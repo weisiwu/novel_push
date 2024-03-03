@@ -1,0 +1,11 @@
+1、无法在vue文件中引入ipcRenderer
+https://blog.csdn.net/qq_44760844/article/details/125333973
+https://stackoverflow.com/questions/63615355/how-to-import-ipcrenderer-in-vue-js-dirname-is-not-defined
+
+2、electron-vite 无法配置多窗口
+https://github.com/alex8088/electron-vite/issues/154
+https://github.com/alex8088/electron-vite/issues/207
+先build一下，然后再dev
+
+3、ipc无法传递file 对象
+https://stackoverflow.com/questions/63081902/unable-to-pass-objects-arrays-in-ipcrenderer-an-object-could-not-be-cloned-even

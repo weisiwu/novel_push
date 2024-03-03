@@ -1,0 +1,26 @@
+测试机器
+https://novel-push-1-1229125983044594.pai-eas.cn-shanghai.aliyun.com/docs
+后续可能要搞自定义镜像去弄
+
+登录页
+3、上方同样有白条
+1、tab的字是绿色的
+
+main
+1、切割视频用，阿里云的灵杰视频开放服务，
+  https://vision.console.aliyun.com/cn-shanghai/detail/videorecog
+  镜头解析 (DetectVideoShot)
+1、生成的图片地址放在什么地方？
+1、载入视频步骤里，应该是先让用户选择本地视频
+1、在客户端里，如何保存图片到本地
+
+
+1、解决main无法快速调试问题
+
+1、目前调用镜头分割，还是依靠videoURl,先到oss，能否直接用本地的流？
+novel_push\src\sdk\DetectVideoShot.js
+
+1、如何将ffmpeg打包到electron里面
+
+1、文稿，怎么通过API去搞出来？？？
+  镜头和字幕并非一一对应
