@@ -20,7 +20,7 @@ function createWindow() {
     maximizable: false,
     autoHideMenuBar: true,
     contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -51,7 +51,7 @@ function openSpecialWindow(pageName = 'main') {
     show: true,
     autoHideMenuBar: true,
     contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, `../preload/${pageName}.js`),
       sandbox: false

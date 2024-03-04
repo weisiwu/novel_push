@@ -56,22 +56,18 @@ export default class Client {
     let client = Client.createClient(apiConfig.accessKeyId, apiConfig.accessKeySecret)
     // 本地视频解析参考文档，需要将选择的视频文件转化为Stream格式
     // https://help.aliyun.com/zh/viapi/developer-reference/node-js?spm=a2c4g.11186623.0.i6
-    // let detectVideoShotRequest = new $videorecog20200320.DetectVideoShotAdvanceRequest({
-    let detectVideoShotRequest = new $videorecog20200320.DetectVideoShotRequest({
-      // videoUrlObject: videoUrlObject
-      videoUrl:
-        'https://novel-test-1-1.oss-cn-shanghai.aliyuncs.com/demo.mp4?Expires=1709516575&OSSAccessKeyId=TMP.3KebbRdXekqXryv53rSUQUoJY15ni2xUGWYbY9j8cSSNRsxtLGVpcNeD9gGHFPARy295zEkS8fL2x38BjbnKPcJuEcqFcj&Signature=%2FEfuL9Y7Dnb2kqZ5xRL5Crrgxj4%3D'
-    })
+    let detectVideoShotRequest = new $videorecog20200320.DetectVideoShotAdvanceRequest()
+    detectVideoShotRequest.videoUrlObject = videoUrlObject
     let runtime = new $Util.RuntimeOptions({})
     try {
-      let resp = await client.detectVideoShotWithOptions(detectVideoShotRequest, runtime)
+      let resp = await client.detectVideoShotAdvance(detectVideoShotRequest, runtime)
       cb?.(resp)
     } catch (error) {
       // 错误 message
-      console.log(error.message)
+      console.log(error?.message)
       // 诊断地址
-      console.log(error.data['Recommend'])
-      Util.assertAsString(error.message)
+      console.log(error?.data?.['Recommend'])
+      Util?.assertAsString?.(error?.message)
     }
   }
 }

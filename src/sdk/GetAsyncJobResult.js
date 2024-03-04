@@ -64,10 +64,10 @@ export default class Client {
       cb?.(resp)
     } catch (error) {
       // 错误 message
-      console.log(error.message)
+      console.log(error?.message)
       // 诊断地址
-      console.log(error.data['Recommend'])
-      Util.assertAsString(error.message)
+      console.log(error?.data?.['Recommend'])
+      Util?.assertAsString?.(error?.message)
     }
   }
 }

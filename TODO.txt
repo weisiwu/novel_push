@@ -10,9 +10,8 @@ main
 1、切割视频用，阿里云的灵杰视频开放服务，
   https://vision.console.aliyun.com/cn-shanghai/detail/videorecog
   镜头解析 (DetectVideoShot)
-1、生成的图片地址放在什么地方？
-1、载入视频步骤里，应该是先让用户选择本地视频
 1、在客户端里，如何保存图片到本地
+1、调用切割视频的时候，函数需要我传递videoUrl，问下是否可以直接上传视频流，而不是先到oss，再调用函数
 
 
 1、解决main无法快速调试问题
