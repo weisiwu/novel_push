@@ -13,6 +13,12 @@ main
 1、在客户端里，如何保存图片到本地
 1、调用切割视频的时候，函数需要我传递videoUrl，问下是否可以直接上传视频流，而不是先到oss，再调用函数
 
+1、解决反推问题
+  模型未下载
+  先在ecs上，下载模型，然后移动到oss里面，然后再挂载到EAS实例上
+https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_caption_capfilt_large.pth
+/code/stable-diffusion-webui/models/BLIP/model_base_caption_capfilt_large.pth
+
 
 1、解决main无法快速调试问题
 
@@ -23,3 +29,6 @@ novel_push\src\sdk\DetectVideoShot.js
 
 1、文稿，怎么通过API去搞出来？？？
   镜头和字幕并非一一对应
+
+1、大视频怎么搞？
+  如果给1个长一个小时的视频，你要怎么处理？直接切分成片段还是怎么的？
