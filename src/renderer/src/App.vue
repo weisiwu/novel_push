@@ -1,6 +1,6 @@
 <script lang="ts">
 import { h, ref, defineComponent } from 'vue'
-import { NIcon, NEllipsis, NButton, useLoadingBar, NTag, NImage } from 'naive-ui'
+import { NIcon, NEllipsis, NButton, NTag, NImage } from 'naive-ui'
 import {
   RocketOutline,
   NotificationsOutline,
@@ -10,8 +10,6 @@ import {
   ArchiveOutline
 } from '@vicons/ionicons5'
 import SelectVideo from './components/SelectVideo.vue'
-// TODO:(wsw) 测试使用
-import login_left_1 from './assets/images/login_left_1.png'
 
 function renderIcon(icon) {
   return () => h(NIcon, { class: 'sidebar_icon' }, { default: () => h(icon) })
@@ -133,6 +131,7 @@ export default defineComponent({
     ArchiveOutline
   },
   setup() {
+    const selectMenu = ref('from_video')
     const currentRef = ref(1)
     const next = () => {
       if (currentRef.value === null) currentRef.value = 1
@@ -152,22 +151,26 @@ export default defineComponent({
             text: '',
             tags: [],
             ori_img: img,
-            // new_img: img,
             trans: ''
           }
         })
       }
       next()
     }
+    const clickMenu = (args, data) => {
+      // from_video
+    }
 
     return {
       collapsed: ref(false),
       currentStatus: ref('process'),
       current: currentRef,
+      clickMenu,
       next,
       prev,
       videoSplit,
       menuOptions,
+      selectMenu,
       renderMenuLabel(option) {
         return option.label
       },
@@ -206,6 +209,7 @@ export default defineComponent({
             <p v-if="!collapsed">AI推文</p>
           </div>
           <n-menu
+            v-model:value="selectMenu"
             :collapsed="collapsed"
             :collapsed-width="64"
             :collapsed-icon-size="22"
@@ -213,7 +217,7 @@ export default defineComponent({
             :render-label="renderMenuLabel"
             :render-icon="renderMenuIcon"
             :expand-icon="expandIcon"
-            default-value="from_video"
+            @click="clickMenu"
           />
         </n-layout-sider>
         <n-layout class="content">

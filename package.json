@@ -18,6 +18,7 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "@alicloud/imagerecog20190930": "^2.0.10",
     "@alicloud/openapi-client": "^0.4.8",
     "@alicloud/tea-console": "^1.0.0",
     "@alicloud/tea-typescript": "^1.7.1",

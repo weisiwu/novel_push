@@ -19,7 +19,6 @@ main
 https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_caption_capfilt_large.pth
 /code/stable-diffusion-webui/models/BLIP/model_base_caption_capfilt_large.pth
 
-
 1、解决main无法快速调试问题
 
 1、目前调用镜头分割，还是依靠videoURl,先到oss，能否直接用本地的流？
