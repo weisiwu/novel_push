@@ -205,7 +205,7 @@ export default defineComponent({
           @expand="collapsed = false"
         >
           <div class="sidebar_title">
-            <img src="./assets/images/sidebar_logo.png" />
+            <img src="./assets/electron.svg" />
             <p v-if="!collapsed">AI推文</p>
           </div>
           <n-menu
