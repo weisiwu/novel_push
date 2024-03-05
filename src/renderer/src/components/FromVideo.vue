@@ -1,16 +1,8 @@
 <script lang="ts">
 import { h, ref, defineComponent } from 'vue'
 import { NIcon, NEllipsis, NButton, NTag, NImage } from 'naive-ui'
-import {
-  RocketOutline,
-  NotificationsOutline,
-  MedkitOutline,
-  SettingsOutline,
-  CaretDownOutline
-} from '@vicons/ionicons5'
-import FromVideo from './components/FromVideo.vue'
-import Tools from './components/Tools.vue'
-import SystemConfig from './components/SystemConfig.vue'
+import { RocketOutline, MedkitOutline, SettingsOutline, CaretDownOutline } from '@vicons/ionicons5'
+import SelectVideo from './SelectVideo.vue'
 
 function renderIcon(icon) {
   return () => h(NIcon, { class: 'sidebar_icon' }, { default: () => h(icon) })
@@ -127,15 +119,10 @@ const tableData = ref([])
 
 export default defineComponent({
   components: {
-    FromVideo,
-    Tools,
-    SystemConfig,
-    NotificationsOutline
+    SelectVideo
   },
   setup() {
-    const selectMenu = ref('from_video')
     const currentRef = ref(1)
-    console.log('wswTest: selectMenu', selectMenu)
     const next = () => {
       if (currentRef.value === null) currentRef.value = 1
       else if (currentRef.value >= 6) currentRef.value = null
@@ -169,17 +156,12 @@ export default defineComponent({
       prev,
       videoSplit,
       menuOptions,
-      selectMenu,
       renderMenuLabel(option) {
         return option.label
       },
       expandIcon() {
         return h(NIcon, null, { default: () => h(CaretDownOutline) })
       },
-      jumpUpdate() {
-        console.log('wswTest: ', '后续跳转')
-      },
-      NotificationsOutline,
       tableData,
       columns: createColumns({}),
       pagination: false
@@ -189,123 +171,36 @@ export default defineComponent({
 </script>
 
 <template>
-  <n-space vertical>
-    <n-loading-bar-provider>
-      <n-layout has-sider class="layout">
-        <n-layout-sider
-          bordered
-          class="sidebar"
-          collapse-mode="width"
-          :collapsed-width="64"
-          :width="240"
-          :collapsed="collapsed"
-          show-trigger
-          @collapse="collapsed = true"
-          @expand="collapsed = false"
-        >
-          <div class="sidebar_title">
-            <img src="./assets/images/sidebar_logo.png" />
-            <p v-if="!collapsed">AI推文</p>
-          </div>
-          <n-menu
-            v-model:value="selectMenu"
-            :collapsed="collapsed"
-            :collapsed-width="64"
-            :collapsed-icon-size="22"
-            :options="menuOptions"
-            :render-label="renderMenuLabel"
-            :expand-icon="expandIcon"
-          />
-        </n-layout-sider>
-        <n-layout class="content">
-          <div class="statusbar">
-            <div class="blank"></div>
-            <div class="update" @click="jumpUpdate">
-              <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
-              <n-gradient-text
-                style="font-size: 16px; cursor: pointer; font-weight: bold"
-                type="info"
-              >
-                更新说明
-              </n-gradient-text>
-            </div>
-          </div>
-          <FromVideo v-if="selectMenu === 'from_video'" />
-          <Tools v-if="selectMenu === 'tools'" />
-          <SystemConfig v-if="selectMenu === 'system_config'" />
-        </n-layout>
-      </n-layout>
-    </n-loading-bar-provider>
-  </n-space>
+  <div class="actionbar">
+    <n-steps :current="current" :status="currentStatus">
+      <n-step title="载入视频" />
+      <n-step title="分析视频" />
+      <n-step title="反推Tag" />
+      <n-step title="绘图" />
+      <n-step title="高清重绘" />
+      <n-step title="导出视频" />
+    </n-steps>
+  </div>
+  <SelectVideo v-if="current === 1" :next="videoSplit" />
+  <div v-if="current !== 1" class="details">
+    <n-data-table
+      style="margin-top: 50px"
+      :columns="columns"
+      :data="tableData"
+      :pagination="pagination"
+      :bordered="false"
+    />
+  </div>
 </template>
 
 <style>
-.layout {
-  display: flex;
-  width: 1920px;
-  height: 1080px;
-}
-.sidebar_title {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  height: 50px;
-  line-height: 50px;
-  margin-top: 16px;
-  align-items: center;
+.actionbar {
+  margin: 20px 50px 0px;
   justify-content: center;
-  img {
-    width: 40px;
-    height: 40px;
-  }
-  p {
-    color: #fff;
-    font-weight: bold;
-    font-size: 20px;
-    cursor: pointer;
-    margin-left: 14px;
-  }
+  align-items: center;
 }
-.sidebar {
-  width: 240px;
-  height: 100%;
-  background-color: #0f1222;
-}
-.sidebar_icon {
-  color: #fff;
-}
-.n-menu .n-menu-item-content:hover .n-menu-item-content__icon .sidebar_icon {
-  color: #333;
-}
-.n-menu-item-content--selected {
-  background-color: #2d47d2;
-}
-.n-menu .n-menu-item-content .n-menu-item-content-header .sidebar_text span {
-  color: #fff;
-}
-.n-menu .n-menu-item-content:hover .n-menu-item-content-header .sidebar_text span {
-  color: #333;
-}
-.statusbar {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  height: 50px;
-  line-height: 50px;
-  .blank {
-    flex-grow: 1;
-  }
-  .update {
-    display: flex;
-    flex-grow: 0;
-    flex-direction: row;
-    font-size: 16px;
-    font-weight: bold;
-    margin-right: 24px;
-    i {
-      align-self: center;
-      margin-right: 8px;
-    }
-  }
+.ori_img,
+.new_img {
+  width: 120px;
 }
 </style>
