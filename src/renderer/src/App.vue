@@ -135,7 +135,6 @@ export default defineComponent({
   setup() {
     const selectMenu = ref('from_video')
     const currentRef = ref(1)
-    console.log('wswTest: selectMenu', selectMenu)
     const next = () => {
       if (currentRef.value === null) currentRef.value = 1
       else if (currentRef.value >= 6) currentRef.value = null
