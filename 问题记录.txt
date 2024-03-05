@@ -9,3 +9,22 @@ https://github.com/alex8088/electron-vite/issues/207
 
 3、ipc无法传递file 对象
 https://stackoverflow.com/questions/63081902/unable-to-pass-objects-arrays-in-ipcrenderer-an-object-could-not-be-cloned-even
+
+4、sd应用，目前使用的是阿里云的fass服务
+
+5、调用tagger服务，遇到模型无法下载问题
+直接到对应extension目录下的插件里，找到这个文件
+stable-diffusion-webui-wd14-tagger-1.2.0\tagger\interrogator.py
+将download函数里面的替换掉，就可以了（注意这两个文件需要你先手动找网盘或者从这里下载）
+https://huggingface.co/SmilingWolf/wd-v1-4-moat-tagger-v2/tree/main
+
+# model_path = hf_hub_download(
+#     repo_id=self.repo_id,
+#     filename=self.model_path,
+#     cache_dir=cache)
+# tags_path = hf_hub_download(
+#     repo_id=self.repo_id,
+#     filename=self.tags_path,
+#     cache_dir=cache)
+model_path = '/mnt/auto/sd/models/interrogators/models--SmilingWolf--wd-v1-4-moat-tagger-v2/model.onnx'
+tags_path = '/mnt/auto/sd/models/interrogators/models--SmilingWolf--wd-v1-4-moat-tagger-v2/selected_tags.csv'

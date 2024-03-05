@@ -1,27 +1,35 @@
 import axios from 'axios'
 import { readFileSync } from 'fs'
 
-// TODO:(wsw) 联调反推tag
-export const TaggingImage = ({ filePath } = {}) => {
-  console.log('wswTest: ', '联调反推tag')
-  const imgTest = Buffer.from(readFileSync(filePath)).toString('base64')
-  return axios
-    .post(
-      'http://novel-push-1.1229125983044594.cn-shanghai.pai-eas.aliyuncs.com/sdapi/v1/interrogate',
-      {
-        image: imgTest,
-        model: 'clip'
-      },
-      {
-        headers: {
-          Authorization: 'NWU1ZDU0ZWIxMDNiOTdiY2Y1YzkzZGE4YmNkNWMzNjBhY2I5MDg2Mg=='
-        }
-      }
-    )
-    .then((res) => {
-      console.log('wswTest: 反推tag结果', res.data)
+export const TaggingImage = ({ event, imgs } = {}) => {
+  return Promise.all(
+    (imgs || []).map((img) => {
+      const imgObj = Buffer.from(readFileSync(img)).toString('base64')
+      return axios
+        .post(
+          'http://sd-7ad15a--sd.fcv3.1229125983044594.cn-hangzhou.fc.devsapp.net/tagger/v1/interrogate',
+          {
+            model: 'wd-v1-4-moat-tagger.v2',
+            image: imgObj,
+            threshold: 0.3
+          }
+        )
+        .then((res) => {
+          const tags = res?.data?.caption?.tag || {}
+          return (
+            Object.keys(tags)
+              .sort((prev, next) => tags[next] - tags[prev])
+              .slice(0, 10) || []
+          )
+        })
+        .catch((e) => {
+          console.log(`图片反推发生错误 ${img}`, e)
+        })
     })
-    .catch((e) => {
-      console.log('wswTest:发生错误 ', e)
-    })
+  ).then((imageTaggers) => {
+    console.log('wswTest: imageTaggers', imageTaggers)
+    event.sender.send('image-tagger-complete', imageTaggers)
+  })
 }
+
+export default TaggingImage

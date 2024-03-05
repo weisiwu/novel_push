@@ -123,10 +123,31 @@ export default defineComponent({
   },
   setup() {
     const currentRef = ref(1)
-    const next = () => {
+    const next = (data) => {
       if (currentRef.value === null) currentRef.value = 1
       else if (currentRef.value >= 6) currentRef.value = null
       else currentRef.value++
+
+      console.log('wswTest: 分析视频步骤传入的数据是', data)
+      // 将要进行到第三部分: 反推tag
+      if (currentRef.value === 2 && data?.length > 0) {
+        // 开始loading效果
+        // loadingBar.start()
+        // 图片反推完成，给到结果
+        window.ipcRenderer.send('image-tagger', data)
+        window.ipcRenderer.receive('image-tagger-complete', (imageTaggers) => {
+          console.log('wswTest:返穗关键词最终结果 ', imageTaggers)
+          tableData.value = tableData.value.map((row, index) => {
+            return {
+              ...row,
+              tags: imageTaggers[index] || []
+            }
+          })
+          // 结束loading效果(最少500ms)
+          // loadingBar.finish()
+          // next(result)
+        })
+      }
     }
     const prev = () => {
       if (currentRef.value === 0) currentRef.value = null
@@ -145,7 +166,7 @@ export default defineComponent({
           }
         })
       }
-      next()
+      next(imgs)
     }
 
     return {

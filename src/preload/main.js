@@ -11,13 +11,25 @@ if (process.contextIsolated) {
     // https://stackoverflow.com/questions/63615355/how-to-import-ipcrenderer-in-vue-js-dirname-is-not-defined
     contextBridge.exposeInMainWorld('ipcRenderer', {
       send: (channel, data) => {
-        let validChannels = ['open-new-window', 'cut-video', 'cut-video-complete']
+        let validChannels = [
+          'open-new-window',
+          'cut-video',
+          'cut-video-complete',
+          'image-tagger',
+          'image-tagger-complete'
+        ]
         if (validChannels.includes(channel)) {
           ipcRenderer.send(channel, data)
         }
       },
       receive: (channel, func) => {
-        let validChannels = ['open-new-window', 'cut-video', 'cut-video-complete']
+        let validChannels = [
+          'open-new-window',
+          'cut-video',
+          'cut-video-complete',
+          'image-tagger',
+          'image-tagger-complete'
+        ]
         if (validChannels.includes(channel)) {
           ipcRenderer.on(channel, (event, ...args) => func(...args))
         }

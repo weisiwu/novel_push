@@ -25,7 +25,6 @@ const parseVideo = async (file) => {
     directory-dnd
     style="margin: 50px 50px; width: auto"
     :default-upload="false"
-    action="https://www.mocky.io/v2/5e4bafc63100007100d8b70f"
     :max="1"
     @change="parseVideo"
   >

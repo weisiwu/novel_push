@@ -5,6 +5,7 @@ import { Readable } from 'stream'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import DetectVideoShot from '../sdk/DetectVideoShot'
+import TaggingImage from '../sdk/TaggingImage'
 
 let startWindow = null
 let mainWindow = null
@@ -83,6 +84,12 @@ app.whenReady().then(() => {
         filePath,
         event
       })
+    }
+  })
+
+  ipcMain.on('image-tagger', async (event, imgs) => {
+    if (mainWindow) {
+      TaggingImage({ event, imgs })
     }
   })
 
