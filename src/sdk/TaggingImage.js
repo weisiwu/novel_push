@@ -27,7 +27,6 @@ export const TaggingImage = ({ event, imgs } = {}) => {
         })
     })
   ).then((imageTaggers) => {
-    console.log('wswTest: imageTaggers', imageTaggers)
     event.sender.send('image-tagger-complete', imageTaggers)
   })
 }

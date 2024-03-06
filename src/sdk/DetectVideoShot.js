@@ -2,7 +2,7 @@ import { join, dirname } from 'path'
 import { exec } from 'child_process'
 import videorecog20200320, * as $videorecog20200320 from '@alicloud/videorecog20200320'
 import * as $OpenApi from '@alicloud/openapi-client'
-import Util, * as $Util from '@alicloud/tea-util'
+import * as $Util from '@alicloud/tea-util'
 import GetAsyncJobResult from './GetAsyncJobResult'
 import apiConfig from './ali_linzhi_config.json'
 
@@ -105,9 +105,7 @@ export default class Client {
     } catch (error) {
       // 错误 message
       console.log('DetectVideoShot error', error?.message)
-      // 诊断地址
-      console.log(error?.data?.['Recommend'])
-      Util?.assertAsString?.(error?.message)
+      console.log('DetectVideoShot error Full', error)
     }
   }
 }

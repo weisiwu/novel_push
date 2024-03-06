@@ -1,6 +1,7 @@
 <script setup>
 import { defineProps } from 'vue'
 import { useLoadingBar } from 'naive-ui'
+import { ArchiveOutline } from '@vicons/ionicons5'
 
 const loadingBar = useLoadingBar()
 const props = defineProps({ video: Object, next: Function })

@@ -28,10 +28,7 @@ https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_ba
 1、大视频怎么搞？
   如果给1个长一个小时的视频，你要怎么处理？直接切分成片段还是怎么的？
 
-1、整体软件不应该允许继续放大了 main 但是列表底部可能看不到
-
 1、反推如何批量走？同时又如何管控？
-
 
 1、fass明显存在启动问题
 启动前是没有接口的，启动后，才有？？？？
@@ -39,6 +36,12 @@ https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_ba
 1、tag一个一个的更新上去
 不要等所有结果出来再搞
 
-1、描述词多了，直接折行，不要挤压前面的
+1、反推关键词后，进度没有变化
 
-1、进度没有变化
+1、更新说明，上一个飞书链接
+
+1、少错误提示 - 后续定义一个统一的
+
+1、无论有没有vpn，分割镜头都不能超时
+  提示的这个错误很奇怪
+  DetectVideoShot error ReadTimeout(3000). POST undefined://viapi-customer-pop.oss-cn-shanghai.aliyuncs.com/ failed.

@@ -1,5 +1,7 @@
-imageTaggers[
-  ([
+import img from '../src/renderer/src/assets/images/login_left_1.png'
+
+const taggers = [
+  [
     '1boy',
     'male_focus',
     'solo',
@@ -400,5 +402,17 @@ imageTaggers[
     'chinese_text',
     '1boy',
     'looking_at_viewer'
-  ])
+  ]
 ]
+
+const tableData = taggers.map((tagger, index) => {
+  return {
+    index: index + 1,
+    text: '这是一段文稿文稿文稿文稿，这是一段文稿文稿文稿文稿，这是一段文稿文稿文稿文稿，这是一段文稿文稿文稿文稿，这是一段文稿文稿文稿文稿',
+    tags: tagger,
+    ori_img: img,
+    trans: ''
+  }
+})
+
+export default tableData

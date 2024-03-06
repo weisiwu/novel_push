@@ -195,6 +195,7 @@ export default defineComponent({
           bordered
           class="sidebar"
           collapse-mode="width"
+          content-style="padding: 24px;"
           :collapsed-width="64"
           :width="240"
           :collapsed="collapsed"
@@ -232,6 +233,7 @@ export default defineComponent({
           <FromVideo v-if="selectMenu === 'from_video'" />
           <Tools v-if="selectMenu === 'tools'" />
           <SystemConfig v-if="selectMenu === 'system_config'" />
+          <div style="margin-bottom: 200px"></div>
         </n-layout>
       </n-layout>
     </n-loading-bar-provider>
