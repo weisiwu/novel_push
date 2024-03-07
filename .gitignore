@@ -5,3 +5,5 @@ out
 *.log*
 stable-diffusion-webui
 stable-diffusion-webui/*
+models/*
+models

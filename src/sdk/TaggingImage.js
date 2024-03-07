@@ -1,7 +1,10 @@
 import axios from 'axios'
 import { readFileSync } from 'fs'
+import { resolve, join, dirname } from 'path'
+import { exec } from 'child_process'
 
-export const TaggingImage = ({ event, imgs } = {}) => {
+// 通过阿里云fc 部署sd api接口并调用
+export const TaggingImageFromAliyun = ({ event, imgs } = {}) => {
   return Promise.all(
     (imgs || []).map((img) => {
       const imgObj = Buffer.from(readFileSync(img)).toString('base64')
@@ -29,6 +32,48 @@ export const TaggingImage = ({ event, imgs } = {}) => {
   ).then((imageTaggers) => {
     event.sender.send('image-tagger-complete', imageTaggers)
   })
+}
+
+const isWindows = process.platform === 'win32'
+const isMac = process.platform === 'darwin'
+const csvPath = resolve(__dirname, './models/selected_tags.csv')
+const modelPath = resolve(__dirname, './models/model.onnx')
+console.log('wswTest: process.platform', process.platform)
+console.log('wswTest:csvPath ', csvPath)
+console.log('wswTest:modelPath ', modelPath)
+
+const tagCmd = (imgPath) => {
+  let postfix = '.exe'
+  let folder = 'windows'
+
+  if (isMac) {
+    postfix = ''
+    folder = 'mac'
+  }
+  return `./tagger/${folder}/interrogator_wd-v1-4-moat-tagger-v2${postfix} --image ${imgPath} --csv_path ${csvPath} --model_path ${modelPath}`
+}
+
+// 将反推模型放到本地，通过python脚本调用本地模型，并转换脚本为跨平台可执行软件。
+const TaggingImage = ({ event, imgs } = {}) => {
+  return Promise.all(
+    (imgs || []).map((img) => {
+      return new Promise((resolve, reject) => {
+        exec(tagCmd(img), (error, stdout, stderr) => {
+          if (error || stderr) {
+            reject(error || stderr)
+          }
+          console.log('wswTest: stdout', stdout)
+          resolve(stdout)
+        })
+      })
+    })
+  )
+    .then((imageTaggers) => {
+      event.sender.send('image-tagger-complete', imageTaggers)
+    })
+    .catch((e) => {
+      console.log(`【本地】图片反推发生错误`, e)
+    })
 }
 
 export default TaggingImage
