@@ -1,47 +1,27 @@
-测试机器
-https://novel-push-1-1229125983044594.pai-eas.cn-shanghai.aliyun.com/docs
-后续可能要搞自定义镜像去弄
-
-登录页
-3、上方同样有白条
-1、tab的字是绿色的
-
-main
-1、svg怎么换成白色的
-1、切割视频用，阿里云的灵杰视频开放服务，
-  https://vision.console.aliyun.com/cn-shanghai/detail/videorecog
-  镜头解析 (DetectVideoShot)
-1、在客户端里，如何保存图片到本地
-
-1、解决反推问题
-  模型未下载
-  先在ecs上，下载模型，然后移动到oss里面，然后再挂载到EAS实例上
-https://storage.googleapis.com/sfr-vision-language-research/BLIP/models/model_base_caption_capfilt_large.pth
-/code/stable-diffusion-webui/models/BLIP/model_base_caption_capfilt_large.pth
-
-1、解决main无法快速调试问题
-1、如何将ffmpeg打包到electron里面
-
-1、文稿，怎么通过API去搞出来？？？
-  镜头和字幕并非一一对应
-
-1、大视频怎么搞？
-  如果给1个长一个小时的视频，你要怎么处理？直接切分成片段还是怎么的？
-
-1、反推如何批量走？同时又如何管控？
-
-1、fass明显存在启动问题
-启动前是没有接口的，启动后，才有？？？？
-
-1、tag一个一个的更新上去
-不要等所有结果出来再搞
-
-1、反推关键词后，进度没有变化
-
-1、更新说明，上一个飞书链接
-
-1、少错误提示 - 后续定义一个统一的
-
-1、无论有没有vpn，分割镜头都不能超时
-  提示的这个错误很奇怪
+主流程问题
+1、tagger功能sdk化
+  支持在本地执行
+  需要支持批量
+  然后将这玩意打包了
+1、python环境打包到本地
+  ffmpeg
+1、调用的镜头解析服务，接口时长出现访问错误，提示超时
   DetectVideoShot error ReadTimeout(3000). POST undefined://viapi-customer-pop.oss-cn-shanghai.aliyuncs.com/ failed.
+1、大视频如何处理？
+  如果超过1个小时，目前需要先传到阿里云上做镜头切割，切割后再做本地转换
+  这里需要进行架构设计
+1、在客户端里，如何保存图片到本地
+1、解决main无法快速调试问题
+1、文稿（字幕）如何同镜头进行对应
+
+样式问题
+1、登录页上方同样有白条
+1、登录页tab的字是绿色的
+1、主页svg怎么换成白色的
+1、反推关键词后，进度没有变化
+1、更新说明，上一个飞书链接
+1、处理过程中缺少错误提示
+
+剩余代办
+1、将图用关键词+模型，重新生成
+2、将生成的图，通过过渡效果链接起来，形成视频
