@@ -2,6 +2,8 @@
 pyinstaller --onefile interrogator_wd-v1-4-moat-tagger-v2.py
 pyinstaller --onedir interrogator_wd-v1-4-moat-tagger-v2.py
 
+<!-- 这些命令都废了 -->
+
 python测试命令
 ./interrogator_wd-v1-4-moat-tagger-v2.py --image /Users/siwu/Desktop/github/novel_push/src/demo/demo.png --csv_path /Users/siwu/Desktop/github/novel_push/src/sdk/models/tagger/selected_tags.csv --model_path /Users/siwu/Desktop/github/novel_push/src/sdk/models/tagger/model.onnx
 
