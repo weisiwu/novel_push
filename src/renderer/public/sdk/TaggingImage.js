@@ -2,6 +2,9 @@ import axios from 'axios'
 import { readFileSync } from 'fs'
 import { resolve, join } from 'path'
 import { exec } from 'child_process'
+// 引入图片反推关键词sdk
+// import macSDK from './tagger/mac/interrogator_wd-v1-4-moat-tagger-v2?asset&asarUnpack'
+// import winSDK from './tagger/windows/interrogator_wd-v1-4-moat-tagger-v2.exe?asset&asarUnpack'
 
 // 通过阿里云fc 部署sd api接口并调用
 export const TaggingImageFromAliyun = ({ event, imgs } = {}) => {
@@ -38,10 +41,16 @@ const isWindows = process.platform === 'win32'
 const isMac = process.platform === 'darwin'
 const csvPath = resolve(__dirname, './models/selected_tags.csv')
 const modelPath = resolve(__dirname, './models/model.onnx')
+console.log('wswTest: process.platform', process.platform)
 console.log('wswTest:csvPath ', csvPath)
 console.log('wswTest:modelPath ', modelPath)
 
-console.log('wswTest: binPath==>', __dirname)
+const binPath = join(__dirname, `../../resources/interrogator_wd-v1-4-moat-tagger-v2`).replace(
+  'app.asar',
+  'app.asar.unpacked'
+)
+
+console.log('wswTest: binPath==>', binPath)
 
 const tagCmd = (imgPath) => {
   let postfix = '.exe'

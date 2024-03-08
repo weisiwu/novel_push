@@ -4,8 +4,8 @@ import { join } from 'path'
 import { Readable } from 'stream'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import DetectVideoShot from '../sdk/DetectVideoShot'
-import TaggingImage from '../sdk/TaggingImage'
+import DetectVideoShot from '../renderer/public/sdk/DetectVideoShot'
+import TaggingImage from '../renderer/public/sdk/TaggingImage'
 
 let startWindow = null
 let mainWindow = null

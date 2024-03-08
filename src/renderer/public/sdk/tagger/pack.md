@@ -14,4 +14,3 @@ mac测试命令
 python源文件:interrogator_wd-v1-4-moat-tagger-v2.py
 mac可执行文件:mac_interrogator_wd-v1-4-moat-tagger-v2
 windows可执行文件:
-
