@@ -4,6 +4,7 @@ import { join } from 'path'
 import { Readable } from 'stream'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import macIcon from '../../resources/icon.png?asset'
 import DetectVideoShot from '../renderer/public/sdk/DetectVideoShot'
 import TaggingImage from '../renderer/public/sdk/TaggingImage'
 
@@ -105,3 +106,23 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+if (process.platform === 'darwin') {
+  app.dock.setIcon(macIcon)
+  // gif换动图
+  // let tray = null
+  // const frames = ['0.jpg', '1.jpg', '2.jpg', '3.jpg', '4.jpg'] // 图标序列
+  // let currentFrame = 0
+  // function updateTrayIcon() {
+  //   const iconName = frames[currentFrame]
+  //   const iconPath = join(__dirname, `../renderer/sdk/${iconName}`)
+  //   app.dock.setIcon(iconPath)
+  //   currentFrame = (currentFrame + 1) % frames.length
+  //   setTimeout(updateTrayIcon, 100) // 更新图标的间隔时间，100毫秒
+  // }
+  // app.whenReady().then(() => {
+  //   app.dock.setIcon(join(__dirname, `../renderer/sdk/0.jpg`))
+  //   // tray = new Tray(join(__dirname, `../renderer/sdk/0.jpg`))
+  //   updateTrayIcon()
+  // })
+}
