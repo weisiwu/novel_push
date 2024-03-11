@@ -1,10 +1,7 @@
 import axios from 'axios'
-import { writeFileSync } from 'fs'
 import { join } from 'path'
-import config from './AliyunServer.json'
-
-const isWindows = process.platform === 'win32'
-const isMac = process.platform === 'darwin'
+import { writeFileSync } from 'fs'
+import config from '../src/BaoganAiConfig.json'
 
 // 图片高清重绘 - 单张
 const AmplifyImageByAliyun = ({ event, imgs } = {}) => {

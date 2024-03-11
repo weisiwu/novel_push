@@ -1,18 +1,11 @@
-import rimraf from 'rimraf'
 import axios from 'axios'
-import { mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { join, resolve } from 'path'
-import config from './AliyunServer.json'
-
-const appPath = process.resourcesPath
-const negative_prompt = readFileSync(resolve(__dirname, '../renderer/sdk/negative.prompt'))
+import { join } from 'path'
+import { readFileSync, writeFileSync } from 'fs'
+import { videoFramesOutputPath as videoFramesPath, negativePrompt } from '../src/config.js'
+import config from '../src/BaoganAiConfig.json'
 
 // 调用阿里云服务
 const ImageToImageByAliyun = ({ event, params } = {}) => {
-  const videoFramesPath = join(appPath, 'resources', 'img_to_img_result')
-  rimraf.rimrafSync(videoFramesPath)
-  mkdirSync(videoFramesPath)
-
   const { init_images, size, index: imgindex } = params || {}
 
   console.log('wswTest:12 ', size.height || config.HDImageWidth)
@@ -23,7 +16,7 @@ const ImageToImageByAliyun = ({ event, params } = {}) => {
       init_images: [
         'data:image/jpeg;base64,' + Buffer.from(readFileSync(init_images)).toString('base64')
       ], // 转换成base64
-      negative_prompt: negative_prompt?.toString?.() || '',
+      negative_prompt: negativePrompt,
       styles: ['Anime'],
       batch_size: 1,
       n_iter: 1,

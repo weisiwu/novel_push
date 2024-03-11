@@ -1,10 +1,13 @@
 import { join } from 'path'
-import rimraf from 'rimraf'
 import sizeOf from 'image-size'
-import { readdir, mkdirSync, readFileSync, existsSync } from 'fs'
+import { readdir } from 'fs'
 import { execSync, spawn } from 'child_process'
-import binPath from '../../../../resources/sdk/py_sencedetect/scenedetect.exe?asset&asarUnpack'
-import cutPartsBin from '../../../../resources/sdk/auto_clip_video/auto_clip_video.exe?asset&asarUnpack'
+import {
+  videoPartsOutputPath,
+  videoFramesOutputPath,
+  sceneDetectBin as binPath,
+  cutPartsBin
+} from '../../src/config.js'
 
 const appPath = process.resourcesPath
 let sendFrameSize = false
@@ -13,18 +16,13 @@ const imgSize = {}
 // 小视频片段，直接处理 (不超过10s)
 export default function DetectVideoShot({
   filePath,
-  outPath = join(appPath, 'resources', 'video_cut_result'),
-  videoFramesPath = join(appPath, 'resources', 'video_frames'),
+  outPath = videoPartsOutputPath,
+  videoFramesPath = videoFramesOutputPath,
   event,
   totalData = [],
   totalTimes = []
 }) {
   const concatProcess = spawn(binPath, ['-i', filePath, '-o', outPath, 'split-video'])
-
-  rimraf.rimrafSync(outPath)
-  mkdirSync(outPath, { recursive: true })
-  rimraf.rimrafSync(videoFramesPath)
-  mkdirSync(videoFramesPath, { recursive: true })
 
   return new Promise((resolve, reject) => {
     concatProcess.on('close', (code) => {
@@ -78,8 +76,6 @@ export const DetectVideoShotByParts = ({ filePath, event }) => {
   const totalTimes = []
   const outPath = join(appPath, 'resources', 'video_cut_parts')
 
-  rimraf.rimrafSync(outPath)
-  mkdirSync(outPath, { recursive: true })
   // 启动切片进程
   const cutParsProcess = spawn(cutPartsBin, [
     '--input_file',
@@ -116,8 +112,11 @@ export const DetectVideoShotByParts = ({ filePath, event }) => {
           const taskIndex = Math.max(0, finishParts.length - 1 + index)
           return DetectVideoShot({
             filePath: join(outPath, waitingItem),
-            outPath: join(appPath, 'resources', `video_cut_result${taskIndex}`),
-            videoFramesPath: join(appPath, 'resources', `video_frames${taskIndex}`),
+            // TODO:(wsw) 这里获取值的方式要调整
+            outPath: videoPartsOutputPath,
+            videoFramesPath: videoFramesOutputPath,
+            // outPath: join(appPath, 'resources', `video_cut_result${taskIndex}`),
+            // videoFramesPath: join(appPath, 'resources', `video_frames${taskIndex}`),
             event,
             totalData,
             totalTimes
@@ -134,7 +133,7 @@ export const DetectVideoShotByParts = ({ filePath, event }) => {
           width: imgSize.width,
           height: imgSize.height,
           durations: totalTimes,
-          output_file: videoFramesPath
+          output_file: videoFramesOutputPath
         })
       }
     })

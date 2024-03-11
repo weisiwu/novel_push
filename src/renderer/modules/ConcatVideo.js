@@ -1,19 +1,14 @@
 import { join } from 'path'
-import { mkdirSync, existsSync } from 'fs'
 import { spawn } from 'child_process'
-import binPath from '../../../../resources/sdk/concat_video/concat_video.exe?asset&asarUnpack'
-
-const isWindows = process.platform === 'win32'
-const appPath = process.resourcesPath
+import {
+  outputPath,
+  videoFramesOutputPath as videoFramesPath,
+  concatVideoPath as binPath
+} from '../src/config.js'
 
 // 本地将图片合成为视频
 const ConcatVideo = ({ event, params = {} }) => {
   const { width, height, durations, output_file } = params || {}
-  const videoFramesPath = join(appPath, 'resources', 'img_to_img_result')
-  if (!existsSync(join(appPath, 'resources', `cache`))) {
-    mkdirSync(join(appPath, 'resources', `cache`), { recursive: true })
-  }
-  const outputPath = join(appPath, 'resources', `./cache/${output_file}.mp4`)
   const concatProcess = spawn(binPath, [
     '--width',
     width,
@@ -22,13 +17,10 @@ const ConcatVideo = ({ event, params = {} }) => {
     '--image_folder',
     videoFramesPath,
     '--output_file',
-    outputPath,
+    join(outputPath, `${output_file}.mp4`),
     '--durations',
     durations.join(',')
   ])
-
-  console.log('wswTest: videoFramesPath', videoFramesPath)
-  console.log('wswTest: outputPath', outputPath)
 
   concatProcess.on('close', (code) => {
     if (code === 0) {
