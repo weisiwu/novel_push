@@ -7,3 +7,6 @@ stable-diffusion-webui
 stable-diffusion-webui/*
 models/*
 models
+_internal
+_internal/*
+py_sencedetect/*

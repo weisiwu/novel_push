@@ -1,111 +1,149 @@
-import { join, dirname } from 'path'
-import { exec } from 'child_process'
-import videorecog20200320, * as $videorecog20200320 from '@alicloud/videorecog20200320'
-import * as $OpenApi from '@alicloud/openapi-client'
-import * as $Util from '@alicloud/tea-util'
-import GetAsyncJobResult from './GetAsyncJobResult'
-import apiConfig from './ali_linzhi_config.json'
+import { join } from 'path'
+import rimraf from 'rimraf'
+import sizeOf from 'image-size'
+import { readdir, mkdirSync, readFileSync, existsSync } from 'fs'
+import { execSync, spawn } from 'child_process'
+import binPath from '../../../../resources/sdk/py_sencedetect/scenedetect.exe?asset&asarUnpack'
+import cutPartsBin from '../../../../resources/sdk/auto_clip_video/auto_clip_video.exe?asset&asarUnpack'
 
-export default class Client {
-  /**
-   * 使用AK&SK初始化账号Client
-   * @param accessKeyId
-   * @param accessKeySecret
-   * @return Client
-   * @throws Exception
-   */
-  static createClient(accessKeyId, accessKeySecret) {
-    let config = new $OpenApi.Config({
-      // 必填，您的 AccessKey ID
-      accessKeyId: accessKeyId,
-      // 必填，您的 AccessKey Secret
-      accessKeySecret: accessKeySecret
-    })
-    // Endpoint 请参考 https://api.aliyun.com/product/videorecog
-    config.endpoint = `videorecog.cn-shanghai.aliyuncs.com`
-    return new videorecog20200320.default(config)
-  }
+const appPath = process.resourcesPath
+let sendFrameSize = false
+const imgSize = {}
 
-  /**
-   * 使用STS鉴权方式初始化账号Client，推荐此方式。
-   * @param accessKeyId
-   * @param accessKeySecret
-   * @param securityToken
-   * @return Client
-   * @throws Exception
-   */
-  static createClientWithSTS(accessKeyId, accessKeySecret, securityToken) {
-    let config = new $OpenApi.Config({
-      // 必填，您的 AccessKey ID
-      accessKeyId: accessKeyId,
-      // 必填，您的 AccessKey Secret
-      accessKeySecret: accessKeySecret,
-      // 必填，您的 Security Token
-      securityToken: securityToken,
-      // 必填，表明使用 STS 方式
-      type: 'sts'
-    })
-    // Endpoint 请参考 https://api.aliyun.com/product/videorecog
-    config.endpoint = `videorecog.cn-shanghai.aliyuncs.com`
-    return new videorecog20200320.default(config)
-  }
+// 小视频片段，直接处理 (不超过10s)
+export default function DetectVideoShot({
+  filePath,
+  outPath = join(appPath, 'resources', 'video_cut_result'),
+  videoFramesPath = join(appPath, 'resources', 'video_frames'),
+  event,
+  totalData = [],
+  totalTimes = []
+}) {
+  const concatProcess = spawn(binPath, ['-i', filePath, '-o', outPath, 'split-video'])
 
-  static async main({ videoUrlObject, filePath, event }) {
-    let client = Client.createClient(apiConfig.accessKeyId, apiConfig.accessKeySecret)
-    // 本地视频解析参考文档，需要将选择的视频文件转化为Stream格式
-    // https://help.aliyun.com/zh/viapi/developer-reference/node-js?spm=a2c4g.11186623.0.i6
-    let detectVideoShotRequest = new $videorecog20200320.DetectVideoShotAdvanceRequest()
-    detectVideoShotRequest.videoUrlObject = videoUrlObject
-    let runtime = new $Util.RuntimeOptions({})
-    try {
-      const result = await client.detectVideoShotAdvance(detectVideoShotRequest, runtime)
-      const requestId = result?.body?.requestId
-      const resultImgs = []
-      let timer = setInterval(() => {
-        GetAsyncJobResult.main(requestId, (result2) => {
-          const quereyResult = result2?.body?.data?.result || '{}'
-          const quereyStatus = result2?.body?.data?.status || ''
-          if (quereyStatus !== 'PROCESS_SUCCESS') {
-            return
+  rimraf.rimrafSync(outPath)
+  mkdirSync(outPath, { recursive: true })
+  rimraf.rimrafSync(videoFramesPath)
+  mkdirSync(videoFramesPath, { recursive: true })
+
+  return new Promise((resolve, reject) => {
+    concatProcess.on('close', (code) => {
+      if (code === 0) {
+        // 本地分片完成后，对每个视频段进行读取，获取视频中间帧和视频持续时间。获取目录下所有文件
+        readdir(outPath, (err, files) => {
+          if (err) {
+            console.error('Error reading directory:', err)
+            reject(err)
           }
 
-          const frames = JSON.parse((JSON.parse(quereyResult) || {})?.ShotFrameIds || '[]')
-          console.log(`正在查询任务结果: ${requestId} 结果为: ${JSON.stringify(frames)}`)
-          const outputFilePattern = join(dirname(filePath), 'frame-%03d.png')
-          const frameIndexFilter = frames
-            ?.map?.((part, index) => {
-              // 取中间帧，以达到画面稳定
-              const next = frames[index + 1]
-              if (!next) {
-                return part
-              }
-              resultImgs.push(
-                join(dirname(filePath), `frame-${String(index + 1).padStart(3, 0)}.png`)
-              )
-              return Math.ceil((next + part) / 2)
-            })
-            ?.map?.((part) => {
-              return `eq(n\\,${part})`
-            })
-            ?.join('+')
+          // 遍历目录中的每个文件
+          files.forEach((file, index) => {
+            const filePath = join(outPath, file)
 
-          exec(
-            `ffmpeg -i ${filePath} -vf "select=${frameIndexFilter}" -vsync vfr ${outputFilePattern}`,
-            (error) => {
-              if (error) {
-                console.error('error:', error)
-                return
-              }
-              event.sender.send('cut-video-complete', resultImgs)
+            // 使用ffprobe获取视频时长
+            const durationCommand = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`
+            const duration = execSync(durationCommand).toString().trim()
+
+            const imgName = join(videoFramesPath, `${index}.jpg`)
+
+            // 使用ffmpeg获取视频中间帧
+            const totalFramesCommand = `ffprobe -v error -select_streams v:0 -count_frames -show_entries stream=nb_frames -of default=nokey=1:noprint_wrappers=1 ${filePath}`
+            const total_frames = execSync(totalFramesCommand)
+            const thumbnailCommand = `ffmpeg -i "${filePath}" -vf "select=eq(n\\,${Math.floor(total_frames / 2)})" -vframes 1 -q:v 2 ${imgName}`
+            execSync(thumbnailCommand)
+
+            if (!sendFrameSize) {
+              const { width, height } = sizeOf(imgName) || {}
+              sendFrameSize = true
+              imgSize.width = width
+              imgSize.height = height
+              event.sender.send('get-frame-size', { width, height })
             }
-          )
-          clearInterval(timer)
+
+            totalData.push(imgName)
+            totalTimes.push(duration)
+            console.log('wswTest: update-video-frame imagName', imgName)
+            event.sender.send('update-video-frame', { totalData, totalTimes })
+          })
+          resolve()
         })
-      }, 5000)
-    } catch (error) {
-      // 错误 message
-      console.log('DetectVideoShot error', error?.message)
-      console.log('DetectVideoShot error Full', error)
+      }
+    })
+  })
+}
+
+// 大视频片段，分块处理
+export const DetectVideoShotByParts = ({ filePath, event }) => {
+  const totalData = []
+  const totalTimes = []
+  const outPath = join(appPath, 'resources', 'video_cut_parts')
+
+  rimraf.rimrafSync(outPath)
+  mkdirSync(outPath, { recursive: true })
+  // 启动切片进程
+  const cutParsProcess = spawn(cutPartsBin, [
+    '--input_file',
+    filePath,
+    '--output_dir',
+    outPath,
+    '--interval',
+    10
+  ])
+  let finishParts = [] // 处理中，已经处理完的分片序号
+  let waitingParts = [] // 待处理完的分片序号
+  let scanTimer = null
+  const taskList = Promise.resolve()
+  const scanInterval = 10000 // 扫描切片目录间隔
+
+  /**
+   * auto_clip_video 进程对大视频切片，切完后，回复 auto_clip_video_finish
+   * 在收到切片完成回复前，每3s扫描依次切片目录。查看有无新切片
+   */
+  scanTimer = setInterval(() => {
+    readdir(outPath, (err, files) => {
+      if (err) {
+        console.error(`Error reading directory ${outPath}:`, err)
+        return
+      }
+
+      // 将扫描的文件全部加入待办,升序排列
+      waitingParts = [...files]
+        .filter((file) => !finishParts.includes(file))
+        .sort((prev, next) => prev.split('.')[0] - next.split('.')[0])
+      // 将所有待办任务添加到任务列表中
+      waitingParts.reduce((sum, waitingItem, index) => {
+        return sum.then(() => {
+          const taskIndex = Math.max(0, finishParts.length - 1 + index)
+          return DetectVideoShot({
+            filePath: join(outPath, waitingItem),
+            outPath: join(appPath, 'resources', `video_cut_result${taskIndex}`),
+            videoFramesPath: join(appPath, 'resources', `video_frames${taskIndex}`),
+            event,
+            totalData,
+            totalTimes
+          })
+        })
+      }, taskList)
+      // 添加完毕后，移除所有待办任务到已完成、进行中任务
+      waitingParts = []
+      finishParts = [...files]
+
+      // 切片timer被清空，这时最后一块被加入的任务
+      if (!scanTimer) {
+        event.sender.send('concat-video', {
+          width: imgSize.width,
+          height: imgSize.height,
+          durations: totalTimes,
+          output_file: videoFramesPath
+        })
+      }
+    })
+  }, scanInterval)
+
+  cutParsProcess.on('close', (code) => {
+    console.log('wswTest: timer clear', code)
+    if (code === 0) {
+      clearInterval(scanTimer)
     }
-  }
+  })
 }

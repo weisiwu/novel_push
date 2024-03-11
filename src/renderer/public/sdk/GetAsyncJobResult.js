@@ -1,11 +1,9 @@
 // This file is auto-generated, don't edit it
 // 依赖的模块可通过下载工程中的模块依赖文件或右上角的获取 SDK 依赖信息查看
 import videorecog20200320, * as $videorecog20200320 from '@alicloud/videorecog20200320'
-import OpenApi, * as $OpenApi from '@alicloud/openapi-client'
-import Console from '@alicloud/tea-console'
-import Util, * as $Util from '@alicloud/tea-util'
-import * as $tea from '@alicloud/tea-typescript'
-import apiConfig from './ali_linzhi_config.json'
+import * as $OpenApi from '@alicloud/openapi-client'
+import * as $Util from '@alicloud/tea-util'
+import apiConfig from './AliyunServer.json'
 
 export default class Client {
   /**
@@ -58,16 +56,15 @@ export default class Client {
     let getAsyncJobResultRequest = new $videorecog20200320.GetAsyncJobResultRequest({
       jobId: requestId
     })
-    let runtime = new $Util.RuntimeOptions({})
+    let runtime = new $Util.RuntimeOptions({
+      readTimeout: 10000,
+      connectTimeout: 10000
+    })
     try {
       let resp = await client.getAsyncJobResultWithOptions(getAsyncJobResultRequest, runtime)
       cb?.(resp)
     } catch (error) {
-      // 错误 message
-      console.log(error?.message)
-      // 诊断地址
-      console.log(error?.data?.['Recommend'])
-      Util?.assertAsString?.(error?.message)
+      console.log(`【error】GetAsyncJobResult =>`, error)
     }
   }
 }

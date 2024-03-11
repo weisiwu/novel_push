@@ -1,6 +1,5 @@
 <script setup>
 const openMainWindow = () => {
-  console.log('asdfafafdas', window.ipcRenderer)
   window.ipcRenderer.send('open-new-window')
 }
 </script>

@@ -2,74 +2,61 @@
 import { h, ref } from 'vue'
 import { NButton, NTag, NImage, useLoadingBar } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
+import config from '../../public/sdk/AliyunServer.json'
 
+const imgSize = 250
 const loadingBar = useLoadingBar()
 
 const createColumns = ({}) => {
   return [
     { title: '镜头', align: 'center', key: 'index', minWidth: 40 },
-    { title: '文稿', align: 'center', key: 'text', minWidth: 150 },
-    {
-      title: '描述词',
-      align: 'center',
-      key: 'tags',
-      minWidth: 150,
-      render(row) {
-        const { tags } = row || {}
-
-        return h(
-          'p',
-          null,
-          tags?.map((tag) => {
-            return h(
-              NTag,
-              {
-                type: 'info',
-                style: { 'margin-right': '8px', cursor: 'pointor', 'margin-top': '8px' }
-              },
-              tag
-            )
-          })
-        )
-      }
-    },
+    { title: '字幕', align: 'center', key: 'text', minWidth: 200 },
     {
       title: '原图',
       align: 'center',
       key: 'ori_img',
-      minWidth: 150,
+      minWidth: imgSize,
       render(row) {
-        return h(NImage, { src: row?.ori_img || '', width: 120, class: 'ori_img' }, null)
+        return h(NImage, { src: row?.ori_img || '', width: imgSize, class: 'ori_img' }, null)
       }
     },
     {
       title: '二创图',
       align: 'center',
       key: 'new_img',
-      minWidth: 150,
+      minWidth: imgSize,
       render(row) {
-        return h(NImage, { src: row?.new_img || '', width: 150, class: 'new_img' }, null)
+        return h(
+          NImage,
+          {
+            src: row?.new_img || '',
+            width: imgSize,
+            style: `display: ${row?.new_img ? 'block' : 'none'}`,
+            height: row?.height,
+            class: 'new_img'
+          },
+          null
+        )
       }
     },
-    { title: '画面过渡', align: 'center', key: 'trans', minWidth: 120 },
     {
       title: '操作',
       align: 'center',
       key: 'actions',
       minWidth: 120,
       render(row) {
-        return h('p', { style: 'display: flex;flex-direction: column' }, [
+        return h('p', { style: 'display: flex;flex-direction: column', 'align-items': 'center' }, [
           h(
             NButton,
             {
               strong: true,
               tertiary: true,
-              type: 'info',
               size: 'small',
-              style: { 'margin-bottom': '8px', width: '80px' },
+              type: 'info',
+              style: { width: '80px', margin: '0 auto' },
               onClick: () => {}
             },
-            '反推'
+            '重绘'
           ),
           h(
             NButton,
@@ -78,10 +65,10 @@ const createColumns = ({}) => {
               tertiary: true,
               size: 'small',
               type: 'info',
-              style: { width: '80px' },
+              style: { width: '80px', margin: '8px auto 0px' },
               onClick: () => {}
             },
-            '重绘'
+            '设置'
           )
         ])
       }
@@ -90,62 +77,89 @@ const createColumns = ({}) => {
 }
 
 const tableData = ref([])
+const currentRef = ref(false)
+const oriSize = ref([0, 0])
+const newImgSize = ref([0, 0])
+const durations = ref([])
+const taskInProgress = ref([])
+const taskList = Promise.resolve()
 
-const currentRef = ref(1)
-const next = (data) => {
-  if (currentRef.value === null) currentRef.value = 1
-  else if (currentRef.value >= 6) currentRef.value = null
-  else currentRef.value++
+// 接受帧图片尺寸
+window.ipcRenderer.receive('get-frame-size', (frameSize) => {
+  oriSize.value = [frameSize.width || 0, frameSize.height || 0]
+  const ratio = oriSize.value[1] ? oriSize.value[0] / oriSize.value[1] : 1
+  newImgSize.value = [config.HDImageWidth, config.HDImageWidth / ratio]
+})
 
-  console.log('wswTest: 分析视频步骤传入的数据是', data)
-  // 将要进行到第三部分: 反推tag
-  if (currentRef.value === 2 && data?.length > 0) {
-    // 开始loading效果
-    // loadingBar.start()
-    // 图片反推完成，给到结果
-    window.ipcRenderer.send('image-tagger', data)
-    window.ipcRenderer.receive('image-tagger-complete', (imageTaggers) => {
-      tableData.value = tableData.value.map((row, index) => {
-        return {
-          ...row,
-          tags: imageTaggers[index] || []
-        }
-      })
-      // 结束loading效果(最少500ms)
-      // loadingBar.finish()
-      // next(result)
-    })
+// 更新表单数据 - 每切割出一个镜头，就新增一条更新任务
+window.ipcRenderer.receive('update-video-frame', (data) => {
+  currentRef.value = true
+  const { totalData = [], totalTimes } = data || {}
+  durations.value = totalTimes
+  // 获取视频尺寸，仅在第一次获取
+  if (!oriSize?.value?.[0]) {
+    if (totalData?.[0]) {
+      console.log('wswTest: getImageSize ===>', totalData[0])
+      const _img = new Image()
+      _img.src = totalData[0]
+      _img.onload = () => {
+        oriSize.value = [_img.width, _img.height]
+      }
+    }
   }
-}
-const videoSplit = (imgs) => {
-  if (imgs?.length) {
-    tableData.value = imgs.map((img, index) => {
-      return {
+
+  totalData.reduce((sum, item, index) => {
+    return sum.then(() => {
+      if (taskInProgress.value.includes(item)) {
+        return Promise.resolve()
+      }
+      tableData.value.push({
         index: index + 1,
         text: '',
-        tags: [],
-        ori_img: img,
-        trans: ''
-      }
+        ori_img: item,
+        height: (oriSize.value[1] / oriSize.value[0]) * imgSize
+      })
+      taskInProgress.value.push(item)
+      window.ipcRenderer.send('image-to-image', {
+        init_images: item,
+        size: { width: newImgSize.value[0], height: newImgSize.value[1] },
+        index
+      })
+      return Promise.resolve()
     })
+  }, taskList)
+})
+
+// 接受图生图结果
+window.ipcRenderer.receive('image-to-image-complete', (rawData) => {
+  // 处理后返回的图片
+  const { index, newImg, videoFramesPath } = rawData || {}
+
+  if (!newImg) {
+    return null
   }
-  next(imgs)
-}
+  tableData.value = tableData.value.map((row, i) => {
+    if (index !== i) return row
+    return {
+      ...row,
+      new_img: newImg,
+      // new_img: `data:image/jpeg;base64,${newImg}`,
+      height: (oriSize.value[1] / oriSize.value[0]) * imgSize
+    }
+  })
+})
+
+// 接受视频合并结束
+window.ipcRenderer.receive('concat-video-complete', (result) => {
+  if (result) {
+    window.openPath(result.save_path)
+  }
+})
 </script>
 
 <template>
-  <div class="actionbar">
-    <n-steps :current="currentRef" :status="process">
-      <n-step title="载入视频" />
-      <n-step title="分析视频" />
-      <n-step title="反推Tag" />
-      <n-step title="绘图" />
-      <n-step title="高清重绘" />
-      <n-step title="导出视频" />
-    </n-steps>
-  </div>
-  <SelectVideo v-if="currentRef === 1" :next="videoSplit" />
-  <div v-if="currentRef !== 1" class="details">
+  <SelectVideo v-if="!currentRef" />
+  <div v-if="currentRef" class="details">
     <n-data-table
       style="margin-top: 50px"
       :columns="createColumns({})"
@@ -165,5 +179,7 @@ const videoSplit = (imgs) => {
 .ori_img,
 .new_img {
   width: 120px;
+  height: auto;
+  text-align: center;
 }
 </style>

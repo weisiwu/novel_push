@@ -1,4 +1,5 @@
 <script lang="ts">
+// import { shell } from 'electron'
 import { h, ref, defineComponent } from 'vue'
 import { NIcon, NEllipsis, NButton, NTag, NImage } from 'naive-ui'
 import {
@@ -38,93 +39,6 @@ const menuOptions = [
   }
 ]
 
-const createColumns = ({}) => {
-  return [
-    { title: '镜头', align: 'center', key: 'index' },
-    { title: '文稿', align: 'center', key: 'text' },
-    {
-      title: '描述词',
-      align: 'center',
-      key: 'tags',
-      render(row) {
-        const { tags } = row || {}
-
-        return h(
-          'p',
-          null,
-          tags?.map((tag) => {
-            return h(
-              NTag,
-              { type: 'info', style: { 'margin-right': '8px', cursor: 'pointor' } },
-              tag
-            )
-          })
-        )
-      }
-    },
-    {
-      title: '原图',
-      align: 'center',
-      key: 'ori_img',
-      render(row) {
-        return h(NImage, { src: row?.ori_img || '', width: 120, class: 'ori_img' }, null)
-      }
-    },
-    {
-      title: '二创图',
-      align: 'center',
-      key: 'new_img',
-      render(row) {
-        return h(NImage, { src: row?.new_img || '', width: 120, class: 'new_img' }, null)
-      }
-    },
-    { title: '画面过渡', align: 'center', key: 'trans' },
-    {
-      title: '操作',
-      align: 'center',
-      key: 'actions',
-      render(row) {
-        return h(
-          NButton,
-          {
-            strong: true,
-            tertiary: true,
-            size: 'small',
-            onClick: () => {}
-          },
-          [
-            h(
-              NButton,
-              {
-                strong: true,
-                tertiary: true,
-                size: 'small',
-                type: 'info',
-                style: { 'margin-right': '8px' },
-                onClick: () => {}
-              },
-              '重绘'
-            ),
-            h(
-              NButton,
-              {
-                strong: true,
-                tertiary: true,
-                type: 'info',
-                size: 'small',
-                onClick: () => {}
-              },
-              '反推'
-            )
-          ]
-        )
-      }
-    }
-  ]
-}
-
-const tableData = ref([])
-
 export default defineComponent({
   components: {
     FromVideo,
@@ -145,20 +59,6 @@ export default defineComponent({
       else if (currentRef.value === null) currentRef.value = 4
       else currentRef.value--
     }
-    const videoSplit = (imgs) => {
-      if (imgs?.length) {
-        tableData.value = imgs.map((img, index) => {
-          return {
-            index: index + 1,
-            text: '',
-            tags: [],
-            ori_img: img,
-            trans: ''
-          }
-        })
-      }
-      next()
-    }
 
     return {
       collapsed: ref(false),
@@ -166,7 +66,6 @@ export default defineComponent({
       current: currentRef,
       next,
       prev,
-      videoSplit,
       menuOptions,
       selectMenu,
       renderMenuLabel(option) {
@@ -176,11 +75,9 @@ export default defineComponent({
         return h(NIcon, null, { default: () => h(CaretDownOutline) })
       },
       jumpUpdate() {
-        console.log('wswTest: ', '后续跳转')
+        window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
       },
       NotificationsOutline,
-      tableData,
-      columns: createColumns({}),
       pagination: false
     }
   }
@@ -203,9 +100,9 @@ export default defineComponent({
           @collapse="collapsed = true"
           @expand="collapsed = false"
         >
-          <div class="sidebar_title">
-            <img src="./assets/electron.svg" />
-            <p v-if="!collapsed">AI推文</p>
+          <div v-if="!collapsed" class="sidebar_title">
+            <img src="./assets/ai_logo.svg" />
+            <p>AI推文</p>
           </div>
           <n-menu
             v-model:value="selectMenu"
@@ -256,8 +153,11 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   img {
-    width: 40px;
-    height: 40px;
+    position: absolute;
+    left: 13px;
+    top: 8px;
+    width: 110px;
+    height: 110px;
   }
   p {
     color: #fff;

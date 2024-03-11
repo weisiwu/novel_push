@@ -1,15 +1,23 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import fs from 'fs'
+import asar from 'asar'
 import { join } from 'path'
-import { Readable } from 'stream'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import macIcon from '../../resources/icon.png?asset'
-import DetectVideoShot from '../renderer/public/sdk/DetectVideoShot'
-import TaggingImage from '../renderer/public/sdk/TaggingImage'
+import { DetectVideoShotByParts } from '../renderer/public/sdk/DetectVideoShot'
+import ImageToImage from '../renderer/public/sdk/ImageToImage'
+import AmplifyImage, { AmplifyBatchImageByAliyun } from '../renderer/public/sdk/AmplifyImage'
+import ConcatVideo from '../renderer/public/sdk/ConcatVideo'
 
 let startWindow = null
 let mainWindow = null
+const resourcesPath = join(__dirname, 'resources')
+const asarPath = join(__dirname, 'app.asar')
+
+// 打包资源文件到 app.asar
+asar.createPackage(resourcesPath, asarPath, () => {
+  console.log('Resources packed into app.asar')
+})
 
 function createWindow() {
   startWindow = new BrowserWindow({
@@ -79,18 +87,34 @@ app.whenReady().then(() => {
 
   ipcMain.on('cut-video', async (event, filePath) => {
     if (mainWindow) {
-      const fileStream = Readable.from(fs.readFileSync(filePath))
-      DetectVideoShot.main({
-        videoUrlObject: fileStream,
+      DetectVideoShotByParts({
         filePath,
         event
       })
     }
   })
 
-  ipcMain.on('image-tagger', async (event, imgs) => {
+  ipcMain.on('image-to-image', async (event, params) => {
     if (mainWindow) {
-      TaggingImage({ event, imgs })
+      ImageToImage({ event, params })
+    }
+  })
+
+  ipcMain.on('amplify-image', async (event, imgs) => {
+    if (mainWindow) {
+      AmplifyImage({ event, imgs })
+    }
+  })
+
+  ipcMain.on('amplify-batch-image', async (event, imgs) => {
+    if (mainWindow) {
+      AmplifyBatchImageByAliyun({ event, imgs })
+    }
+  })
+
+  ipcMain.on('concat-video', async (event, params) => {
+    if (mainWindow) {
+      ConcatVideo({ event, params })
     }
   })
 
