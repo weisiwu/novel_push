@@ -1,7 +1,8 @@
 <script setup>
-import { h, ref, defineComponent } from 'vue'
-import { NIcon, NEllipsis, NButton, NTag, NImage } from 'naive-ui'
+import { h, ref } from 'vue'
+import { NIcon, NEllipsis } from 'naive-ui'
 import {
+  BugOutline,
   RocketOutline,
   NotificationsOutline,
   SettingsOutline,
@@ -10,8 +11,14 @@ import {
 } from '@vicons/ionicons5'
 import FromVideo from './components/FromVideo.vue'
 import Tools from './components/Tools.vue'
+import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
 
+const pageNames = {
+  from_video: 'from_video',
+  tools: 'tools',
+  feedback: 'feedback'
+}
 function renderIcon(icon) {
   return () => h(NIcon, { class: 'sidebar_icon' }, { default: () => h(icon) })
 }
@@ -21,32 +28,40 @@ function renderLabel(text) {
 const renderMenuLabel = (option) => {
   return option.label
 }
+const expandIcon = () => {
+  return h(NIcon, null, { default: () => h(CaretDownOutline) })
+}
 const menuOptions = [
   {
     label: renderLabel('二次创作'),
-    key: 'from_video',
+    key: pageNames.from_video,
     icon: renderIcon(RocketOutline)
   },
   {
     label: renderLabel('工具箱'),
-    key: 'tools',
+    key: pageNames.tools,
     icon: renderIcon(MedkitOutline)
   },
   {
-    label: renderLabel('系统设置'),
-    key: 'system_config',
-    icon: renderIcon(SettingsOutline)
+    label: renderLabel('我有建议'),
+    key: pageNames.feedback,
+    icon: renderIcon(BugOutline)
   }
 ]
 
 const collapsed = ref(false)
+const showSystemConfig = ref(false)
 const selectMenu = ref('from_video')
 
-const expandIcon = () => {
-  return h(NIcon, null, { default: () => h(CaretDownOutline) })
-}
 const jumpUpdate = () => {
   window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
+}
+const toggleConfig = (newStatus) => {
+  if (newStatus !== undefined) {
+    showSystemConfig.value = newStatus
+    return
+  }
+  showSystemConfig.value = !showSystemConfig.value
 }
 </script>
 
@@ -83,7 +98,7 @@ const jumpUpdate = () => {
         <n-layout class="content">
           <div class="statusbar">
             <div class="blank"></div>
-            <div class="config topbar_icon" @click="jumpUpdate">
+            <div class="config topbar_icon" @click="toggleConfig">
               <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
               <n-gradient-text
                 style="font-size: 16px; cursor: pointer; font-weight: bold"
@@ -102,9 +117,10 @@ const jumpUpdate = () => {
               </n-gradient-text>
             </div>
           </div>
-          <FromVideo v-if="selectMenu === 'from_video'" />
-          <Tools v-if="selectMenu === 'tools'" />
-          <SystemConfig v-if="selectMenu === 'system_config'" />
+          <FromVideo v-if="selectMenu === pageNames.from_video" />
+          <Tools v-if="selectMenu === pageNames.tools" />
+          <Feedback v-if="selectMenu === pageNames.feedback" />
+          <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
           <div style="margin-bottom: 200px"></div>
         </n-layout>
       </n-layout>
