@@ -60,7 +60,6 @@ export default function DetectVideoShot({
 
             totalData.push(imgName)
             totalTimes.push(duration)
-            console.log('wswTest: update-video-frame imagName', imgName)
             event.sender.send('update-video-frame', { totalData, totalTimes })
           })
           resolve()
