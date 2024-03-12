@@ -78,7 +78,7 @@ function initProcess() {
   try {
     console.log('============ initProcess start ============')
     if (!existsSync(outputPath)) {
-      mkdirSync(outputPath)
+      mkdirSync(outputPath, { recursive: true })
     } else {
       rimraf(join(outputPath, '/*'))
     }
