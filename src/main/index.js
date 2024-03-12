@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import asar from 'asar'
 import { join } from 'path'
-import { existsSync, mkdir, mkdirSync } from 'fs'
+import { existsSync, mkdirSync } from 'fs'
 import rimraf from 'rimraf'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -80,7 +80,7 @@ function initProcess() {
     if (!existsSync(outputPath)) {
       mkdirSync(outputPath, { recursive: true })
     } else {
-      rimraf(join(outputPath, '/*'))
+      rimraf.rimraf(join(outputPath, '/*'))
     }
     mkdirSync(videoFramesOutputPath, { recursive: true })
     mkdirSync(videoPartsOutputPath, { recursive: true })

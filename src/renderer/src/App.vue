@@ -1,12 +1,11 @@
-<script lang="ts">
-// import { shell } from 'electron'
+<script setup>
 import { h, ref, defineComponent } from 'vue'
 import { NIcon, NEllipsis, NButton, NTag, NImage } from 'naive-ui'
 import {
   RocketOutline,
   NotificationsOutline,
-  MedkitOutline,
   SettingsOutline,
+  MedkitOutline,
   CaretDownOutline
 } from '@vicons/ionicons5'
 import FromVideo from './components/FromVideo.vue'
@@ -16,11 +15,12 @@ import SystemConfig from './components/SystemConfig.vue'
 function renderIcon(icon) {
   return () => h(NIcon, { class: 'sidebar_icon' }, { default: () => h(icon) })
 }
-
 function renderLabel(text) {
   return h(NEllipsis, { class: 'sidebar_text' }, text)
 }
-
+const renderMenuLabel = (option) => {
+  return option.label
+}
 const menuOptions = [
   {
     label: renderLabel('二次创作'),
@@ -39,49 +39,15 @@ const menuOptions = [
   }
 ]
 
-export default defineComponent({
-  components: {
-    FromVideo,
-    Tools,
-    SystemConfig,
-    NotificationsOutline
-  },
-  setup() {
-    const selectMenu = ref('from_video')
-    const currentRef = ref(1)
-    const next = () => {
-      if (currentRef.value === null) currentRef.value = 1
-      else if (currentRef.value >= 6) currentRef.value = null
-      else currentRef.value++
-    }
-    const prev = () => {
-      if (currentRef.value === 0) currentRef.value = null
-      else if (currentRef.value === null) currentRef.value = 4
-      else currentRef.value--
-    }
+const collapsed = ref(false)
+const selectMenu = ref('from_video')
 
-    return {
-      collapsed: ref(false),
-      currentStatus: ref('process'),
-      current: currentRef,
-      next,
-      prev,
-      menuOptions,
-      selectMenu,
-      renderMenuLabel(option) {
-        return option.label
-      },
-      expandIcon() {
-        return h(NIcon, null, { default: () => h(CaretDownOutline) })
-      },
-      jumpUpdate() {
-        window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
-      },
-      NotificationsOutline,
-      pagination: false
-    }
-  }
-})
+const expandIcon = () => {
+  return h(NIcon, null, { default: () => h(CaretDownOutline) })
+}
+const jumpUpdate = () => {
+  window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
+}
 </script>
 
 <template>
@@ -117,7 +83,16 @@ export default defineComponent({
         <n-layout class="content">
           <div class="statusbar">
             <div class="blank"></div>
-            <div class="update" @click="jumpUpdate">
+            <div class="config topbar_icon" @click="jumpUpdate">
+              <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
+              <n-gradient-text
+                style="font-size: 16px; cursor: pointer; font-weight: bold"
+                type="info"
+              >
+                软件设置
+              </n-gradient-text>
+            </div>
+            <div class="update topbar_icon" @click="jumpUpdate">
               <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
               <n-gradient-text
                 style="font-size: 16px; cursor: pointer; font-weight: bold"
@@ -196,7 +171,7 @@ export default defineComponent({
   .blank {
     flex-grow: 1;
   }
-  .update {
+  .topbar_icon {
     display: flex;
     flex-grow: 0;
     flex-direction: row;
