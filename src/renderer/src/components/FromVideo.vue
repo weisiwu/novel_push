@@ -1,8 +1,8 @@
 <script setup>
 import { h, ref } from 'vue'
-import { NButton, NTag, NImage, useLoadingBar } from 'naive-ui'
+import { NButton, NImage, useLoadingBar } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
-import config from '../../public/sdk/BaoganAiConfig.json'
+import config from '../../src/BaoganAiConfig.json'
 
 const imgSize = 250
 const loadingBar = useLoadingBar()

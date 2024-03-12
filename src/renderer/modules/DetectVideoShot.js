@@ -7,7 +7,7 @@ import {
   videoFramesOutputPath,
   sceneDetectBin as binPath,
   cutPartsBin
-} from '../../src/config.js'
+} from '../src/config.js'
 
 const appPath = process.resourcesPath
 let sendFrameSize = false

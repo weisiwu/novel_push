@@ -3,9 +3,9 @@
  * 都是在进行时中才能获取的变量
  */
 import { join } from 'path'
-import sceneDetectBin from '../../../resources/sdk/py_sencedetect/scenedetect.exe?asset&asarUnpack'
-import cutPartsBin from '../../../../resources/sdk/auto_clip_video/auto_clip_video.exe?asset&asarUnpack'
-import concatVideoPath from '../../../resources/sdk/concat_video/concat_video.exe?asset&asarUnpack'
+import sceneDetectBin from '../../../resources/sdk/py_sencedetect/bin/scenedetect.exe?asset&asarUnpack'
+import cutPartsBin from '../../../resources/sdk/auto_clip_video/bin/auto_clip_video.exe?asset&asarUnpack'
+import concatVideoPath from '../../../resources/sdk/concat_video/bin/concat_video.exe?asset&asarUnpack'
 
 // 所有路径，统一在初始化的时候进行测试和创建
 const appPath = process.resourcesPath
