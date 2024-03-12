@@ -80,7 +80,7 @@ function initProcess() {
     if (!existsSync(outputPath)) {
       mkdirSync(outputPath, { recursive: true })
     } else {
-      rimraf.rimraf(join(outputPath, '/*'))
+      rimraf.rimraf(join(outputPath, '/'))
     }
     mkdirSync(videoFramesOutputPath, { recursive: true })
     mkdirSync(videoPartsOutputPath, { recursive: true })
@@ -108,42 +108,38 @@ app.whenReady().then(() => {
     }
   })
 
-  // 视频分段
-  ipcMain.on('cut-video', async (event, filePath) => {
-    if (mainWindow) {
-      DetectVideoShotByParts({
-        filePath,
-        event
-      })
+  /**
+   * 启动处理进程，渲染告诉主进程，本地视频位置，主进程处理
+   */
+  ipcMain.on('start-process', async (event, filePath) => {
+    if (!mainWindow) {
+      return
     }
+    DetectVideoShotByParts({
+      filePath,
+      event
+    })
   })
 
-  // 图生图
-  ipcMain.on('image-to-image', async (event, params) => {
-    if (mainWindow) {
-      ImageToImage({ event, params })
+  /**
+   * 返回处理进度（每个关键帧都是新进度）
+   * 主进程的每个处理子任务完成，都会通知渲染进程更新页面
+   */
+  ipcMain.on('update-process', async (event, params) => {
+    if (!mainWindow) {
+      return
     }
+    // ImageToImage({ event, params })
   })
 
-  // 放大图片
-  ipcMain.on('amplify-image', async (event, imgs) => {
-    if (mainWindow) {
-      AmplifyImage({ event, imgs })
+  /**
+   * 结束处理进程，主进程任务完全结束，通知渲染进程
+   */
+  ipcMain.on('finish-process', async (event, params) => {
+    if (!mainWindow) {
+      return
     }
-  })
-
-  // 批量放大图片
-  ipcMain.on('amplify-batch-image', async (event, imgs) => {
-    if (mainWindow) {
-      AmplifyBatchImageByAliyun({ event, imgs })
-    }
-  })
-
-  // 合并视频
-  ipcMain.on('concat-video', async (event, params) => {
-    if (mainWindow) {
-      ConcatVideo({ event, params })
-    }
+    // ConcatVideo({ event, params })
   })
 
   createWindow()

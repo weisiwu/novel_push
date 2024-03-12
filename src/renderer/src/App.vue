@@ -10,12 +10,14 @@ import {
   CaretDownOutline
 } from '@vicons/ionicons5'
 import FromVideo from './components/FromVideo.vue'
+import FromText from './components/FromText.vue'
 import Tools from './components/Tools.vue'
 import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
 
 const pageNames = {
   from_video: 'from_video',
+  from_text: 'from_text',
   tools: 'tools',
   feedback: 'feedback'
 }
@@ -35,6 +37,11 @@ const menuOptions = [
   {
     label: renderLabel('二次创作'),
     key: pageNames.from_video,
+    icon: renderIcon(RocketOutline)
+  },
+  {
+    label: renderLabel('文生视频'),
+    key: pageNames.from_text,
     icon: renderIcon(RocketOutline)
   },
   {
@@ -82,8 +89,7 @@ const toggleConfig = (newStatus) => {
           @expand="collapsed = false"
         >
           <div v-if="!collapsed" class="sidebar_title">
-            <img src="./assets/ai_logo.svg" />
-            <p>AI推文</p>
+            <img src="../../../resources/logos/logo_16.svg" />
           </div>
           <n-menu
             v-model:value="selectMenu"
@@ -118,6 +124,7 @@ const toggleConfig = (newStatus) => {
             </div>
           </div>
           <FromVideo v-if="selectMenu === pageNames.from_video" />
+          <FromText v-if="selectMenu === pageNames.from_text" />
           <Tools v-if="selectMenu === pageNames.tools" />
           <Feedback v-if="selectMenu === pageNames.feedback" />
           <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
@@ -145,8 +152,8 @@ const toggleConfig = (newStatus) => {
   justify-content: center;
   img {
     position: absolute;
-    left: 13px;
-    top: 8px;
+    left: 61px;
+    top: 45px;
     width: 110px;
     height: 110px;
   }
