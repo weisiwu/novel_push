@@ -1,15 +1,23 @@
 import os
 import cv2
 import GPUtil
+import shutil
 from pathlib import *
+from tqdm import tqdm
 from types import SimpleNamespace
 
 # from auto_clip_video import auto_clip_video
-
 # from scenedetect.scene_detector import SceneDetector
 
 # https://www.scenedetect.com/download/
 # py_sencedetect
+
+"""
+考虑的优化点
+1、处理视频前，先将视频压缩，再处理
+2、支持多种视频类型
+3、第一屏只取正常时长的一半
+"""
 
 log_type = SimpleNamespace(
     system_check="_system_check",
@@ -27,11 +35,10 @@ class ClientConfig:
     客户端配置，接受用户的输入
     """
 
-    def __init__(self, input_path="", batch_size=100, output_dir=""):
+    def __init__(self, input_path="", segment_time=10, output_dir=""):
         self.input_path = input_path  # 待处理视频
-        self.batch_size = (
-            batch_size  # 视频分段大小，单位帧，切割生成的小视频，每段有100帧画面
-        )
+        # 视频分段长度，单位秒
+        self.segment_time = segment_time
         self.output_dir = output_dir  # 输出目录
 
 
@@ -54,6 +61,9 @@ class VideoInfo:
         self.height = height
         self.frame_rate = frame_rate
         self.size = (width, height)
+        self.codec = cv2.VideoWriter_fourcc(*"XVID")
+        self.total_frames = 0  # 视频总帧数
+        self.split_frames = 0  # 切割出来的每段视频，有多少帧
 
 
 class CacheConfig:
@@ -76,7 +86,7 @@ class VideoProcess:
         self.sd_config = SDConfig()  # sd配置
         # 客户端配置,比如输出位置和输入位置
         self.client_config = ClientConfig(
-            input_path=self.basedir / "demo.mp4",
+            input_path=self.basedir / "demo4.mp4",
             output_dir=self.basedir / "output" / "output.mp4",
         )
         self.cache_config = CacheConfig()
@@ -84,9 +94,9 @@ class VideoProcess:
         self.video_info = VideoInfo()
         # 视频片段的起始帧[[0,99]]表示第一个分段是从第一帧到第100帧，列表中均为已处理
         self.video_segments = []
-        # 当前帧序号(未处理)
-        self.current_frame_index = 0
-        self.videowrite = None  #
+        self.current_frame_index = 0  # 当前帧序号(未处理)
+        self.current_segment_index = 0  # 当前视频片段序号
+        self.videowrite = None  # 当前写视频句柄引用
         self.check_system()
 
     # 程序进度，True: 完成  False: 未执行或执行中
@@ -136,13 +146,21 @@ class VideoProcess:
         else:
             firstGPU = GPUs[0]
             self.gpuInfo = {
-                "name": firstGPU["name"],  # 显卡名称
-                "memoryTotal": firstGPU["memoryTotal"],  # 总内存
-                "driver": firstGPU["driver"],  # 驱动名称
-                "load": firstGPU["load"],  # GPU负载率
-                "memoryUtil": firstGPU["memoryUtil"],  # 显存使用率
+                "name": firstGPU.name,  # 显卡名称
+                "memoryTotal": firstGPU.memoryTotal,  # 总内存
+                "driver": firstGPU.driver,  # 驱动名称
+                "load": firstGPU.load,  # GPU负载率
+                "memoryUtil": firstGPU.memoryUtil,  # 显存使用率
             }
             VideoProcess.log(self.gpuInfo, log_type.system_check)
+
+        # 清空并创建后续需要用到的目录
+        if os.path.exists(self.cache_config.video_frames_cahce_path):
+            shutil.rmtree(self.cache_config.video_frames_cahce_path)
+        if os.path.exists(self.cache_config.video_parts_cahce_path):
+            shutil.rmtree(self.cache_config.video_parts_cahce_path)
+        os.makedirs(self.cache_config.video_frames_cahce_path, exist_ok=True)
+        os.makedirs(self.cache_config.video_parts_cahce_path, exist_ok=True)
 
         VideoProcess.log()
         self.read_config()
@@ -164,10 +182,7 @@ class VideoProcess:
         自动分割视频
         """
         VideoProcess.log(type=log_type.cut_video)
-        input_path = self.client_config.input_path
-        output_dir = self.client_config.output_dir
-        batch_size = self.client_config.batch_size
-        self.cap = cv2.VideoCapture(input_path.as_posix())
+        self.cap = cv2.VideoCapture(self.client_config.input_path.as_posix())
 
         if not self.cap:
             VideoProcess.error("video empty", log_type.cut_video)
@@ -181,32 +196,74 @@ class VideoProcess:
         if not self.video_info.frame_rate:
             self.video_info.frame_rate = self.cap.get(cv2.CAP_PROP_FPS)  # 获取视频帧率
         if not self.video_info.width:
-            self.video_info.width = int(
-                self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-            )  # 获取视频宽度
+            # 获取视频宽度
+            self.video_info.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         if not self.video_info.height:
-            self.video_info.height = int(
-                self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            )  # 获取视频高度
+            # 获取视频高度
+            self.video_info.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.video_info.size = (self.video_info.width, self.video_info.height)
+        if not self.video_info.total_frames:
+            self.video_info.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if not self.video_info.split_frames:
+            # 计算切割点
+            self.video_info.split_frames = int(
+                self.video_info.frame_rate * self.client_config.segment_time
+            )
 
-        VideoProcess.log(
-            f"\n width:{self.video_info.width} \n heihgt:{self.video_info.height} \n frame_rate:{self.video_info.frame_rate}",
-            log_type.cut_video,
-        )
+        while self.current_frame_index < self.video_info.total_frames:
+            VideoProcess.log(
+                msg=f"Creating {self.current_segment_index}.mp4",
+                type=log_type.cut_video,
+            )
+            self.videowrite = cv2.VideoWriter(
+                str(
+                    self.cache_config.video_parts_cahce_path
+                    / f"{self.current_segment_index}.mp4"
+                ),
+                self.video_info.codec,
+                self.video_info.frame_rate,
+                self.video_info.size,
+            )
 
-        self.video_segments.append([])
+            for i in tqdm(range(self.video_info.split_frames)):
+                success, frame = self.cap.read()
+                if not success:
+                    VideoProcess.log(
+                        msg="Failed to read frame, clip completed",
+                        type=log_type.cut_video,
+                    )
+                    break
+                self.videowrite.write(frame)
 
-        # while True:
+            self.videowrite.release()
+            self.current_segment_index += 1
+            self.current_frame_index += self.video_info.split_frames
 
-    # 对分段视频抽取关键帧
+        VideoProcess.log(type=log_type.cut_video)
 
-    # 去除关键帧水印
-    # https://github.com/YaoFANGUK/video-subtitle-remover
+    def extract_picture(self):
+        """
+        对分段视频抽取关键帧
+        """
+        pass
 
-    # 同步消息到外部
+    def rm_watermark(self):
+        """
+        去除关键帧水印
+        https://github.com/YaoFANGUK/video-subtitle-remover
+        """
+        pass
 
-    # 将关键帧合成视频
+    def transfer_msg(self):
+        """
+        同步消息到外部
+        """
+        pass
+
     def concat_imgs_to_video(self):
+        """
+        将关键帧合成视频
+        """
         VideoProcess.log(log_type.merge_video)
         self.videowrite = cv2.VideoWriter(
             self.client_config.output_dir,

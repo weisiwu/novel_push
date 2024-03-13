@@ -12,3 +12,6 @@ _internal/*
 package-lock.json
 py_sencedetect
 demo.mp4
+demo*.mp4
+video_frames_cahce
+video_parts_cahce
