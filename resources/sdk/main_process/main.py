@@ -8,9 +8,7 @@ import threading
 from pathlib import *
 from tqdm import tqdm
 from types import SimpleNamespace
-
-# from auto_clip_video import auto_clip_video
-# from scenedetect.scene_detector import SceneDetector
+from scenedetect import SceneManager, open_video, ContentDetector
 
 # https://www.scenedetect.com/download/
 # py_sencedetect
@@ -38,11 +36,19 @@ class ClientConfig:
     客户端配置，接受用户的输入
     """
 
-    def __init__(self, input_path="", segment_time=10, output_dir=""):
+    def __init__(
+        self,
+        input_path="",
+        segment_time=10,
+        output_dir="",
+        extrac_picture_threshold=0.35,
+    ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
         self.segment_time = segment_time
         self.output_dir = output_dir  # 输出目录
+        # 抽取关键帧决断值
+        self.extrac_picture_threshold = extrac_picture_threshold
 
 
 class SDConfig:
@@ -82,6 +88,16 @@ class CacheConfig:
         pass
 
 
+class Task:
+    """
+    任务
+    """
+
+    def __init__(self, task_type, args):
+        self.task_type = task_type
+        self.args = args
+
+
 class VideoProcess:
     def __init__(self):
         self.basedir = Path(__file__).parent
@@ -91,6 +107,7 @@ class VideoProcess:
         self.client_config = ClientConfig(
             input_path=self.basedir / "demo4.mp4",
             output_dir=self.basedir / "output" / "output.mp4",
+            extrac_picture_threshold=0.35,
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -100,6 +117,35 @@ class VideoProcess:
         self.current_frame_index = 0  # 当前帧序号(未处理)
         self.current_segment_index = 0  # 当前视频片段序号
         self.videowrite = None  # 当前写视频句柄引用
+        self.process_start = False  # 进程是否启动
+
+        """
+        任务队列相关
+        视频处理过程中，会存在四个任务队列
+        # 1. clip_video_queue: 视频切割队列
+        2. extract_picture_queue: 抽取关键帧队列
+        3. rm_watermark_queue: 去除水印队列
+        4. merge_video_queue: 合并视频队列
+        依次往下，上级队列都是下级队列任务的来源
+        比如抽取关键帧队列，每处理完一幅图，就会向去除水印队列添加任务
+        去除水印队列，每完成10张图，就会向合并视频队列添加任务
+        当以上四个队列任务均为空时，视频处理完毕
+        任务队列的源头是视频切分
+        """
+        self.scan_interval = 10  # 每N秒扫描一次，任务是否完成
+        self.clip_video_queue = queue.Queue()
+        self.extract_picture_queue = queue.Queue()
+        self.rm_watermark_queue = queue.Queue()
+        self.merge_video_queue = queue.Queue()
+        self.threads = []
+        # 任务关系，key表示前置任务，value为后续任务
+        self.task_relations = {
+            "clip_video_queue": "extract_picture_queue",
+            "extract_picture_queue": "rm_watermark_queue",
+            "rm_watermark_queue": "merge_video_queue",
+            "merge_video_queue": None,
+        }
+        # 开始检查系统
         self.check_system()
 
     # 程序进度，True: 完成  False: 未执行或执行中
@@ -137,6 +183,7 @@ class VideoProcess:
         https://blog.csdn.net/LuohenYJ/article/details/125857613
         """
         VideoProcess.log()
+        self.process_start = True  # 标记启动
         # 获取所有可用GPU列表，id号从0开始
         GPUs = GPUtil.getGPUs()
 
@@ -178,6 +225,7 @@ class VideoProcess:
             return
 
         VideoProcess.log(type=log_type.read_config)
+        self.init_workers()
         self.auto_clip_video()
 
     def auto_clip_video(self):
@@ -218,11 +266,12 @@ class VideoProcess:
                 msg=f"Creating {self.current_segment_index}.mp4",
                 type=log_type.cut_video,
             )
+            segment_file_name = str(
+                self.cache_config.video_parts_cahce_path
+                / f"{self.current_segment_index}.mp4"
+            )
             self.videowrite = cv2.VideoWriter(
-                str(
-                    self.cache_config.video_parts_cahce_path
-                    / f"{self.current_segment_index}.mp4"
-                ),
+                segment_file_name,
                 self.video_info.codec,
                 self.video_info.frame_rate,
                 self.video_info.size,
@@ -241,13 +290,46 @@ class VideoProcess:
             self.videowrite.release()
             self.current_segment_index += 1
             self.current_frame_index += self.video_info.split_frames
+            # 添加抽取关键帧任务
+            self.task_queues.extract_picture_queue.push(
+                Task(
+                    "extract_picture_queue",
+                    {
+                        "input_file": segment_file_name,
+                    },
+                )
+            )
 
         VideoProcess.log(type=log_type.cut_video)
 
-    def extract_picture(self):
+    def extract_picture(self, args):
         """
         对分段视频抽取关键帧
         """
+        input_file = args.input_file
+        video = open_video(input_file)
+        scene_manager = SceneManager()
+        scene_manager.add_detector(
+            ContentDetector(threshold=self.client_config.extrac_picture_threshold)
+        )
+        scene_manager.detect_scenes(video)
+        # `get_scene_list` returns a list of start/end timecode pairs
+        # for each scene that was found.
+        # 明确每小段视频里，有哪些场景
+        scene_list = scene_manager.get_scene_list()
+        # 直接读取场景的中间帧
+        print(scene_list)
+        # 保存并返回
+
+        # self.task_queues.rm_watermark_queue.push(
+        #     Task(
+        #         "rm_watermark_queue",
+        #         {
+        #             # "input_file": segment_file_name,
+        #             # "size": self.video_info.size,
+        #         },
+        #     )
+        # )
         pass
 
     def rm_watermark(self):
@@ -255,6 +337,17 @@ class VideoProcess:
         去除关键帧水印
         https://github.com/YaoFANGUK/video-subtitle-remover
         """
+        # TODO: 每到第N张的时候，调用一次合成视频
+        self.task_queues.merge_video_queue.push(
+            Task(
+                "merge_video_queue",
+                {
+                    # "input_file": segment_file_name,
+                    # "size": self.video_info.size,
+                },
+            )
+        )
+        pass
         pass
 
     def transfer_msg(self):
@@ -289,6 +382,81 @@ class VideoProcess:
         self.videowrite.release()
 
         VideoProcess.log(log_type.merge_video)
+
+    # TODO: 目前任务类和调度类是联合在一起的
+    def task_queues(self):
+        return SimpleNamespace(
+            clip_video_queue=self.clip_video_queue,
+            extract_picture_queue=self.extract_picture_queue,
+            rm_watermark_queue=self.rm_watermark_queue,
+            merge_video_queue=self.merge_video_queue,
+        )
+
+    def process_finish(self):
+        """
+        检查视频处理任务的所有对列是否完成
+        """
+        if self.process_start:
+            return all(_queue.empty() for _queue in self.task_queues.values())
+        return False
+
+    def process_task(self, task, task_type):
+        """
+        任务处理函数，主要做调用分发
+        """
+        if task_type == "extract_picture_queue":
+            self.extract_picture(task)
+            pass
+        elif task_type == "rm_watermark_queue":
+            pass
+        elif task_type == "merge_video_queue":
+            pass
+        pass
+
+    def worker(self, task_type):
+        """
+        任务队列处理
+        task_type: 当前处理的任务类型
+        """
+        while True:
+            task = self.task_queues[task_type].get()
+            if task is None:  # None作为停止信号
+                break
+            self.process_task(task, task_type)  # 处理当前任务，并分发子任务
+            self.task_queues[task_type].task_done()
+
+    def generate_subtasks(self, task_type, count):
+        """
+        子任务生成器
+        """
+        subtasks = []
+        for i in range(count):
+            subtasks.append(Task(task_type, f"{task_type} Subtask {i+1}"))
+        return subtasks
+
+    def init_workers(self):
+        """
+        初始化工作线程，并监听处理结束
+        """
+        for task_type in self.task_relations.items():
+            t = threading.Thread(target=self.worker, args=(task_type))
+            t.start()
+            self.threads.append(t)
+
+        # 监控队列，当所有队列都为空时，结束任务
+        # try:
+        #     while not self.process_finish():
+        #         time.sleep(self.scan_interval)
+        # finally:
+        #     # 发送停止信号给工作线程
+        #     self.task_queues.clip_video_queue.put(None)
+        #     self.task_queues.extract_picture_queue.put(None)
+        #     self.task_queues.rm_watermark_queue.put(None)
+        #     self.task_queues.merge_video_queue.put(None)
+
+        #     # 等待所有线程结束
+        #     for t in self.threads:
+        #         t.join()
 
 
 if __name__ == "__main__":
