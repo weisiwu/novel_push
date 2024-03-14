@@ -8,10 +8,12 @@ import threading
 from pathlib import *
 from tqdm import tqdm
 from types import SimpleNamespace
-from scenedetect import SceneManager, open_video, ContentDetector
-
-# https://www.scenedetect.com/download/
-# py_sencedetect
+from scenedetect import (
+    detect,
+    AdaptiveDetector,
+    ContentDetector,
+    split_video_ffmpeg,
+)
 
 """
 考虑的优化点
@@ -39,11 +41,11 @@ class ClientConfig:
     def __init__(
         self,
         input_path="",
-        # segment_time=10,
-        # TODO: 测试
         segment_time=3,
         output_dir="",
-        extrac_picture_threshold=0.35,
+        # extrac_picture_threshold=0.35,
+        # extrac_picture_threshold=27,
+        extrac_picture_threshold=12,
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
@@ -107,22 +109,40 @@ class ExtractPictureTask(Task):
     对分段视频抽取关键帧任务
     """
 
-    def __init__(self, input_file, threshold):
+    def __init__(
+        self, input_file, threshold, current_frame_index, video_frames_cahce_path
+    ):
         super().__init__("extract_picture_queue")
         self.input_file = input_file
         self.threshold = threshold
+        # self.current_frame_index = current_frame_index
+        self.video_frames_cahce_path = video_frames_cahce_path
 
     def process(self):
-        video = open_video(self.input_file)
-        scene_manager = SceneManager()
-        scene_manager.add_detector(ContentDetector(threshold=self.threshold))
-        scene_manager.detect_scenes(video)
-        # `get_scene_list` returns a list of start/end timecode pairs
-        # for each scene that was found.
         # 明确每小段视频里，有哪些场景
-        scene_list = scene_manager.get_scene_list()
-        # 直接读取场景的中间帧
-        print("视频关键帧抽取任务执行结果====>", scene_list)
+        scene_list = detect(self.input_file, ContentDetector())
+        split_video_ffmpeg(
+            input_video_path=self.input_file,
+            scene_list=scene_list,
+            output_dir=self.video_frames_cahce_path,
+            output_file_template="$VIDEO_NAME$SCENE_NUMBER.mp4",
+        )
+        # self.current_frame_index += self.current_frame_index
+
+        # video = open_video(self.input_file)
+        # scene_manager = SceneManager()
+        # scene_manager.add_detector(ContentDetector(threshold=self.threshold))
+        # scene_manager.detect_scenes(video)
+        # # 明确每小段视频里，有哪些场景
+        # scene_list = scene_manager.get_scene_list()
+        # # 直接读取场景的中间帧
+        # # print("视频关键帧抽取任务执行结果====>", scene_list)
+        # # 将指定id的帧图像抽出保存
+        # for scene in scene_list:
+        #     # scene_start, scene_end = scene[0]
+        #     print("捕获的关键帧==>", scene[0], scene[1])
+        # print("捕获的关键帧起点和终止点==>", getattr(scene[0], "frame"))
+        # print("捕获的关键帧起点和终止点==>", scene[0])
         # 保存并返回
 
         # self.task_queues.rm_watermark_queue.push(
@@ -134,7 +154,6 @@ class ExtractPictureTask(Task):
         #         },
         #     )
         # )
-        pass
 
 
 class VideoProcess:
@@ -144,7 +163,7 @@ class VideoProcess:
         self.sd_config = SDConfig()  # sd配置
         # 客户端配置,比如输出位置和输入位置
         self.client_config = ClientConfig(
-            input_path=self.basedir / "demo.mp4",
+            input_path=self.basedir / "demo1.mp4",
             output_dir=self.basedir / "output" / "output.mp4",
             extrac_picture_threshold=0.35,
         )
@@ -340,7 +359,9 @@ class VideoProcess:
             self.task_queues.extract_picture_queue.put(
                 ExtractPictureTask(
                     input_file=segment_file_name,
+                    current_frame_index=self.current_frame_index,
                     threshold=self.client_config.extrac_picture_threshold,
+                    video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
                 )
             )
 
@@ -433,7 +454,7 @@ class VideoProcess:
             if task is None:  # None作为停止信号
                 break
             self.process_task(task, task_type)  # 处理当前任务，并分发子任务
-            self.task_queues[task_type].task_done()
+            task_queue.task_done()
 
     def init_workers(self):
         """
