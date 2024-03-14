@@ -1,6 +1,5 @@
 import os
 import cv2
-import time
 import queue
 import GPUtil
 import shutil
@@ -43,9 +42,8 @@ class ClientConfig:
         input_path="",
         segment_time=3,
         output_dir="",
-        # extrac_picture_threshold=0.35,
-        # extrac_picture_threshold=27,
-        extrac_picture_threshold=12,
+        extrac_picture_threshold=27,
+        # extrac_picture_threshold=12,
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
@@ -110,50 +108,74 @@ class ExtractPictureTask(Task):
     """
 
     def __init__(
-        self, input_file, threshold, current_frame_index, video_frames_cahce_path
+        self,
+        input_file,
+        threshold,
+        frame_index,
+        video_frames_cahce_path,
+        sub_task_queue,
     ):
         super().__init__("extract_picture_queue")
-        self.input_file = input_file
         self.threshold = threshold
-        # self.current_frame_index = current_frame_index
+        self.input_file = input_file
+        self.current_index = frame_index
+        self.sub_task_queue = sub_task_queue
         self.video_frames_cahce_path = video_frames_cahce_path
+        self.cap = cv2.VideoCapture(input_file)
 
     def process(self):
         # 明确每小段视频里，有哪些场景
-        scene_list = detect(self.input_file, ContentDetector())
-        split_video_ffmpeg(
-            input_video_path=self.input_file,
-            scene_list=scene_list,
-            output_dir=self.video_frames_cahce_path,
-            output_file_template="$VIDEO_NAME$SCENE_NUMBER.mp4",
+        # scene_list = detect(self.input_file, ContentDetector())
+        scene_list = detect(self.input_file, AdaptiveDetector())
+        for i, scene in enumerate(scene_list):
+            start_index = scene[0].get_frames()  # 起始帧
+            end_index = scene[1].get_frames()  # 结束帧
+            key_frame_index = int((start_index + end_index) / 2)  # 关键帧
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, key_frame_index)
+
+            # read方法返回一个布尔值和一个视频帧。若帧读取成功，则返回True
+            success, image = self.cap.read()
+            print(f"正在读取第{self.current_index + key_frame_index}帧")
+            cv2.imwrite(
+                (
+                    self.video_frames_cahce_path
+                    / f"{self.current_index + key_frame_index}.png"
+                ).as_posix(),
+                image,
+            )
+
+        # 添加去水印任务 - 直接替换源图
+        self.sub_task_queue.put(
+            Task(
+                "rm_watermark_queue",
+                {
+                    # "input_file": segment_file_name,
+                    # "size": self.video_info.size,
+                },
+            )
         )
-        # self.current_frame_index += self.current_frame_index
 
-        # video = open_video(self.input_file)
-        # scene_manager = SceneManager()
-        # scene_manager.add_detector(ContentDetector(threshold=self.threshold))
-        # scene_manager.detect_scenes(video)
-        # # 明确每小段视频里，有哪些场景
-        # scene_list = scene_manager.get_scene_list()
-        # # 直接读取场景的中间帧
-        # # print("视频关键帧抽取任务执行结果====>", scene_list)
-        # # 将指定id的帧图像抽出保存
-        # for scene in scene_list:
-        #     # scene_start, scene_end = scene[0]
-        #     print("捕获的关键帧==>", scene[0], scene[1])
-        # print("捕获的关键帧起点和终止点==>", getattr(scene[0], "frame"))
-        # print("捕获的关键帧起点和终止点==>", scene[0])
-        # 保存并返回
 
-        # self.task_queues.rm_watermark_queue.push(
-        #     Task(
-        #         "rm_watermark_queue",
-        #         {
-        #             # "input_file": segment_file_name,
-        #             # "size": self.video_info.size,
-        #         },
-        #     )
-        # )
+class RmWatermarkTask(Task):
+    """
+    对执行图片去除水印、字幕
+    """
+
+    def __init__(
+        self,
+        input_file,
+        video_frames_cahce_path,
+        sub_task_queue,
+    ):
+        super().__init__("rm_watermark_queue")
+        self.input_file = input_file
+        self.sub_task_queue = sub_task_queue
+        self.video_frames_cahce_path = video_frames_cahce_path
+        self.cap = cv2.VideoCapture(input_file)
+
+    def process(self):
+
+        pass
 
 
 class VideoProcess:
@@ -163,7 +185,7 @@ class VideoProcess:
         self.sd_config = SDConfig()  # sd配置
         # 客户端配置,比如输出位置和输入位置
         self.client_config = ClientConfig(
-            input_path=self.basedir / "demo1.mp4",
+            input_path=self.basedir / "demo4.mp4",
             output_dir=self.basedir / "output" / "output.mp4",
             extrac_picture_threshold=0.35,
         )
@@ -359,7 +381,8 @@ class VideoProcess:
             self.task_queues.extract_picture_queue.put(
                 ExtractPictureTask(
                     input_file=segment_file_name,
-                    current_frame_index=self.current_frame_index,
+                    frame_index=self.current_frame_index,
+                    sub_task_queue=self.task_queues.rm_watermark_queue,
                     threshold=self.client_config.extrac_picture_threshold,
                     video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
                 )
