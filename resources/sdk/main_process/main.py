@@ -39,7 +39,9 @@ class ClientConfig:
     def __init__(
         self,
         input_path="",
-        segment_time=10,
+        # segment_time=10,
+        # TODO: 测试
+        segment_time=3,
         output_dir="",
         extrac_picture_threshold=0.35,
     ):
@@ -90,12 +92,49 @@ class CacheConfig:
 
 class Task:
     """
-    任务
+    任务基类
     """
 
-    def __init__(self, task_type, args):
+    def __init__(self, task_type):
         self.task_type = task_type
-        self.args = args
+
+    def process(self):
+        pass
+
+
+class ExtractPictureTask(Task):
+    """
+    对分段视频抽取关键帧任务
+    """
+
+    def __init__(self, input_file, threshold):
+        super().__init__("extract_picture_queue")
+        self.input_file = input_file
+        self.threshold = threshold
+
+    def process(self):
+        video = open_video(self.input_file)
+        scene_manager = SceneManager()
+        scene_manager.add_detector(ContentDetector(threshold=self.threshold))
+        scene_manager.detect_scenes(video)
+        # `get_scene_list` returns a list of start/end timecode pairs
+        # for each scene that was found.
+        # 明确每小段视频里，有哪些场景
+        scene_list = scene_manager.get_scene_list()
+        # 直接读取场景的中间帧
+        print("视频关键帧抽取任务执行结果====>", scene_list)
+        # 保存并返回
+
+        # self.task_queues.rm_watermark_queue.push(
+        #     Task(
+        #         "rm_watermark_queue",
+        #         {
+        #             # "input_file": segment_file_name,
+        #             # "size": self.video_info.size,
+        #         },
+        #     )
+        # )
+        pass
 
 
 class VideoProcess:
@@ -105,7 +144,7 @@ class VideoProcess:
         self.sd_config = SDConfig()  # sd配置
         # 客户端配置,比如输出位置和输入位置
         self.client_config = ClientConfig(
-            input_path=self.basedir / "demo4.mp4",
+            input_path=self.basedir / "demo.mp4",
             output_dir=self.basedir / "output" / "output.mp4",
             extrac_picture_threshold=0.35,
         )
@@ -133,18 +172,24 @@ class VideoProcess:
         任务队列的源头是视频切分
         """
         self.scan_interval = 10  # 每N秒扫描一次，任务是否完成
-        self.clip_video_queue = queue.Queue()
+        # self.clip_video_queue = queue.Queue()
         self.extract_picture_queue = queue.Queue()
         self.rm_watermark_queue = queue.Queue()
         self.merge_video_queue = queue.Queue()
         self.threads = []
         # 任务关系，key表示前置任务，value为后续任务
         self.task_relations = {
-            "clip_video_queue": "extract_picture_queue",
+            # "clip_video_queue": "extract_picture_queue",
             "extract_picture_queue": "rm_watermark_queue",
             "rm_watermark_queue": "merge_video_queue",
             "merge_video_queue": None,
         }
+        self.task_queues = SimpleNamespace(
+            # clip_video_queue=self.clip_video_queue,
+            extract_picture_queue=self.extract_picture_queue,
+            rm_watermark_queue=self.rm_watermark_queue,
+            merge_video_queue=self.merge_video_queue,
+        )
         # 开始检查系统
         self.check_system()
 
@@ -291,46 +336,15 @@ class VideoProcess:
             self.current_segment_index += 1
             self.current_frame_index += self.video_info.split_frames
             # 添加抽取关键帧任务
-            self.task_queues.extract_picture_queue.push(
-                Task(
-                    "extract_picture_queue",
-                    {
-                        "input_file": segment_file_name,
-                    },
+            print("关键帧任务队列附加新任务", self.task_queues.extract_picture_queue)
+            self.task_queues.extract_picture_queue.put(
+                ExtractPictureTask(
+                    input_file=segment_file_name,
+                    threshold=self.client_config.extrac_picture_threshold,
                 )
             )
 
         VideoProcess.log(type=log_type.cut_video)
-
-    def extract_picture(self, args):
-        """
-        对分段视频抽取关键帧
-        """
-        input_file = args.input_file
-        video = open_video(input_file)
-        scene_manager = SceneManager()
-        scene_manager.add_detector(
-            ContentDetector(threshold=self.client_config.extrac_picture_threshold)
-        )
-        scene_manager.detect_scenes(video)
-        # `get_scene_list` returns a list of start/end timecode pairs
-        # for each scene that was found.
-        # 明确每小段视频里，有哪些场景
-        scene_list = scene_manager.get_scene_list()
-        # 直接读取场景的中间帧
-        print(scene_list)
-        # 保存并返回
-
-        # self.task_queues.rm_watermark_queue.push(
-        #     Task(
-        #         "rm_watermark_queue",
-        #         {
-        #             # "input_file": segment_file_name,
-        #             # "size": self.video_info.size,
-        #         },
-        #     )
-        # )
-        pass
 
     def rm_watermark(self):
         """
@@ -384,14 +398,6 @@ class VideoProcess:
         VideoProcess.log(log_type.merge_video)
 
     # TODO: 目前任务类和调度类是联合在一起的
-    def task_queues(self):
-        return SimpleNamespace(
-            clip_video_queue=self.clip_video_queue,
-            extract_picture_queue=self.extract_picture_queue,
-            rm_watermark_queue=self.rm_watermark_queue,
-            merge_video_queue=self.merge_video_queue,
-        )
-
     def process_finish(self):
         """
         检查视频处理任务的所有对列是否完成
@@ -404,42 +410,38 @@ class VideoProcess:
         """
         任务处理函数，主要做调用分发
         """
-        if task_type == "extract_picture_queue":
-            self.extract_picture(task)
-            pass
-        elif task_type == "rm_watermark_queue":
-            pass
-        elif task_type == "merge_video_queue":
-            pass
+        print(f"执行任务{task_type}", task)
+        task.process()
+        # if task_type == "extract_picture_queue":
+        #     pass
+        # elif task_type == "rm_watermark_queue":
+        #     pass
+        # elif task_type == "merge_video_queue":
+        #     pass
         pass
 
-    def worker(self, task_type):
+    def worker(self, *args):
         """
         任务队列处理
         task_type: 当前处理的任务类型
         """
+        task_type = args[0] or None
+        task_queue = getattr(self.task_queues, task_type)
+        print("worker接受到的任务类型", task_type)
         while True:
-            task = self.task_queues[task_type].get()
+            task = task_queue.get()
             if task is None:  # None作为停止信号
                 break
             self.process_task(task, task_type)  # 处理当前任务，并分发子任务
             self.task_queues[task_type].task_done()
 
-    def generate_subtasks(self, task_type, count):
-        """
-        子任务生成器
-        """
-        subtasks = []
-        for i in range(count):
-            subtasks.append(Task(task_type, f"{task_type} Subtask {i+1}"))
-        return subtasks
-
     def init_workers(self):
         """
         初始化工作线程，并监听处理结束
         """
-        for task_type in self.task_relations.items():
-            t = threading.Thread(target=self.worker, args=(task_type))
+        for task_type in self.task_relations.keys():
+            print(f"创建{task_type}线程")
+            t = threading.Thread(target=self.worker, args=(task_type,))
             t.start()
             self.threads.append(t)
 
