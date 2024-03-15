@@ -11,8 +11,8 @@ from scenedetect import (
     detect,
     AdaptiveDetector,
     ContentDetector,
-    split_video_ffmpeg,
 )
+from rm_subtitle_aliyun import main as RmSubtitleAliyun
 
 """
 考虑的优化点
@@ -114,12 +114,14 @@ class ExtractPictureTask(Task):
         frame_index,
         video_frames_cahce_path,
         sub_task_queue,
+        next_sub_task_queue,
     ):
         super().__init__("extract_picture_queue")
         self.threshold = threshold
         self.input_file = input_file
         self.current_index = frame_index
         self.sub_task_queue = sub_task_queue
+        self.next_sub_task_queue = next_sub_task_queue
         self.video_frames_cahce_path = video_frames_cahce_path
         self.cap = cv2.VideoCapture(input_file)
 
@@ -136,46 +138,79 @@ class ExtractPictureTask(Task):
             # read方法返回一个布尔值和一个视频帧。若帧读取成功，则返回True
             success, image = self.cap.read()
             print(f"正在读取第{self.current_index + key_frame_index}帧")
-            cv2.imwrite(
-                (
-                    self.video_frames_cahce_path
-                    / f"{self.current_index + key_frame_index}.png"
-                ).as_posix(),
-                image,
+            save_img_name = (
+                self.video_frames_cahce_path
+                / f"{self.current_index + key_frame_index}.png"
+            ).as_posix()
+            cv2.imwrite(save_img_name, image)
+            # 添加去水印任务 - 直接替换源图
+            self.sub_task_queue.put(
+                RmWatermarkTask(
+                    input_file=save_img_name,
+                    sub_task_queue=self.next_sub_task_queue,
+                )
             )
-
-        # 添加去水印任务 - 直接替换源图
-        self.sub_task_queue.put(
-            Task(
-                "rm_watermark_queue",
-                {
-                    # "input_file": segment_file_name,
-                    # "size": self.video_info.size,
-                },
-            )
-        )
 
 
 class RmWatermarkTask(Task):
     """
     对执行图片去除水印、字幕
+    目前阶段使用阿里云RemoveImageSubtitlesRequest API
+    后续迁移为(本地方案)
+    https://github.com/YaoFANGUK/video-subtitle-remover
     """
 
     def __init__(
         self,
         input_file,
-        video_frames_cahce_path,
         sub_task_queue,
     ):
         super().__init__("rm_watermark_queue")
         self.input_file = input_file
         self.sub_task_queue = sub_task_queue
-        self.video_frames_cahce_path = video_frames_cahce_path
-        self.cap = cv2.VideoCapture(input_file)
+        self.times = 1
 
     def process(self):
+        print("【去除水印task启动】文件路径========>", self.input_file)
+        result = RmSubtitleAliyun(self.input_file)
+        print("【去除水印task启动】处理结果========>", result)
+        if result:
+            # TODO: 这里的base_url需要调整
+            self.sub_task_queue.put(
+              SDImgToImgTask(input_file=self.input_file,sub_task_queue=self.sub_task_queue, base_url='')
+            )
+        else:
+            # 失败重试三次
+            if self.times <= 3:
+                self.process()
 
-        pass
+
+
+class SDImgToImgTask(Task):
+    """
+    SD图生图任务，支持云端，本地
+    """
+
+    def __init__(
+        self,
+        input_file,
+        sub_task_queue,
+        next_sub_task_queue
+    ):
+        super().__init__("rm_watermark_queue")
+        self.input_file = input_file
+        self.sub_task_queue = sub_task_queue
+
+    def process(self):
+        print("【去除水印task启动】文件路径========>", self.input_file)
+        result = RmSubtitleAliyun(self.input_file)
+        print("【去除水印task启动】处理结果========>", result)
+        if result:
+            self.sub_task_queue.put(
+              SDImgToImgTask(input_file=self.input_file)
+            )
+        else:
+
 
 
 class VideoProcess:
@@ -185,7 +220,7 @@ class VideoProcess:
         self.sd_config = SDConfig()  # sd配置
         # 客户端配置,比如输出位置和输入位置
         self.client_config = ClientConfig(
-            input_path=self.basedir / "demo4.mp4",
+            input_path=self.basedir / "demo1.mp4",
             output_dir=self.basedir / "output" / "output.mp4",
             extrac_picture_threshold=0.35,
         )
@@ -229,6 +264,7 @@ class VideoProcess:
             # clip_video_queue=self.clip_video_queue,
             extract_picture_queue=self.extract_picture_queue,
             rm_watermark_queue=self.rm_watermark_queue,
+            # TODO: 这里要增加一级任务，重绘任务
             merge_video_queue=self.merge_video_queue,
         )
         # 开始检查系统
@@ -288,6 +324,9 @@ class VideoProcess:
                 "load": firstGPU.load,  # GPU负载率
                 "memoryUtil": firstGPU.memoryUtil,  # 显存使用率
             }
+            print(
+                f"【system config】\n name: ${firstGPU.name} \n memoryTotal: ${firstGPU.memoryTotal} \n driver: ${firstGPU.driver} \n load: ${firstGPU.load} \n memoryUtil: ${firstGPU.memoryUtil} \n"
+            )
             VideoProcess.log(self.gpuInfo, log_type.system_check)
 
         # 清空并创建后续需要用到的目录
@@ -384,29 +423,12 @@ class VideoProcess:
                     frame_index=self.current_frame_index,
                     sub_task_queue=self.task_queues.rm_watermark_queue,
                     threshold=self.client_config.extrac_picture_threshold,
+                    next_sub_task_queue=self.task_queues.merge_video_queue,
                     video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
                 )
             )
 
         VideoProcess.log(type=log_type.cut_video)
-
-    def rm_watermark(self):
-        """
-        去除关键帧水印
-        https://github.com/YaoFANGUK/video-subtitle-remover
-        """
-        # TODO: 每到第N张的时候，调用一次合成视频
-        self.task_queues.merge_video_queue.push(
-            Task(
-                "merge_video_queue",
-                {
-                    # "input_file": segment_file_name,
-                    # "size": self.video_info.size,
-                },
-            )
-        )
-        pass
-        pass
 
     def transfer_msg(self):
         """
@@ -456,12 +478,6 @@ class VideoProcess:
         """
         print(f"执行任务{task_type}", task)
         task.process()
-        # if task_type == "extract_picture_queue":
-        #     pass
-        # elif task_type == "rm_watermark_queue":
-        #     pass
-        # elif task_type == "merge_video_queue":
-        #     pass
         pass
 
     def worker(self, *args):
