@@ -15,7 +15,8 @@ const mainWindowChannels = [
   'select-folder',
   'start-process',
   'update-process',
-  'finish-process'
+  'finish-process',
+  'save-config'
 ]
 
 if (process.contextIsolated) {

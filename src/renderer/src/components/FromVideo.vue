@@ -1,10 +1,9 @@
 <script setup>
 import { h, ref } from 'vue'
-import { NButton, NProgress, NImage, useLoadingBar } from 'naive-ui'
+import { NButton, NProgress, NImage } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
 
 const imgSize = 250
-const loadingBar = useLoadingBar()
 
 const createColumns = () => {
   return [
@@ -93,79 +92,81 @@ const createColumns = () => {
 const tableData = ref([])
 const currentRef = ref(false)
 
-window.ipcRenderer.receive('update-process', (params) => {
-  let isExsist = false
-  const { type, width, height, file_name, img_path, new_img_path } = params || {}
-  console.log('wswTest: 接受到的更新数据是', params)
-  const _tableData = tableData.value.map((item) => {
-    console.log('wswTest类型是什么', type, item.value, file_name)
-    // 存在名称相同的图片，则是更新为对该图片的追加改动
-    if (item.value == file_name.replace('_new', '')) {
-      isExsist = true
-      if (type === 'extract_picture') {
-        return {
-          ...item,
-          width,
-          height,
-          ori_img: img_path,
-          new_img: img_path,
-          new_img_mask_opacity: 0.2,
-          percentage: Math.floor(Math.random() * 40),
-          finish: false
-        }
-      } else if (type === 'rm_watermark') {
-        return {
-          ...item,
-          width,
-          height,
-          new_img: new_img_path,
-          new_img_mask_opacity: 0.7,
-          percentage: Math.floor(Math.random() * 88),
-          finish: false
-        }
-      } else if (type === 'sd_imgtoimg') {
-        return {
-          ...item,
-          width,
-          height,
-          new_img: new_img_path,
-          new_img_mask_opacity: 1,
-          percentage: 100,
-          finish: true
+window.ipcRenderer &&
+  window.ipcRenderer.receive('update-process', (params) => {
+    let isExsist = false
+    const { type, width, height, file_name, img_path, new_img_path } = params || {}
+    console.log('wswTest: 接受到的更新数据是', params)
+    const _tableData = tableData.value.map((item) => {
+      console.log('wswTest类型是什么', type, item.value, file_name)
+      // 存在名称相同的图片，则是更新为对该图片的追加改动
+      if (item.value == file_name.replace('_new', '')) {
+        isExsist = true
+        if (type === 'extract_picture') {
+          return {
+            ...item,
+            width,
+            height,
+            ori_img: img_path,
+            new_img: img_path,
+            new_img_mask_opacity: 0.2,
+            percentage: Math.floor(Math.random() * 40),
+            finish: false
+          }
+        } else if (type === 'rm_watermark') {
+          return {
+            ...item,
+            width,
+            height,
+            new_img: new_img_path,
+            new_img_mask_opacity: 0.7,
+            percentage: Math.floor(Math.random() * 88),
+            finish: false
+          }
+        } else if (type === 'sd_imgtoimg') {
+          return {
+            ...item,
+            width,
+            height,
+            new_img: new_img_path,
+            new_img_mask_opacity: 1,
+            percentage: 100,
+            finish: true
+          }
         }
       }
-    }
-    return item
-  })
-  // 如果并非已经存在的图片
-  if (!isExsist) {
-    _tableData.push({
-      index: _tableData.length + 1,
-      text: '',
-      value: file_name,
-      new_img: '',
-      width,
-      height,
-      ori_img: img_path,
-      new_img_mask_opacity: 0.2,
-      percentage: Math.floor(Math.random() * 15),
-      finish: false
+      return item
     })
-  }
-  tableData.value = _tableData
+    // 如果并非已经存在的图片
+    if (!isExsist) {
+      _tableData.push({
+        index: _tableData.length + 1,
+        text: '',
+        value: file_name,
+        new_img: '',
+        width,
+        height,
+        ori_img: img_path,
+        new_img_mask_opacity: 0.2,
+        percentage: Math.floor(Math.random() * 15),
+        finish: false
+      })
+    }
+    tableData.value = _tableData
 
-  if (!currentRef.value) {
-    currentRef.value = tableData.value.length || 0
-  }
-})
+    if (!currentRef.value) {
+      currentRef.value = tableData.value.length || 0
+    }
+  })
 
-window.ipcRenderer.receive('concat_imgs_to_video', (params) => {
-  const { code, video_path } = params || {}
-  console.log('wswTest: video_pathvideo_path', video_path)
-  if (code === 1 && video_path) {
-    window.openPath(video_path)
-  }
-})
+window.ipcRenderer &&
+  window.ipcRenderer.receive('concat_imgs_to_video', (params) => {
+    const { code, video_path } = params || {}
+    console.log('wswTest: video_pathvideo_path', video_path)
+    if (code === 1 && video_path) {
+      window.openPath(video_path)
+    }
+  })
 </script>
 
 <template>

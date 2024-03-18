@@ -13,14 +13,20 @@
         <n-button type="primary" @click="saveConfig">保存</n-button>
       </n-space>
       <n-space vertical>
-        <n-form ref="formRef" :model="model" :label-width="200" :style="{ maxWidth: '640px' }">
+        <n-form ref="formRef" :model="formModel" :label-width="200" :style="{ maxWidth: '640px' }">
+          <n-form-item label="输入SD服务地址" path="SDBaseurl">
+            <n-input
+              v-model:value="formModel.SDBaseurl"
+              placeholder="请输入您的SD地址，如 http://localhost:7860/"
+            />
+          </n-form-item>
           <n-form-item label="保存地址" path="savePath">
-            <n-space v-if="!model.savePath">
+            <n-space v-if="!formModel.savePath">
               <n-button @click="selectFolder">请选择视频保存文件夹</n-button>
             </n-space>
-            <n-space v-if="model.savePath" horizontal :style="{ height: '42px' }">
+            <n-space v-if="formModel.savePath" horizontal :style="{ height: '42px' }">
               <p
-                :alt="model.savePath"
+                :alt="formModel.savePath"
                 :style="{
                   'line-height': '42px',
                   height: '42px',
@@ -31,13 +37,21 @@
                   'text-overflow': 'ellipsis'
                 }"
               >
-                {{ model.savePath }}
+                {{ formModel.savePath }}
               </p>
               <n-button type="primary" @click="selectFolder">重新选择</n-button>
             </n-space>
           </n-form-item>
+          <n-form-item
+            label-placement="left"
+            label-width="90"
+            label="是否去水印"
+            path="skipRmWatermark"
+          >
+            <n-switch v-model:value="formModel.skipRmWatermark" size="large" />
+          </n-form-item>
           <n-form-item label="原图相关度" path="steps">
-            <n-radio-group v-model:value="model.cfg" name="原图相关度">
+            <n-radio-group v-model:value="formModel.cfg" name="原图相关度">
               <n-radio-button
                 v-for="cfg in CFG_SETS"
                 :key="cfg.value"
@@ -48,10 +62,32 @@
           </n-form-item>
           <n-form-item label="绘图模型" path="models">
             <n-select
-              v-model:value="model.models"
+              v-model:value="formModel.models"
               placeholder="请选择绘画模型"
-              :options="modelsOptions"
+              :options="modelsOptions.value"
             />
+          </n-form-item>
+          <n-form-item label="调整视频画面大小" path="imgSize">
+            <n-switch v-model:value="formModel.isOriginalSize">
+              <template #checked> 保持原画面大小 </template>
+              <template #unchecked> 使用下列尺寸 </template>
+            </n-switch>
+          </n-form-item>
+          <n-form-item label="图像宽" path="imgWidth">
+            <n-input
+              v-model:value="formModel.imgWidth"
+              :disabled="formModel.isOriginalSize"
+              placeholder=""
+            >
+            </n-input>
+          </n-form-item>
+          <n-form-item label="图像高" path="imgHeight">
+            <n-input
+              v-model:value="formModel.imgHeight"
+              :disabled="formModel.isOriginalSize"
+              placeholder=""
+            >
+            </n-input>
           </n-form-item>
         </n-form>
       </n-space>
@@ -60,8 +96,10 @@
 </template>
 
 <script setup>
-import { ref, defineProps } from 'vue'
+import { ref, defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
+import axios from 'axios'
+import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json'
 
 const props = defineProps({ toggleShow: Function })
 
@@ -76,29 +114,71 @@ const toggle = () => {
   props.toggleShow(active.value)
   active.value = !active.value
 }
-const modelsOptions = [
-  { label: '动漫风', value: 'Anime_Model' },
-  { label: '写实系', value: 'Real_Model' },
-  { label: '赛博朋克', value: 'CyberPunk_Model' }
-]
+const modelsOptions = ref([])
 const formRef = ref(null)
-const model = ref({
+const formModel = ref({
+  skipRmWatermark: false,
+  SDBaseurl: '',
   steps: 25,
   cfg: 0.5,
-  model: 'Anime_Model',
-  savePath: ''
+  models: 'Anime_Model',
+  savePath: '',
+  isOriginalSize: true,
+  imgWidth: 512,
+  imgHeight: 512
 })
 const selectFolder = () => {
   window.ipcRenderer.send('open-dialog')
 }
 
-window.ipcRenderer.receive('select-folder', (params) => {
-  console.log('wswTest: 选了的实例拉到', params)
-  model.value.savePath = params
+let retryTimes = 0
+const fetchModelList = () => {
+  return axios
+    .get(`${baseUrl}${modelListApi}`)
+    .then((model_list) => {
+      console.log('wswTest: model_list', model_list)
+      if (model_list?.length) {
+        // demoValue
+        // "title": "mixProV4.Cqhm.safetensors [61e23e57ea]",
+        // "model_name": "mixProV4.Cqhm",
+        // "hash": "61e23e57ea",
+        // "sha256": "61e23e57ea13765152435b42d55e7062de188ca3234edb82d751cf52f7667d4f",
+        // "filename": "/stable-diffusion-webui/models/Stable-diffusion/mixProV4.Cqhm.safetensors",
+        // "config": null
+        modelsOptions.value =
+          model_list?.map?.((model) => {
+            return {
+              ...model,
+              label: model.title,
+              value: model.model_name
+            }
+          }) || []
+        return
+      }
+      throw new Error('没有发现绘画模型')
+    })
+    .catch(() => {
+      if (retryTimes < 3) {
+        retryTimes++
+        return fetchModelList()
+      }
+    })
+}
+
+onMounted(() => {
+  // 获取模型列表
+  fetchModelList()
 })
 
+window.ipcRenderer &&
+  window.ipcRenderer.receive('select-folder', (params) => {
+    console.log('wswTest: 选了的实例拉到', params)
+    formModel.value.savePath = params
+  })
+
 const saveConfig = () => {
-  console.log('wswTest: model', model.value)
+  console.log('wswTest: model', JSON.stringify(formModel.value))
+  window.ipcRenderer.send('save-config', formModel.value)
   message.success('修改配置保存成功！将全局生效')
   toggle()
 }

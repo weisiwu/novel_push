@@ -1,4 +1,5 @@
 import asar from 'asar'
+import { writeFileSync } from 'fs'
 import { join } from 'path'
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -116,6 +117,11 @@ app.whenReady().then(() => {
       return
     }
     event.sender.send('select-folder', result?.[0] || process.resourcesPath || '')
+  })
+
+  // 保存全局配置
+  ipcMain.on('save-config', (event, params) => {
+    console.log('wswTest: 用户保存的配置', params)
   })
 
   createWindow()
