@@ -1,11 +1,18 @@
 import os
 import cv2
+import sys
+import time
+import json
+import glob
 import queue
+import base64
 import GPUtil
 import shutil
+import requests
+import argparse
 import threading
+import numpy as np
 from pathlib import *
-from tqdm import tqdm
 from types import SimpleNamespace
 from scenedetect import (
     detect,
@@ -14,23 +21,19 @@ from scenedetect import (
 )
 from rm_subtitle_aliyun import main as RmSubtitleAliyun
 
+
+def custom_sort(frame_img):
+    name = Path(frame_img).name
+    num = int(name.split("_")[0])
+    return num
+
+
 """
 考虑的优化点
 1、处理视频前，先将视频压缩，再处理
 2、支持多种视频类型
 3、第一屏只取正常时长的一半
 """
-
-log_type = SimpleNamespace(
-    system_check="_system_check",
-    read_config="_read_config",
-    cut_video="_cut_video",
-    extract_picture="_extract_picture",
-    rm_watermark="_rm_watermark",
-    transfer_msg="_transfer_msg",
-    merge_video="_merge_video",
-)
-
 
 class ClientConfig:
     """
@@ -42,24 +45,16 @@ class ClientConfig:
         input_path="",
         segment_time=3,
         output_dir="",
+        transition_duration_rate=0.3,
         extrac_picture_threshold=27,
-        # extrac_picture_threshold=12,
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
         self.segment_time = segment_time
         self.output_dir = output_dir  # 输出目录
+        self.transition_duration_rate = transition_duration_rate
         # 抽取关键帧决断值
         self.extrac_picture_threshold = extrac_picture_threshold
-
-
-class SDConfig:
-    """
-    sd相关设置
-    """
-
-    def __init__(self) -> None:
-        pass
 
 
 class VideoInfo:
@@ -72,7 +67,7 @@ class VideoInfo:
         self.height = height
         self.frame_rate = frame_rate
         self.size = (width, height)
-        self.codec = cv2.VideoWriter_fourcc(*"XVID")
+        self.codec = cv2.VideoWriter_fourcc(*"mp4v")
         self.total_frames = 0  # 视频总帧数
         self.split_frames = 0  # 切割出来的每段视频，有多少帧
 
@@ -109,19 +104,20 @@ class ExtractPictureTask(Task):
 
     def __init__(
         self,
-        input_file,
         threshold,
+        input_file,
+        video_info,
         frame_index,
+        task_queues,
         video_frames_cahce_path,
-        sub_task_queue,
-        next_sub_task_queue,
     ):
         super().__init__("extract_picture_queue")
         self.threshold = threshold
         self.input_file = input_file
         self.current_index = frame_index
-        self.sub_task_queue = sub_task_queue
-        self.next_sub_task_queue = next_sub_task_queue
+        self.task_queues = task_queues
+        self.video_info = video_info
+        self.sub_task_queue = task_queues.rm_watermark_queue
         self.video_frames_cahce_path = video_frames_cahce_path
         self.cap = cv2.VideoCapture(input_file)
 
@@ -137,20 +133,33 @@ class ExtractPictureTask(Task):
 
             # read方法返回一个布尔值和一个视频帧。若帧读取成功，则返回True
             success, image = self.cap.read()
-            print(f"正在读取第{self.current_index + key_frame_index}帧")
+            # 保存的名字和真实的帧序号并不相同,保存的是终止帧序号，内容对应的是中间帧图片
             save_img_name = (
-                self.video_frames_cahce_path
-                / f"{self.current_index + key_frame_index}.png"
+                self.video_frames_cahce_path / f"{self.current_index + end_index}.png"
             ).as_posix()
             cv2.imwrite(save_img_name, image)
+            print(
+                json.dumps(
+                    {
+                        "code": 1,
+                        "type": "extract_picture",
+                        "input_file": save_img_name,
+                        "width": self.video_info.width,
+                        "height": self.video_info.height,
+                    }
+                )
+            )
+            sys.stdout.flush()
             # 添加去水印任务 - 直接替换源图
             self.sub_task_queue.put(
                 RmWatermarkTask(
                     input_file=save_img_name,
-                    sub_task_queue=self.next_sub_task_queue,
+                    video_info=self.video_info,
+                    task_queues=self.task_queues,
                 )
             )
 
+        self.task_queues.extract_picture_queue.task_done()
 
 class RmWatermarkTask(Task):
     """
@@ -163,66 +172,160 @@ class RmWatermarkTask(Task):
     def __init__(
         self,
         input_file,
-        sub_task_queue,
+        video_info,
+        task_queues,
     ):
         super().__init__("rm_watermark_queue")
-        self.input_file = input_file
-        self.sub_task_queue = sub_task_queue
         self.times = 1
+        self.input_file = input_file
+        self.task_queues = task_queues
+        self.video_info = video_info
+        self.sub_task_queue = task_queues.sd_imgtoimg_queue
+        directory, filename = os.path.split(input_file)
+        name, extension = os.path.splitext(filename)
+        self.output_file = os.path.join(directory, f"{name}_new{extension}")
 
     def process(self):
-        print("【去除水印task启动】文件路径========>", self.input_file)
-        result = RmSubtitleAliyun(self.input_file)
-        print("【去除水印task启动】处理结果========>", result)
+        result = RmSubtitleAliyun(self.input_file, self.output_file)
         if result:
-            # TODO: 这里的base_url需要调整
+            # 【去除图片水印】成功
+            print(
+                json.dumps(
+                    {
+                        "code": 1,
+                        "type": "rm_watermark",
+                        "input_file": self.input_file,
+                        "output_file": self.output_file,
+                        "width": self.video_info.width,
+                        "height": self.video_info.height,
+                    }
+                )
+            )
+            sys.stdout.flush()
+            # 向图生图任务队列添加任务
             self.sub_task_queue.put(
-              SDImgToImgTask(input_file=self.input_file,sub_task_queue=self.sub_task_queue, base_url='')
+                SDImgToImgTask(
+                    video_info=self.video_info,
+                    input_file=self.output_file,
+                    output_file=self.output_file,
+                    task_queues=self.task_queues,
+                )
             )
         else:
+            # 【去除图片水印】失败
+            print(
+                json.dumps(
+                    {"code": 0, "type": "rm_watermark", "input_file": self.input_file}
+                )
+            )
+            sys.stdout.flush()
             # 失败重试三次
             if self.times <= 3:
+                self.times += self.times
                 self.process()
+                return
 
+        self.task_queues.rm_watermark_queue.task_done()
 
 
 class SDImgToImgTask(Task):
     """
-    SD图生图任务，支持云端，本地
+    SD图生图任务，支持云端/本地
     """
 
-    def __init__(
-        self,
-        input_file,
-        sub_task_queue,
-        next_sub_task_queue
-    ):
-        super().__init__("rm_watermark_queue")
+    def __init__(self, input_file, output_file, task_queues, video_info):
+        super().__init__("sd_imgtoimg_queue")
+        self.times = 1
+        self.video_info = video_info
         self.input_file = input_file
-        self.sub_task_queue = sub_task_queue
+        self.output_file = output_file
+        self.task_queues = task_queues
+        self.base_url = sd_config["baseUrl"]
+        self.i2i_api = sd_config["i2iApi"]
+        self.output_width = 512
+        self.output_height = (
+            self.output_width / self.video_info.width
+        ) * self.video_info.height
+
+    def image_to_base64(self):
+        with open(self.input_file, "rb") as image_file:
+            base64_string = base64.b64encode(image_file.read()).decode("utf-8")
+        return base64_string
 
     def process(self):
-        print("【去除水印task启动】文件路径========>", self.input_file)
-        result = RmSubtitleAliyun(self.input_file)
-        print("【去除水印task启动】处理结果========>", result)
-        if result:
-            self.sub_task_queue.put(
-              SDImgToImgTask(input_file=self.input_file)
-            )
-        else:
+        # 发起 POST 请求
+        result = requests.post(
+            f"{self.base_url}{self.i2i_api}",
+            json={
+                "prompt": sd_config["positivePrompt"],
+                "init_images": [self.image_to_base64()],
+                "negative_prompt": sd_config["negativePrompt"],
+                "styles": ["Anime"],
+                "batch_size": 1,
+                "n_iter": 1,
+                "steps": 25,
+                "cfg_scale": 7,
+                "width": self.output_width,
+                "height": self.output_height,
+                "denoising_strength": 0.5,
+                "sampler_index": "DPM++ 3M SDE Exponential",
+                "include_init_images": True,
+            },
+        )
 
+        # 检查响应状态码
+        if result.status_code == 200:
+            response_data = result.json()
+            img_data = base64.b64decode(response_data["images"][0])
+            with open(self.output_file, "wb") as file:
+                file.write(img_data)
+            # 【图生图任务】成功
+            print(
+                json.dumps(
+                    {
+                        "code": 1,
+                        "type": "sd_imgtoimg",
+                        "input_file": self.input_file,
+                        "output_file": self.output_file,
+                        "width": self.video_info.width,
+                        "height": self.video_info.height,
+                    }
+                )
+            )
+            sys.stdout.flush()
+        else:
+            # 【图生图任务】失败
+            print(
+                json.dumps(
+                    {"code": 0, "type": "sd_imgtoimg", "input_file": self.input_file}
+                )
+            )
+            sys.stdout.flush()
+            # 失败重试三次
+            if self.times <= 3:
+                self.times += self.times
+                self.process()
+                return
+
+        self.task_queues.sd_imgtoimg_queue.task_done()
 
 
 class VideoProcess:
-    def __init__(self):
+
+    def __init__(
+        self,
+        input_path,
+    ):
         self.basedir = Path(__file__).parent
         self.gpuInfo = None  # 显卡信息
-        self.sd_config = SDConfig()  # sd配置
+        # print("初始化", sd_config["outputPath"])
         # 客户端配置,比如输出位置和输入位置
         self.client_config = ClientConfig(
-            input_path=self.basedir / "demo1.mp4",
-            output_dir=self.basedir / "output" / "output.mp4",
-            extrac_picture_threshold=0.35,
+            input_path=Path(input_path),
+            output_dir=sd_config["outputPath"],
+            transition_duration_rate=0.3,
+            # TODO: 看下是否ok
+            # extrac_picture_threshold=0.35,
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -236,65 +339,35 @@ class VideoProcess:
 
         """
         任务队列相关
-        视频处理过程中，会存在四个任务队列
-        # 1. clip_video_queue: 视频切割队列
-        2. extract_picture_queue: 抽取关键帧队列
-        3. rm_watermark_queue: 去除水印队列
-        4. merge_video_queue: 合并视频队列
+        视频处理过程中，会存在三个任务队列
+        1. extract_picture_queue: 抽取关键帧队列
+        2. rm_watermark_queue: 去除水印队列
+        3. sd_imgtoimg_queue: 图生图任务
         依次往下，上级队列都是下级队列任务的来源
         比如抽取关键帧队列，每处理完一幅图，就会向去除水印队列添加任务
         去除水印队列，每完成10张图，就会向合并视频队列添加任务
         当以上四个队列任务均为空时，视频处理完毕
         任务队列的源头是视频切分
         """
-        self.scan_interval = 10  # 每N秒扫描一次，任务是否完成
-        # self.clip_video_queue = queue.Queue()
+        self.scan_interval = 5  # 每N秒扫描一次，任务是否完成
         self.extract_picture_queue = queue.Queue()
         self.rm_watermark_queue = queue.Queue()
-        self.merge_video_queue = queue.Queue()
+        self.sd_imgtoimg_queue = queue.Queue()
         self.threads = []
         # 任务关系，key表示前置任务，value为后续任务
         self.task_relations = {
-            # "clip_video_queue": "extract_picture_queue",
             "extract_picture_queue": "rm_watermark_queue",
-            "rm_watermark_queue": "merge_video_queue",
-            "merge_video_queue": None,
+            "rm_watermark_queue": "sd_imgtoimg_queue",
+            "sd_imgtoimg_queue": None,
         }
         self.task_queues = SimpleNamespace(
-            # clip_video_queue=self.clip_video_queue,
             extract_picture_queue=self.extract_picture_queue,
             rm_watermark_queue=self.rm_watermark_queue,
-            # TODO: 这里要增加一级任务，重绘任务
-            merge_video_queue=self.merge_video_queue,
+            sd_imgtoimg_queue=self.sd_imgtoimg_queue,
         )
+
         # 开始检查系统
         self.check_system()
-
-    # 程序进度，True: 完成  False: 未执行或执行中
-    _system_check = False
-    _read_config = False
-    _cut_video = False
-    _extract_picture = False
-    _rm_watermark = False
-    _transfer_msg = False
-    _merge_video = False
-
-    @staticmethod
-    def log(msg="", type=log_type.system_check):
-        if not msg or msg == "":
-            type_status = getattr(VideoProcess, type)
-            if type_status:
-                print(f"======= {type} end =======")
-            else:
-                setattr(VideoProcess, type, True)
-                print(f"======= {type} start =======")
-            return
-
-        print(f"{type} ==> ", msg)
-
-    @staticmethod
-    def error(msg, type=log_type.system_check):
-        print(f"【Error】{type} ==> ", msg)
 
     def check_system(self):
         """
@@ -304,17 +377,12 @@ class VideoProcess:
         目前仅检查了是否为N卡和基础信息
         https://blog.csdn.net/LuohenYJ/article/details/125857613
         """
-        VideoProcess.log()
-        self.process_start = True  # 标记启动
         # 获取所有可用GPU列表，id号从0开始
         GPUs = GPUtil.getGPUs()
 
         if not len(GPUs):
             self.gpuInfo = False
-            VideoProcess.error(
-                "can't find gpu info, please confirm your system info",
-                log_type.system_check,
-            )
+            # print("【读取GPU信息失败】失败")
         else:
             firstGPU = GPUs[0]
             self.gpuInfo = {
@@ -324,10 +392,7 @@ class VideoProcess:
                 "load": firstGPU.load,  # GPU负载率
                 "memoryUtil": firstGPU.memoryUtil,  # 显存使用率
             }
-            print(
-                f"【system config】\n name: ${firstGPU.name} \n memoryTotal: ${firstGPU.memoryTotal} \n driver: ${firstGPU.driver} \n load: ${firstGPU.load} \n memoryUtil: ${firstGPU.memoryUtil} \n"
-            )
-            VideoProcess.log(self.gpuInfo, log_type.system_check)
+            # print("【读取GPU信息失败】成功: ", firstGPU)
 
         # 清空并创建后续需要用到的目录
         if os.path.exists(self.cache_config.video_frames_cahce_path):
@@ -337,19 +402,24 @@ class VideoProcess:
         os.makedirs(self.cache_config.video_frames_cahce_path, exist_ok=True)
         os.makedirs(self.cache_config.video_parts_cahce_path, exist_ok=True)
 
-        VideoProcess.log()
+        # 加载mp4解析器
+        script_dir = str(Path(__file__).resolve().parent)
+        dll_path = os.path.join(script_dir, "openh264-2.4.0-win64.dll")
+
+        if os.path.exists(dll_path):
+            # 设置 OpenCV 的 DLL 文件路径
+            os.environ["PATH"] += ";" + script_dir
+
         self.read_config()
 
     def read_config(self):
         """
         读取程序配置
         """
-        VideoProcess.log(type=log_type.read_config)
         if not self.client_config:
-            VideoProcess.error("client config empty", log_type.read_config)
+            # print("【读取用户配置】失败")
             return
 
-        VideoProcess.log(type=log_type.read_config)
         self.init_workers()
         self.auto_clip_video()
 
@@ -357,16 +427,15 @@ class VideoProcess:
         """
         自动分割视频
         """
-        VideoProcess.log(type=log_type.cut_video)
         self.cap = cv2.VideoCapture(self.client_config.input_path.as_posix())
 
         if not self.cap:
-            VideoProcess.error("video empty", log_type.cut_video)
+            # print("【读取视频】失败")
             return
 
         # 是否成功打开
         if not self.cap.isOpened():
-            VideoProcess.error("video can not open", log_type.cut_video)
+            # print("【打开视频】失败")
             return
 
         if not self.video_info.frame_rate:
@@ -387,10 +456,6 @@ class VideoProcess:
             )
 
         while self.current_frame_index < self.video_info.total_frames:
-            VideoProcess.log(
-                msg=f"Creating {self.current_segment_index}.mp4",
-                type=log_type.cut_video,
-            )
             segment_file_name = str(
                 self.cache_config.video_parts_cahce_path
                 / f"{self.current_segment_index}.mp4"
@@ -402,81 +467,140 @@ class VideoProcess:
                 self.video_info.size,
             )
 
-            for i in tqdm(range(self.video_info.split_frames)):
+            for i in range(self.video_info.split_frames):
                 success, frame = self.cap.read()
                 if not success:
-                    VideoProcess.log(
-                        msg="Failed to read frame, clip completed",
-                        type=log_type.cut_video,
-                    )
                     break
                 self.videowrite.write(frame)
 
             self.videowrite.release()
-            self.current_segment_index += 1
-            self.current_frame_index += self.video_info.split_frames
             # 添加抽取关键帧任务
-            print("关键帧任务队列附加新任务", self.task_queues.extract_picture_queue)
             self.task_queues.extract_picture_queue.put(
                 ExtractPictureTask(
+                    video_info=self.video_info,
+                    task_queues=self.task_queues,
                     input_file=segment_file_name,
                     frame_index=self.current_frame_index,
-                    sub_task_queue=self.task_queues.rm_watermark_queue,
                     threshold=self.client_config.extrac_picture_threshold,
-                    next_sub_task_queue=self.task_queues.merge_video_queue,
                     video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
                 )
             )
+            self.current_segment_index += 1
+            self.current_frame_index += self.video_info.split_frames
+            if not self.process_start:
+                self.process_start = True  # 标记启动
 
-        VideoProcess.log(type=log_type.cut_video)
+        # 视频切片完成，开始监听任务队列执行情况
+        while True:
+            time.sleep(self.scan_interval)
+            # print("定时扫码的结果是什么", self.process_finish())
+            if self.process_finish():
 
-    def transfer_msg(self):
-        """
-        同步消息到外部
-        """
-        pass
+                # 图片处理结束，合成视频
+                process_result = self.concat_imgs_to_video(
+                    frame_rate=self.video_info.frame_rate,
+                    transition_duration_rate=self.client_config.transition_duration_rate,
+                    img_size=self.video_info.size,
+                )
 
-    def concat_imgs_to_video(self):
+                if process_result:
+                    # print("视频处理完成")
+                    print(
+                        json.dumps(
+                            {
+                                "code": 1,
+                                "type": "concat_imgs_to_video",
+                                "video_path": self.client_config.output_dir,
+                            }
+                        )
+                    )
+
+                # print("【退出主线程】")
+                # 发送停止信号给工作线程
+                self.task_queues.extract_picture_queue.put(None)
+                self.task_queues.rm_watermark_queue.put(None)
+                self.task_queues.sd_imgtoimg_queue.put(None)
+
+                # 等待所有线程结束
+                for t in self.threads:
+                    t.join()
+
+    def concat_imgs_to_video(
+        self, frame_rate=30, transition_duration_rate=0.5, img_size=(512, 288)
+    ):
         """
         将关键帧合成视频
+        img_duration: 图片尺寸时间，单位S
+        frame_rate: 视频帧率
+        transition_duration_rate: 过渡百分比，比如当前图片出现时长是10S，过渡百分比15，那么会有1.5S的过渡，目前过渡效果仅支持透明过渡
         """
-        VideoProcess.log(log_type.merge_video)
-        self.videowrite = cv2.VideoWriter(
-            self.client_config.output_dir,
-            -1,
-            self.video_infol.frame_rate,
-            self.video_info.size,
+        videowrite = cv2.VideoWriter(
+            Path(self.client_config.output_dir).as_posix(),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            frame_rate,
+            img_size,
         )
+        # print("保存视频的位置", self.client_config.output_dir)
 
-        img_array = []
+        frame_img_path = self.cache_config.video_frames_cahce_path
+        # print("图片位置", self.cache_config.video_frames_cahce_path)
+        filtered_files = glob.glob(f"{frame_img_path}/*_new*")
+        sort_imgs = sorted(filtered_files, key=custom_sort)
+        imgs_num = len(sort_imgs)
+        prev_end = 0
 
-        for frame_img in os.listdir(self.cache_config.video_frames_cahce_path):
-            filename = Path(self.cache_config.video_frames_cahce_path) / frame_img
-            img = cv2.imread(filename)
+        for index, frame_img in enumerate(sort_imgs):
+            next_index = index + 1 if index + 1 < imgs_num else index
+            img = cv2.resize(cv2.imread(frame_img), img_size)
+            next_img = cv2.resize(cv2.imread(sort_imgs[next_index]), img_size)
 
             if img is None:
-
                 continue
-            self.videowrite.write(img)
 
-        self.videowrite.release()
+            img_duration = (custom_sort(frame_img) - prev_end) / frame_rate
+            prev_end = custom_sort(frame_img)
+            total_num = int(frame_rate * img_duration)
+            transition_num = int(total_num * transition_duration_rate) or 1
+            transition_start_index = int(total_num * (1 - transition_duration_rate))
 
-        VideoProcess.log(log_type.merge_video)
+            for cur_index in range(total_num):
+                # 计算过渡效果的每一帧
+                if (
+                    next_img is not None
+                    and next_index != index
+                    and cur_index >= transition_start_index
+                ):
+                    # 计算过渡权重（0到1之间）
+                    alpha = (cur_index - transition_start_index) / transition_num
 
-    # TODO: 目前任务类和调度类是联合在一起的
+                    # 使用 alpha 权重进行混合
+                    blended_img = cv2.addWeighted(img, 1 - alpha, next_img, alpha, 0)
+
+                    # 将混合后的图像写入视频文件
+                    videowrite.write(np.uint8(blended_img))
+                else:
+                    videowrite.write(img)
+
+        videowrite.release()
+        return True
+
     def process_finish(self):
         """
         检查视频处理任务的所有对列是否完成
         """
+        queues = self.task_queues.__dict__
+        # for index, queue_name in enumerate(queues):
+        #     print("任务队列还剩余多少", queue_name, queues[queue_name].qsize())
         if self.process_start:
-            return all(_queue.empty() for _queue in self.task_queues.values())
+            return all(_queue.empty() for _queue in queues.values())
+
         return False
 
     def process_task(self, task, task_type):
         """
         任务处理函数，主要做调用分发
         """
-        print(f"执行任务{task_type}", task)
+        # print("【执行任务】", task_type)
         task.process()
         pass
 
@@ -487,39 +611,41 @@ class VideoProcess:
         """
         task_type = args[0] or None
         task_queue = getattr(self.task_queues, task_type)
-        print("worker接受到的任务类型", task_type)
         while True:
             task = task_queue.get()
-            if task is None:  # None作为停止信号
-                break
-            self.process_task(task, task_type)  # 处理当前任务，并分发子任务
-            task_queue.task_done()
+            if task is not None:
+                # print("【从任务对列读取任务】", task_type)
+                self.process_task(task, task_type)  # 处理当前任务，并分发子任务
+                # task_queue.task_done()
 
     def init_workers(self):
         """
         初始化工作线程，并监听处理结束
         """
         for task_type in self.task_relations.keys():
-            print(f"创建{task_type}线程")
+            # print("【创建任务线程】", task_type)
             t = threading.Thread(target=self.worker, args=(task_type,))
             t.start()
             self.threads.append(t)
 
-        # 监控队列，当所有队列都为空时，结束任务
-        # try:
-        #     while not self.process_finish():
-        #         time.sleep(self.scan_interval)
-        # finally:
-        #     # 发送停止信号给工作线程
-        #     self.task_queues.clip_video_queue.put(None)
-        #     self.task_queues.extract_picture_queue.put(None)
-        #     self.task_queues.rm_watermark_queue.put(None)
-        #     self.task_queues.merge_video_queue.put(None)
 
-        #     # 等待所有线程结束
-        #     for t in self.threads:
-        #         t.join()
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_file", type=str, default="")
+    parser.add_argument("--config_file", type=str, default="")
+    return parser.parse_args()
 
 
-if __name__ == "__main__":
-    VideoProcess()
+args = parse_args()
+with open(args.config_file, "r") as f:
+    sd_config = json.load(f)
+VideoProcess(input_path=args.input_file)
+
+
+# TODO: 调试时打开
+# if __name__ == "__main__":
+#     config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
+#     input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo1.mp4"
+#     with open(config_file, "r") as f:
+#         sd_config = json.load(f)
+#     VideoProcess(input_path=input_file)

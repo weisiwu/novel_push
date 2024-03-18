@@ -50,7 +50,7 @@ const menuOptions = [
     icon: renderIcon(MedkitOutline)
   },
   {
-    label: renderLabel('我有建议'),
+    label: renderLabel('使用说明'),
     key: pageNames.feedback,
     icon: renderIcon(BugOutline)
   }
@@ -59,13 +59,18 @@ const menuOptions = [
 const collapsed = ref(false)
 const showSystemConfig = ref(false)
 const selectMenu = ref('from_video')
+const loadingStyle = {
+  loading: {
+    height: '12px'
+  }
+}
 
 const jumpUpdate = () => {
   window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
 }
-const toggleConfig = (newStatus) => {
-  if (newStatus !== undefined) {
-    showSystemConfig.value = newStatus
+const toggleConfig = (event) => {
+  if (event.value !== undefined) {
+    showSystemConfig.value = event.value
     return
   }
   showSystemConfig.value = !showSystemConfig.value
@@ -74,63 +79,66 @@ const toggleConfig = (newStatus) => {
 
 <template>
   <n-space vertical>
-    <n-loading-bar-provider>
-      <n-layout has-sider class="layout">
-        <n-layout-sider
-          bordered
-          class="sidebar"
-          collapse-mode="width"
-          content-style="padding: 24px;"
-          :collapsed-width="64"
-          :width="240"
-          :collapsed="collapsed"
-          show-trigger
-          @collapse="collapsed = true"
-          @expand="collapsed = false"
-        >
-          <div v-if="!collapsed" class="sidebar_title">
-            <img src="../../../resources/logos/logo_16.svg" />
-          </div>
-          <n-menu
-            v-model:value="selectMenu"
-            :collapsed="collapsed"
+    <n-loading-bar-provider :loading-bar-style="loadingStyle">
+      <n-message-provider>
+        <n-layout has-sider class="layout">
+          <n-layout-sider
+            bordered
+            class="sidebar"
+            collapse-mode="width"
+            content-style="padding: 24px;"
             :collapsed-width="64"
-            :collapsed-icon-size="22"
-            :options="menuOptions"
-            :render-label="renderMenuLabel"
-            :expand-icon="expandIcon"
-          />
-        </n-layout-sider>
-        <n-layout class="content">
-          <div class="statusbar">
-            <div class="blank"></div>
-            <div class="config topbar_icon" @click="toggleConfig">
-              <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
-              <n-gradient-text
-                style="font-size: 16px; cursor: pointer; font-weight: bold"
-                type="info"
-              >
-                软件设置
-              </n-gradient-text>
+            :width="240"
+            :collapsed="collapsed"
+            show-trigger
+            @collapse="collapsed = true"
+            @expand="collapsed = false"
+          >
+            <div v-if="!collapsed" class="sidebar_title">
+              <img src="../../../resources/logos/logo_16.svg" />
             </div>
-            <div class="update topbar_icon" @click="jumpUpdate">
-              <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
-              <n-gradient-text
-                style="font-size: 16px; cursor: pointer; font-weight: bold"
-                type="info"
-              >
-                更新说明
-              </n-gradient-text>
+            <n-menu
+              v-model:value="selectMenu"
+              :collapsed="collapsed"
+              indent="50"
+              :collapsed-width="64"
+              :collapsed-icon-size="22"
+              :options="menuOptions"
+              :render-label="renderMenuLabel"
+              :expand-icon="expandIcon"
+            />
+          </n-layout-sider>
+          <n-layout class="content">
+            <div class="statusbar">
+              <div class="blank"></div>
+              <div class="config topbar_icon" @click="toggleConfig">
+                <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
+                <n-gradient-text
+                  style="font-size: 16px; cursor: pointer; font-weight: bold"
+                  type="info"
+                >
+                  软件设置
+                </n-gradient-text>
+              </div>
+              <div class="update topbar_icon" @click="jumpUpdate">
+                <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
+                <n-gradient-text
+                  style="font-size: 16px; cursor: pointer; font-weight: bold"
+                  type="info"
+                >
+                  更新说明
+                </n-gradient-text>
+              </div>
             </div>
-          </div>
-          <FromVideo v-if="selectMenu === pageNames.from_video" />
-          <FromText v-if="selectMenu === pageNames.from_text" />
-          <Tools v-if="selectMenu === pageNames.tools" />
-          <Feedback v-if="selectMenu === pageNames.feedback" />
-          <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
-          <div style="margin-bottom: 200px"></div>
+            <FromVideo v-if="selectMenu === pageNames.from_video" />
+            <FromText v-if="selectMenu === pageNames.from_text" />
+            <Tools v-if="selectMenu === pageNames.tools" />
+            <Feedback v-if="selectMenu === pageNames.feedback" />
+            <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
+            <div style="margin-bottom: 200px"></div>
+          </n-layout>
         </n-layout>
-      </n-layout>
+      </n-message-provider>
     </n-loading-bar-provider>
   </n-space>
 </template>
@@ -152,8 +160,8 @@ const toggleConfig = (newStatus) => {
   justify-content: center;
   img {
     position: absolute;
-    left: 61px;
-    top: 45px;
+    left: 64px;
+    top: 44px;
     width: 110px;
     height: 110px;
   }

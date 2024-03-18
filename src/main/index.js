@@ -1,16 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import asar from 'asar'
 import { join } from 'path'
-import { existsSync, mkdirSync } from 'fs'
-import rimraf from 'rimraf'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
-import macIcon from '../../resources/icon.png?asset'
-import { DetectVideoShotByParts } from '../renderer/modules/DetectVideoShot'
-import ImageToImage from '../renderer/modules/ImageToImage'
-import AmplifyImage, { AmplifyBatchImageByAliyun } from '../renderer/modules/AmplifyImage'
-import ConcatVideo from '../renderer/modules/ConcatVideo'
-import { outputPath, videoFramesOutputPath, videoPartsOutputPath } from '../renderer/src/config'
+import icon from '../../resources/imgs/icon.png?asset'
+import macIcon from '../../resources/imgs/icon.png?asset'
+import DetectVideoShotByParts from '../renderer/modules/DetectVideoShot'
 
 let startWindow = null
 let mainWindow = null
@@ -73,30 +67,8 @@ function openSpecialWindow(pageName = 'main') {
   startWindow.close()
 }
 
-// App Ready后开始的准备进程
-function initProcess() {
-  try {
-    console.log('============ initProcess start ============')
-    if (!existsSync(outputPath)) {
-      mkdirSync(outputPath, { recursive: true })
-    } else {
-      rimraf.rimraf(join(outputPath, '/'))
-    }
-    mkdirSync(videoFramesOutputPath, { recursive: true })
-    mkdirSync(videoPartsOutputPath, { recursive: true })
-    console.log('============ initProcess end ============')
-  } catch (e) {
-    console.log('============ initProcess error ============')
-    console.error(e)
-    console.log('============ initProcess error ============')
-    app.exit(1)
-  }
-}
-
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
-
-  initProcess() // 前置检查，不满足，直接退出
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -122,30 +94,41 @@ app.whenReady().then(() => {
   })
 
   /**
-   * 返回处理进度（每个关键帧都是新进度）
-   * 主进程的每个处理子任务完成，都会通知渲染进程更新页面
-   */
-  ipcMain.on('update-process', async (event, params) => {
-    if (!mainWindow) {
-      return
-    }
-    // ImageToImage({ event, params })
-  })
-
-  /**
    * 结束处理进程，主进程任务完全结束，通知渲染进程
    */
   ipcMain.on('finish-process', async (event, params) => {
     if (!mainWindow) {
       return
     }
-    // ConcatVideo({ event, params })
+    console.log('wswTest: 视频处理进程结束', params)
+  })
+
+  // 监听打开文件夹
+  ipcMain.on('open-dialog', (event) => {
+    const result = dialog.showOpenDialogSync(mainWindow, {
+      title: '请选择视频保存文件夹',
+      defaultPath: process.resourcesPath,
+      buttonLabel: '选取',
+      properties: ['openDirectory']
+    })
+    // 用户取消
+    if (result?.canceled || !result?.length) {
+      return
+    }
+    event.sender.send('select-folder', result?.[0] || process.resourcesPath || '')
   })
 
   createWindow()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+
+  app.on('web-contents-created', (event, contents) => {
+    contents.setWindowOpenHandler((details) => {
+      shell.openExternal(details.url)
+      return { action: 'deny' }
+    })
   })
 })
 

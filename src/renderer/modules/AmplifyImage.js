@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { join } from 'path'
 import { writeFileSync } from 'fs'
-import config from '../src/BaoganAiConfig.json'
+import config from '../../../resources/BaoganAiConfig.json'
 
 // 图片高清重绘 - 单张
 const AmplifyImageByAliyun = ({ event, imgs } = {}) => {

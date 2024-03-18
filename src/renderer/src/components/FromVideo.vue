@@ -1,13 +1,12 @@
 <script setup>
 import { h, ref } from 'vue'
-import { NButton, NImage, useLoadingBar } from 'naive-ui'
+import { NButton, NProgress, NImage, useLoadingBar } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
-import config from '../../src/BaoganAiConfig.json'
 
 const imgSize = 250
 const loadingBar = useLoadingBar()
 
-const createColumns = ({}) => {
+const createColumns = () => {
   return [
     { title: '镜头', align: 'center', key: 'index', minWidth: 40 },
     { title: '字幕', align: 'center', key: 'text', minWidth: 200 },
@@ -26,17 +25,32 @@ const createColumns = ({}) => {
       key: 'new_img',
       minWidth: imgSize,
       render(row) {
-        return h(
-          NImage,
-          {
-            src: row?.new_img || '',
-            width: imgSize,
-            style: `display: ${row?.new_img ? 'block' : 'none'}`,
-            height: row?.height,
-            class: 'new_img'
-          },
-          null
-        )
+        const height = row?.height / (row?.width / imgSize || 1)
+        console.log('wswTest: 是否展示进度条', row?.finish)
+        return h('div', { class: 'new_img_ctn' }, [
+          h(
+            NImage,
+            {
+              src: row?.new_img ? `${row?.new_img}?t=${Date.now()}` : row?.ori_img || '',
+              width: imgSize,
+              style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
+              height: height,
+              class: 'new_img'
+            },
+            null
+          ),
+          h(
+            NProgress,
+            {
+              type: 'dashboard',
+              style: `position:absolute;top:20px;left:192px;height:100px;width:100px;display:${row?.finish ? 'none' : 'block'}`,
+              'show-indicator': false,
+              percentage: row?.percentage || 0,
+              'gap-degree': 0
+            },
+            null
+          )
+        ])
       }
     },
     {
@@ -44,7 +58,7 @@ const createColumns = ({}) => {
       align: 'center',
       key: 'actions',
       minWidth: 120,
-      render(row) {
+      render() {
         return h('p', { style: 'display: flex;flex-direction: column', 'align-items': 'center' }, [
           h(
             NButton,
@@ -78,81 +92,78 @@ const createColumns = ({}) => {
 
 const tableData = ref([])
 const currentRef = ref(false)
-const oriSize = ref([0, 0])
-const newImgSize = ref([0, 0])
-const durations = ref([])
-const taskInProgress = ref([])
-const taskList = Promise.resolve()
 
-// 接受帧图片尺寸
-window.ipcRenderer.receive('get-frame-size', (frameSize) => {
-  oriSize.value = [frameSize.width || 0, frameSize.height || 0]
-  const ratio = oriSize.value[1] ? oriSize.value[0] / oriSize.value[1] : 1
-  newImgSize.value = [config.HDImageWidth, config.HDImageWidth / ratio]
-})
-
-// 更新表单数据 - 每切割出一个镜头，就新增一条更新任务
-window.ipcRenderer.receive('update-video-frame', (data) => {
-  currentRef.value = true
-  const { totalData = [], totalTimes } = data || {}
-  durations.value = totalTimes
-  // 获取视频尺寸，仅在第一次获取
-  if (!oriSize?.value?.[0]) {
-    if (totalData?.[0]) {
-      console.log('wswTest: getImageSize ===>', totalData[0])
-      const _img = new Image()
-      _img.src = totalData[0]
-      _img.onload = () => {
-        oriSize.value = [_img.width, _img.height]
+window.ipcRenderer.receive('update-process', (params) => {
+  let isExsist = false
+  const { type, width, height, file_name, img_path, new_img_path } = params || {}
+  console.log('wswTest: 接受到的更新数据是', params)
+  const _tableData = tableData.value.map((item) => {
+    console.log('wswTest类型是什么', type, item.value, file_name)
+    // 存在名称相同的图片，则是更新为对该图片的追加改动
+    if (item.value == file_name.replace('_new', '')) {
+      isExsist = true
+      if (type === 'extract_picture') {
+        return {
+          ...item,
+          width,
+          height,
+          ori_img: img_path,
+          new_img: img_path,
+          new_img_mask_opacity: 0.2,
+          percentage: Math.floor(Math.random() * 40),
+          finish: false
+        }
+      } else if (type === 'rm_watermark') {
+        return {
+          ...item,
+          width,
+          height,
+          new_img: new_img_path,
+          new_img_mask_opacity: 0.7,
+          percentage: Math.floor(Math.random() * 88),
+          finish: false
+        }
+      } else if (type === 'sd_imgtoimg') {
+        return {
+          ...item,
+          width,
+          height,
+          new_img: new_img_path,
+          new_img_mask_opacity: 1,
+          percentage: 100,
+          finish: true
+        }
       }
     }
-  }
-
-  totalData.reduce((sum, item, index) => {
-    return sum.then(() => {
-      if (taskInProgress.value.includes(item)) {
-        return Promise.resolve()
-      }
-      tableData.value.push({
-        index: index + 1,
-        text: '',
-        ori_img: item,
-        height: (oriSize.value[1] / oriSize.value[0]) * imgSize
-      })
-      taskInProgress.value.push(item)
-      window.ipcRenderer.send('image-to-image', {
-        init_images: item,
-        size: { width: newImgSize.value[0], height: newImgSize.value[1] },
-        index
-      })
-      return Promise.resolve()
-    })
-  }, taskList)
-})
-
-// 接受图生图结果
-window.ipcRenderer.receive('image-to-image-complete', (rawData) => {
-  // 处理后返回的图片
-  const { index, newImg, videoFramesPath } = rawData || {}
-
-  if (!newImg) {
-    return null
-  }
-  tableData.value = tableData.value.map((row, i) => {
-    if (index !== i) return row
-    return {
-      ...row,
-      new_img: newImg,
-      // new_img: `data:image/jpeg;base64,${newImg}`,
-      height: (oriSize.value[1] / oriSize.value[0]) * imgSize
-    }
+    return item
   })
+  // 如果并非已经存在的图片
+  if (!isExsist) {
+    _tableData.push({
+      index: _tableData.length + 1,
+      text: '',
+      value: file_name,
+      new_img: '',
+      width,
+      height,
+      ori_img: img_path,
+      new_img_mask_opacity: 0.2,
+      percentage: Math.floor(Math.random() * 15),
+      finish: false
+    })
+  }
+  tableData.value = _tableData
+
+  if (!currentRef.value) {
+    currentRef.value = tableData.value.length || 0
+  }
 })
 
-// 接受视频合并结束
-window.ipcRenderer.receive('concat-video-complete', (result) => {
-  if (result) {
-    window.openPath(result.save_path)
+window.ipcRenderer.receive('concat_imgs_to_video', (params) => {
+  const { code, video_path } = params || {}
+  console.log('wswTest: video_pathvideo_path', video_path)
+  if (code === 1 && video_path) {
+    window.openPath(video_path)
   }
 })
 </script>
@@ -181,5 +192,8 @@ window.ipcRenderer.receive('concat-video-complete', (result) => {
   width: 120px;
   height: auto;
   text-align: center;
+}
+.new_img_ctn {
+  position: relative;
 }
 </style>

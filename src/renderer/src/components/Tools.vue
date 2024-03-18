@@ -1,8 +1,23 @@
 <script setup>
-import { defineProps } from 'vue'
-import { useLoadingBar } from 'naive-ui'
+const tabs = {
+  DONWLOAD_VIDEO: 'DONWLOAD_VIDEO',
+  TODO: 'TODO'
+}
 </script>
 
 <template>
-  Tools 1、快速下载视频，给到B站、抖音链接，均可下载 2、浏览Civital精品图片、视频（前100）
+  <n-tabs type="segment" animated>
+    <n-tab-pane :name="tabs.DONWLOAD_VIDEO" tab="B站/抖音视频下载">
+      <n-h3 style="text-align: center"> B站/抖音视频下载 </n-h3>
+      <n-divider />
+      <n-input-group :style="{ margin: '0px 20%', width: '60%' }">
+        <n-input size="large" placeholder="请将APP里复制的视频链接粘贴到这里" />
+        <n-button size="large" :style="{ width: '120px' }" type="info"> 下载 </n-button>
+      </n-input-group>
+    </n-tab-pane>
+    <n-tab-pane :name="tabs.TODO" tab="待开发">
+      <n-h3 style="text-align: center"> 待开发 </n-h3>
+      <n-divider />
+    </n-tab-pane>
+  </n-tabs>
 </template>
