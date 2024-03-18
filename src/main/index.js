@@ -1,5 +1,5 @@
 import asar from 'asar'
-import { writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -11,6 +11,7 @@ let startWindow = null
 let mainWindow = null
 const resourcesPath = join(__dirname, 'resources')
 const asarPath = join(__dirname, 'app.asar')
+const configPath = join(process.cwd(), 'resources', 'BaoganAiConfig.json')
 
 // 打包资源文件到 app.asar
 asar.createPackage(resourcesPath, asarPath)
@@ -121,7 +122,28 @@ app.whenReady().then(() => {
 
   // 保存全局配置
   ipcMain.on('save-config', (event, params) => {
-    console.log('wswTest: 用户保存的配置', params)
+    console.log('wswTest: 用户保存的配置', params, typeof params)
+    console.log('wswTest: configPath==>', configPath)
+    if (!existsSync(configPath)) {
+      mkdirSync(configPath, { recursive: true })
+    }
+    try {
+      const userConfig = JSON.parse(params)
+      const config = JSON.parse(readFileSync(configPath).toString())
+      writeFileSync(
+        configPath,
+        JSON.stringify({
+          ...config,
+          outputPath: userConfig.savePath || config.outputPath || '',
+          HDImageWidth: userConfig.imgWidth || config.HDImageWidth || '',
+          HDImageHeight: userConfig.imgHeight || config.HDImageHeight || '',
+          baseUrl: userConfig.SDBaseurl || config.baseUrl || ''
+        })
+      )
+      console.log('wswTest: 读取配置文件', config)
+    } catch (e) {
+      console.log('wswTest: 本地写入配置失败', e)
+    }
   })
 
   createWindow()

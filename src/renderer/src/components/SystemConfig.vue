@@ -178,7 +178,7 @@ window.ipcRenderer &&
 
 const saveConfig = () => {
   console.log('wswTest: model', JSON.stringify(formModel.value))
-  window.ipcRenderer.send('save-config', formModel.value)
+  window.ipcRenderer.send('save-config', JSON.stringify(formModel.value))
   message.success('修改配置保存成功！将全局生效')
   toggle()
 }
