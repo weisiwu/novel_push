@@ -16,6 +16,8 @@ const mainWindowChannels = [
   'start-process',
   'update-process',
   'finish-process',
+  'fetch-config',
+  'read-config',
   'save-config'
 ]
 

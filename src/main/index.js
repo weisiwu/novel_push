@@ -122,28 +122,40 @@ app.whenReady().then(() => {
 
   // 保存全局配置
   ipcMain.on('save-config', (event, params) => {
-    console.log('wswTest: 用户保存的配置', params, typeof params)
-    console.log('wswTest: configPath==>', configPath)
     if (!existsSync(configPath)) {
       mkdirSync(configPath, { recursive: true })
     }
     try {
       const userConfig = JSON.parse(params)
       const config = JSON.parse(readFileSync(configPath).toString())
-      writeFileSync(
-        configPath,
-        JSON.stringify({
-          ...config,
-          outputPath: userConfig.savePath || config.outputPath || '',
-          HDImageWidth: userConfig.imgWidth || config.HDImageWidth || '',
-          HDImageHeight: userConfig.imgHeight || config.HDImageHeight || '',
-          baseUrl: userConfig.SDBaseurl || config.baseUrl || ''
-        })
-      )
-      console.log('wswTest: 读取配置文件', config)
+      // 将要写入本地的配置
+      const localConfig = JSON.stringify({
+        ...config,
+        skipRmWatermark: userConfig.skipRmWatermark || false,
+        steps: userConfig.steps || 25,
+        cfg: userConfig.cfg || 0.5,
+        models: userConfig.models || true,
+        isOriginalSize: userConfig.isOriginalSize,
+        outputPath: userConfig.outputPath || config.outputPath || '',
+        HDImageWidth: userConfig.HDImageWidth || config.HDImageWidth || '',
+        HDImageHeight: userConfig.HDImageHeight || config.HDImageHeight || '',
+        baseUrl: userConfig.baseUrl || config.baseUrl || ''
+      })
+      writeFileSync(configPath, localConfig)
+      console.log('wswTest:写入配置文件', config)
     } catch (e) {
       console.log('wswTest: 本地写入配置失败', e)
     }
+  })
+
+  // 响应读起配置请求
+  ipcMain.on('fetch-config', (event) => {
+    if (!existsSync(configPath)) {
+      return
+    }
+    const localConfig = readFileSync(configPath).toString()
+    // 将写入的配置传回UI中
+    event.sender.send('read-config', localConfig)
   })
 
   createWindow()

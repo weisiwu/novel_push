@@ -14,19 +14,19 @@
       </n-space>
       <n-space vertical>
         <n-form ref="formRef" :model="formModel" :label-width="200" :style="{ maxWidth: '640px' }">
-          <n-form-item label="输入SD服务地址" path="SDBaseurl">
+          <n-form-item label="输入SD服务地址" path="baseUrl">
             <n-input
-              v-model:value="formModel.SDBaseurl"
+              v-model:value="formModel.baseUrl"
               placeholder="请输入您的SD地址，如 http://localhost:7860/"
             />
           </n-form-item>
-          <n-form-item label="保存地址" path="savePath">
-            <n-space v-if="!formModel.savePath">
+          <n-form-item label="保存地址" path="outputPath">
+            <n-space v-if="!formModel.outputPath">
               <n-button @click="selectFolder">请选择视频保存文件夹</n-button>
             </n-space>
-            <n-space v-if="formModel.savePath" horizontal :style="{ height: '42px' }">
+            <n-space v-if="formModel.outputPath" horizontal :style="{ height: '42px' }">
               <p
-                :alt="formModel.savePath"
+                :alt="formModel.outputPath"
                 :style="{
                   'line-height': '42px',
                   height: '42px',
@@ -37,7 +37,7 @@
                   'text-overflow': 'ellipsis'
                 }"
               >
-                {{ formModel.savePath }}
+                {{ formModel.outputPath }}
               </p>
               <n-button type="primary" @click="selectFolder">重新选择</n-button>
             </n-space>
@@ -73,21 +73,27 @@
               <template #unchecked> 使用下列尺寸 </template>
             </n-switch>
           </n-form-item>
-          <n-form-item label="图像宽" path="imgWidth">
-            <n-input
-              v-model:value="formModel.imgWidth"
+          <n-form-item label="图像宽(512~2000)" path="HDImageWidth">
+            <n-input-number
+              v-model:value="formModel.HDImageWidth"
+              max="2000"
+              min="512"
+              :show-button="false"
               :disabled="formModel.isOriginalSize"
               placeholder=""
             >
-            </n-input>
+            </n-input-number>
           </n-form-item>
-          <n-form-item label="图像高" path="imgHeight">
-            <n-input
-              v-model:value="formModel.imgHeight"
+          <n-form-item label="图像高(512~2000)" path="HDImageHeight">
+            <n-input-number
+              v-model:value="formModel.HDImageHeight"
+              max="2000"
+              min="512"
+              :show-button="false"
               :disabled="formModel.isOriginalSize"
               placeholder=""
             >
-            </n-input>
+            </n-input-number>
           </n-form-item>
         </n-form>
       </n-space>
@@ -104,9 +110,9 @@ import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json
 const props = defineProps({ toggleShow: Function })
 
 const CFG_SETS = [
-  { value: 0.8, label: '低相似度' },
+  { value: 0.3, label: '低相似度' },
   { value: 0.5, label: '中相似度' },
-  { value: 0.3, label: '高相似度' }
+  { value: 0.8, label: '高相似度' }
 ]
 const active = ref(true)
 const message = useMessage()
@@ -117,15 +123,15 @@ const toggle = () => {
 const modelsOptions = ref([])
 const formRef = ref(null)
 const formModel = ref({
-  skipRmWatermark: false,
-  SDBaseurl: '',
-  steps: 25,
   cfg: 0.5,
-  models: 'Anime_Model',
-  savePath: '',
+  steps: 25,
+  baseUrl: '',
+  outputPath: '',
+  HDImageWidth: 512,
+  HDImageHeight: 512,
   isOriginalSize: true,
-  imgWidth: 512,
-  imgHeight: 512
+  models: 'Anime_Model',
+  skipRmWatermark: false
 })
 const selectFolder = () => {
   window.ipcRenderer.send('open-dialog')
@@ -170,11 +176,25 @@ onMounted(() => {
   fetchModelList()
 })
 
-window.ipcRenderer &&
+if (window.ipcRenderer) {
   window.ipcRenderer.receive('select-folder', (params) => {
     console.log('wswTest: 选了的实例拉到', params)
-    formModel.value.savePath = params
+    formModel.value.outputPath = params
   })
+
+  // 发起读取本地配置
+  window.ipcRenderer.send('fetch-config')
+
+  window.ipcRenderer.receive('read-config', (params) => {
+    console.log('wswTest: 读取本地的配置', params, typeof params)
+    try {
+      const localConfig = JSON.parse(params)
+      formModel.value = localConfig
+    } catch (e) {
+      console.log('wswTest: 传入的本地配置异常', params, e)
+    }
+  })
+}
 
 const saveConfig = () => {
   console.log('wswTest: model', JSON.stringify(formModel.value))
