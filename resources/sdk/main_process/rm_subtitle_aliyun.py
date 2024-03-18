@@ -14,7 +14,10 @@ config = Config(
 runtime_option = RuntimeOptions()
 
 
-def main(img_path, out_path):
+def main(img_path, out_path, skip=False):
+    if skip:
+        os.rename(img_path, out_path)
+        return True
     try:
         img = open(img_path, "rb")
         request = RemoveImageSubtitlesAdvanceRequest()
@@ -23,7 +26,6 @@ def main(img_path, out_path):
         response = client.remove_image_subtitles_advance(request, runtime_option)
         img.close()
         result_img = getattr(response.body.data, "image_url", None)
-        # print("【去除图片水印任务】成功:", result_img)
         if result_img is None:
             return False
         img_response = urlopen(result_img)

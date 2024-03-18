@@ -47,6 +47,13 @@ class ClientConfig:
         output_dir="",
         transition_duration_rate=0.3,
         extrac_picture_threshold=27,
+        HDImageWidth=512,
+        HDImageHeight=512,
+        skipRmWatermark=False,
+        steps=25,
+        cfg=0.5,
+        models="",
+        isOriginalSize=True,
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
@@ -55,6 +62,14 @@ class ClientConfig:
         self.transition_duration_rate = transition_duration_rate
         # 抽取关键帧决断值
         self.extrac_picture_threshold = extrac_picture_threshold
+        # 用户写入配置
+        self.HDImageWidth = HDImageWidth
+        self.HDImageHeight = HDImageHeight
+        self.skipRmWatermark = skipRmWatermark
+        self.steps = steps
+        self.cfg = cfg
+        self.models = models
+        self.isOriginalSize = isOriginalSize
 
 
 class VideoInfo:
@@ -109,6 +124,7 @@ class ExtractPictureTask(Task):
         video_info,
         frame_index,
         task_queues,
+        client_config,
         video_frames_cahce_path,
     ):
         super().__init__("extract_picture_queue")
@@ -117,9 +133,11 @@ class ExtractPictureTask(Task):
         self.current_index = frame_index
         self.task_queues = task_queues
         self.video_info = video_info
+        self.client_config = client_config
         self.sub_task_queue = task_queues.rm_watermark_queue
         self.video_frames_cahce_path = video_frames_cahce_path
         self.cap = cv2.VideoCapture(input_file)
+        print("抽出图配置", self.client_config)
 
     def process(self):
         # 明确每小段视频里，有哪些场景
@@ -156,6 +174,7 @@ class ExtractPictureTask(Task):
                     input_file=save_img_name,
                     video_info=self.video_info,
                     task_queues=self.task_queues,
+                    client_config=self.client_config,
                 )
             )
 
@@ -174,19 +193,27 @@ class RmWatermarkTask(Task):
         input_file,
         video_info,
         task_queues,
+        client_config,
     ):
         super().__init__("rm_watermark_queue")
         self.times = 1
         self.input_file = input_file
         self.task_queues = task_queues
         self.video_info = video_info
+        self.client_config = client_config
         self.sub_task_queue = task_queues.sd_imgtoimg_queue
         directory, filename = os.path.split(input_file)
         name, extension = os.path.splitext(filename)
+        print("去除水印配置", self.client_config)
         self.output_file = os.path.join(directory, f"{name}_new{extension}")
 
     def process(self):
-        result = RmSubtitleAliyun(self.input_file, self.output_file)
+        print("读取是否跳过配置", type(self.client_config.skipRmWatermark))
+        result = RmSubtitleAliyun(
+            self.input_file,
+            self.output_file,
+            skip=self.client_config.skipRmWatermark,
+        )
         if result:
             # 【去除图片水印】成功
             print(
@@ -194,6 +221,8 @@ class RmWatermarkTask(Task):
                     {
                         "code": 1,
                         "type": "rm_watermark",
+                        # 是否跳过去除水印
+                        "is_skip": self.client_config.skipRmWatermark or False,
                         "input_file": self.input_file,
                         "output_file": self.output_file,
                         "width": self.video_info.width,
@@ -207,8 +236,9 @@ class RmWatermarkTask(Task):
                 SDImgToImgTask(
                     video_info=self.video_info,
                     input_file=self.output_file,
-                    output_file=self.output_file,
                     task_queues=self.task_queues,
+                    output_file=self.output_file,
+                    client_config=self.client_config,
                 )
             )
         else:
@@ -233,19 +263,27 @@ class SDImgToImgTask(Task):
     SD图生图任务，支持云端/本地
     """
 
-    def __init__(self, input_file, output_file, task_queues, video_info):
+    def __init__(self, input_file, output_file, client_config, task_queues, video_info):
         super().__init__("sd_imgtoimg_queue")
         self.times = 1
         self.video_info = video_info
         self.input_file = input_file
         self.output_file = output_file
         self.task_queues = task_queues
+        self.client_config = client_config
         self.base_url = sd_config["baseUrl"]
         self.i2i_api = sd_config["i2iApi"]
-        self.output_width = 512
-        self.output_height = (
-            self.output_width / self.video_info.width
-        ) * self.video_info.height
+        print("图生图配置", self.client_config)
+        # 从配置中读取
+        if not client_config.isOriginalSize:
+            self.output_width = client_config.HDImageWidth or 512
+            self.output_height = client_config.HDImageWidth or 512
+        else:
+            self.output_width = video_info.width or 512
+            self.output_height = video_info.height or 512
+        # self.output_height = (
+        #     self.output_width / self.video_info.width
+        # ) * self.video_info.height
 
     def image_to_base64(self):
         with open(self.input_file, "rb") as image_file:
@@ -312,15 +350,20 @@ class SDImgToImgTask(Task):
 
 class VideoProcess:
 
-    def __init__(self, input_path, config_file):
+    def __init__(self, input_path):
         self.basedir = Path(__file__).parent
         self.gpuInfo = None  # 显卡信息
-        # 客户端配置,比如输出位置和输入位置
-        self.config_file = config_file
         self.client_config = ClientConfig(
             input_path=Path(input_path),
             output_dir=sd_config["outputPath"],
             transition_duration_rate=0.3,
+            HDImageWidth=sd_config["HDImageWidth"] or 512,
+            HDImageHeight=sd_config["HDImageHeight"] or 512,
+            skipRmWatermark=sd_config["skipRmWatermark"] or False,
+            steps=sd_config["steps"] or 25,
+            cfg=sd_config["cfg"] or 0.5,
+            models=sd_config["models"] or "",
+            isOriginalSize=sd_config["isOriginalSize"] or True,
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -414,14 +457,6 @@ class VideoProcess:
         if not self.client_config:
             return
 
-        # 读取本地配置
-        if self.config_file:
-            with open(self.config_file, "r") as file:
-                # TODO: here
-                config_data = json.load(file)
-
-        # TODO: 调试
-        return
         self.init_workers()
         self.auto_clip_video()
 
@@ -482,6 +517,7 @@ class VideoProcess:
                     video_info=self.video_info,
                     task_queues=self.task_queues,
                     input_file=segment_file_name,
+                    client_config=self.client_config,
                     frame_index=self.current_frame_index,
                     threshold=self.client_config.extrac_picture_threshold,
                     video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
@@ -638,16 +674,16 @@ def parse_args():
     return parser.parse_args()
 
 
-args = parse_args()
-with open(args.config_file, "r") as f:
-    sd_config = json.load(f)
-VideoProcess(input_path=args.input_file, config_file=args.config_file)
+# args = parse_args()
+# with open(args.config_file, "r") as f:
+#     sd_config = json.load(f)
+# VideoProcess(input_path=args.input_file, config_file=args.config_file)
 
 
 # TODO: 调试时打开
-# if __name__ == "__main__":
-#     config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
-#     input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo1.mp4"
-#     with open(config_file, "r") as f:
-#         sd_config = json.load(f)
-#     VideoProcess(input_path=input_file)
+if __name__ == "__main__":
+    config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
+    input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo.mp4"
+    with open(config_file, "r") as f:
+        sd_config = json.load(f)
+    VideoProcess(input_path=input_file)
