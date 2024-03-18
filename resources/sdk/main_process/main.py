@@ -312,20 +312,15 @@ class SDImgToImgTask(Task):
 
 class VideoProcess:
 
-    def __init__(
-        self,
-        input_path,
-    ):
+    def __init__(self, input_path, config_file):
         self.basedir = Path(__file__).parent
         self.gpuInfo = None  # 显卡信息
-        # print("初始化", sd_config["outputPath"])
         # 客户端配置,比如输出位置和输入位置
+        self.config_file = config_file
         self.client_config = ClientConfig(
             input_path=Path(input_path),
             output_dir=sd_config["outputPath"],
             transition_duration_rate=0.3,
-            # TODO: 看下是否ok
-            # extrac_picture_threshold=0.35,
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -417,9 +412,16 @@ class VideoProcess:
         读取程序配置
         """
         if not self.client_config:
-            # print("【读取用户配置】失败")
             return
 
+        # 读取本地配置
+        if self.config_file:
+            with open(self.config_file, "r") as file:
+                # TODO: here
+                config_data = json.load(file)
+
+        # TODO: 调试
+        return
         self.init_workers()
         self.auto_clip_video()
 
@@ -639,7 +641,7 @@ def parse_args():
 args = parse_args()
 with open(args.config_file, "r") as f:
     sd_config = json.load(f)
-VideoProcess(input_path=args.input_file)
+VideoProcess(input_path=args.input_file, config_file=args.config_file)
 
 
 # TODO: 调试时打开
