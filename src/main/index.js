@@ -6,12 +6,13 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import DetectVideoShotByParts from '../renderer/modules/DetectVideoShot'
+import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
-const resourcesPath = join(__dirname, 'resources')
-const asarPath = join(__dirname, 'app.asar')
-const configPath = join(process.cwd(), 'resources', 'BaoganAiConfig.json')
+const resourcesPath = process.resourcesPath
+const asarPath = join(process.resourcesPath, 'app.asar')
+console.log('wswTest: 读取resources中的配置 ', configPath)
 
 // 打包资源文件到 app.asar
 asar.createPackage(resourcesPath, asarPath)

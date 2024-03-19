@@ -18,3 +18,5 @@ video_parts_cahce
 video-subtitle-remover
 __pycache__
 AccessKey.csv
+pack/
+build/

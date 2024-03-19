@@ -5,8 +5,10 @@ pip install --upgrade 'scenedetect[opencv-headless]'
 pyinstaller --onefile main.py
 pyinstaller --onedir main.py
 pyinstaller --onedir --clean -F main.py
-这个快
-pyinstaller --onedir main.py
+先安装upx，然后指定upx位置，进行打包
+去除无关依赖+upx压缩，打包出来的文件大小约
+pyinstaller main.py --onefile --upx-dir=/opt/homebrew/Cellar/upx/4.1.0
+
 
 python测试命令
 python main.py --input_file C:\Users\Administrator\Desktop\github\novel_push\src\renderer\src\assets\video\demo.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
@@ -24,3 +26,6 @@ A类型每个子任务完成后，都会向B类型插入新的子任务。同理
 cd C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process
 
 conda activate py310
+
+虚拟环境打包
+pip install alibabacloud_imageenhan20190930 alibabacloud_tea_util alibabacloud_tea_openapi opencv-python GPUtil scenedetect numpy requests argparse
