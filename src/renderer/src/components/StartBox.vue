@@ -39,7 +39,7 @@ import ChargeBox from './ChargeBox.vue'
   width: 900px;
   flex-grow: 1;
   flex-direction: row;
-  background-image: url(../assets/images/start_bk.png);
+  background-image: url(../../public/imgs/start_bk.png);
   background-position: 0px -20px;
   background-size: cover;
   background-repeat: no-repeat;
@@ -70,7 +70,7 @@ import ChargeBox from './ChargeBox.vue'
   width: 100%;
   height: 420px;
   display: block;
-  background-image: url(../assets/images/login_left.png);
+  background-image: url(../../public/imgs/login_left.png);
   background-position: -10px 55px;
   background-size: contain;
   background-repeat: no-repeat;

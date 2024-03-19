@@ -14,6 +14,7 @@ import FromText from './components/FromText.vue'
 import Tools from './components/Tools.vue'
 import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
+import AppLogo from '../public/logos/logo_16.svg?asset'
 
 const pageNames = {
   from_video: 'from_video',
@@ -95,7 +96,7 @@ const toggleConfig = (event) => {
             @expand="collapsed = false"
           >
             <div v-if="!collapsed" class="sidebar_title">
-              <img src="../../../resources/logos/logo_16.svg" />
+              <img :src="AppLogo" />
             </div>
             <n-menu
               v-model:value="selectMenu"

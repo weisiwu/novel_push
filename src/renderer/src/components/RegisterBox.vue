@@ -54,11 +54,11 @@
 }
 .btn-bk {
   width: 100px;
-  background-image: url(../assets/images/btn_bk.png);
+  background-image: url(../../public/imgs/btn_bk.png);
   background-size: cover;
 }
 .btn-action {
-  background-image: url(../assets/images/btn_bk.png);
+  background-image: url(../../public/imgs/btn_bk.png);
   background-size: cover;
 }
 </style>

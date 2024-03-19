@@ -28,4 +28,7 @@ cd C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process
 conda activate py310
 
 虚拟环境打包
+python -m venv pack
 pip install alibabacloud_imageenhan20190930 alibabacloud_tea_util alibabacloud_tea_openapi opencv-python GPUtil scenedetect numpy requests argparse
+如果使用单目录打包，体积会到500+M
+pyinstaller --onefile main.py

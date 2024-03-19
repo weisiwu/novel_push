@@ -20,3 +20,4 @@ __pycache__
 AccessKey.csv
 pack/
 build/
+bin/

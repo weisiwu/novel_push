@@ -3,7 +3,10 @@
  * 都是在进行时中才能获取的变量
  */
 import { join, resolve } from 'path'
-import mainProcessBin from '../../../resources/sdk/main_process/bin/main.exe?asset&asarUnpack'
+// windows下调试
+// import mainProcessBin from '../../../resources/sdk/main_process/bin/main.exe?asset&asarUnpack'
+// macos 下调试
+import mainProcessBin from '../../../resources/sdk/main_process/bin/main?asset&asarUnpack'
 
 // 所有路径，统一在初始化的时候进行测试和创建
 const appPath = process.cwd()

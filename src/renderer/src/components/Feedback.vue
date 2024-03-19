@@ -1,6 +1,9 @@
 <script setup>
 import { ref } from 'vue'
-import bk_img from '../../src/assets/images/contact_us_1.jpg?asset'
+import bk_img from '../../public/imgs/contact_us_1.jpg?asset'
+import WXLogo from '../../public/imgs/weixin_logo.png?asset'
+import DYLogo from '../../public/imgs/douyin_logo.png?asset'
+import BiliLogo from '../../public/imgs/bilibili_logo.png?asset'
 
 const iframe_url =
   'https://player.bilibili.com/player.html?aid=562069487&bvid=BV1Uv4y1S734&cid=875577480&p=1'
@@ -81,7 +84,7 @@ const videoLoaded = () => {
                 :size="150"
                 background-color="#F5F5F5"
               />
-              <img class="bk_img_weixin" src="../../../../resources/imgs/weixin_logo.png" />
+              <img class="bk_img_weixin" :src="WXLogo" />
               <div class="light-green">微信</div>
             </n-flex>
           </n-grid-item>
@@ -95,7 +98,7 @@ const videoLoaded = () => {
                 :size="150"
                 background-color="#F5F5F5"
               />
-              <img class="bk_img_douyin" src="../../../../resources/imgs/douyin_logo.png" />
+              <img class="bk_img_douyin" :src="DYLogo" />
               <div class="light-green">抖音</div>
             </n-flex>
           </n-grid-item>
@@ -109,7 +112,7 @@ const videoLoaded = () => {
                 :size="150"
                 background-color="#F5F5F5"
               />
-              <img class="bk_img_b" src="../../../../resources/imgs/bilibili_logo.png" />
+              <img class="bk_img_b" :src="BiliLogo" />
               <p class="light-green">B站</p>
             </n-flex>
           </n-grid-item>

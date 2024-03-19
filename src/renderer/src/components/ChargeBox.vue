@@ -46,7 +46,7 @@
   color: #fff;
 }
 .btn-bk {
-  background-image: url(../assets/images/btn_bk.png);
+  background-image: url(../../public/imgs/btn_bk.png);
   background-size: cover;
 }
 </style>
