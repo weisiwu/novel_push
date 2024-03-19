@@ -572,20 +572,23 @@ class VideoProcess:
         frame_rate: 视频帧率
         transition_duration_rate: 过渡百分比，比如当前图片出现时长是10S，过渡百分比15，那么会有1.5S的过渡，目前过渡效果仅支持透明过渡
         """
+        # TODO: 这个文件名称也需要最终从外面传递
         videowrite = cv2.VideoWriter(
-            Path(self.client_config.output_dir).as_posix(),
+            (Path(self.client_config.output_dir) / "output.mp4").as_posix(),
             cv2.VideoWriter_fourcc(*"mp4v"),
             frame_rate,
             img_size,
         )
-        # print("保存视频的位置", self.client_config.output_dir)
+        # print("保存视频的位置", Path(self.client_config.output_dir).as_posix())
 
         frame_img_path = self.cache_config.video_frames_cahce_path
         # print("图片位置", self.cache_config.video_frames_cahce_path)
+        # print("合成视频的画面大小", img_size)
         filtered_files = glob.glob(f"{frame_img_path}/*_new*")
         sort_imgs = sorted(filtered_files, key=custom_sort)
         imgs_num = len(sort_imgs)
         prev_end = 0
+        # print("画面数量", imgs_num)
 
         for index, frame_img in enumerate(sort_imgs):
             next_index = index + 1 if index + 1 < imgs_num else index
@@ -619,6 +622,7 @@ class VideoProcess:
                 else:
                     videowrite.write(img)
 
+        print("成功保存视频")
         videowrite.release()
         return True
 
@@ -683,7 +687,7 @@ def parse_args():
 # TODO: 调试时打开
 if __name__ == "__main__":
     config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
-    input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo.mp4"
+    input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo1.mp4"
     with open(config_file, "r") as f:
         sd_config = json.load(f)
     VideoProcess(input_path=input_file)

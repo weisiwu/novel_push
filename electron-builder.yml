@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: novel_push
+  executableName: baogan_ai_novel_push
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
