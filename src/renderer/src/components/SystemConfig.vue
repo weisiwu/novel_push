@@ -106,6 +106,7 @@ import { ref, defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import axios from 'axios'
 import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json'
+console.log('wswTest 界面的系统设置中是否存在输出 ', modelListApi, baseUrl)
 
 const props = defineProps({ toggleShow: Function })
 

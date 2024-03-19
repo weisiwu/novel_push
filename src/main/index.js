@@ -8,11 +8,15 @@ import macIcon from '../../resources/imgs/icon.png?asset'
 import DetectVideoShotByParts from '../renderer/modules/DetectVideoShot'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
+console.log('wswTest: ', '防止读取resources中配置存在问题=====开始')
+console.log('wswTest: DetectVideoShotByParts(这是函数)', DetectVideoShotByParts)
+console.log('wswTest: configPath(这是路径)', configPath)
+console.log('wswTest: ', '防止读取resources中配置存在问题=====结束')
+
 let startWindow = null
 let mainWindow = null
 const resourcesPath = process.resourcesPath
 const asarPath = join(process.resourcesPath, 'app.asar')
-console.log('wswTest: 读取resources中的配置 ', configPath)
 
 // 打包资源文件到 app.asar
 asar.createPackage(resourcesPath, asarPath)
