@@ -137,7 +137,6 @@ class ExtractPictureTask(Task):
         self.sub_task_queue = task_queues.rm_watermark_queue
         self.video_frames_cahce_path = video_frames_cahce_path
         self.cap = cv2.VideoCapture(input_file)
-        print("抽出图配置", self.client_config)
 
     def process(self):
         # 明确每小段视频里，有哪些场景
@@ -204,11 +203,9 @@ class RmWatermarkTask(Task):
         self.sub_task_queue = task_queues.sd_imgtoimg_queue
         directory, filename = os.path.split(input_file)
         name, extension = os.path.splitext(filename)
-        print("去除水印配置", self.client_config)
         self.output_file = os.path.join(directory, f"{name}_new{extension}")
 
     def process(self):
-        print("读取是否跳过配置", type(self.client_config.skipRmWatermark))
         result = RmSubtitleAliyun(
             self.input_file,
             self.output_file,
@@ -273,17 +270,13 @@ class SDImgToImgTask(Task):
         self.client_config = client_config
         self.base_url = sd_config["baseUrl"]
         self.i2i_api = sd_config["i2iApi"]
-        print("图生图配置", self.client_config)
         # 从配置中读取
         if not client_config.isOriginalSize:
             self.output_width = client_config.HDImageWidth or 512
-            self.output_height = client_config.HDImageWidth or 512
+            self.output_height = client_config.HDImageHeight or 512
         else:
             self.output_width = video_info.width or 512
             self.output_height = video_info.height or 512
-        # self.output_height = (
-        #     self.output_width / self.video_info.width
-        # ) * self.video_info.height
 
     def image_to_base64(self):
         with open(self.input_file, "rb") as image_file:
@@ -363,7 +356,7 @@ class VideoProcess:
             steps=sd_config["steps"] or 25,
             cfg=sd_config["cfg"] or 0.5,
             models=sd_config["models"] or "",
-            isOriginalSize=sd_config["isOriginalSize"] or True,
+            isOriginalSize=sd_config["isOriginalSize"],
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -531,7 +524,6 @@ class VideoProcess:
         # 视频切片完成，开始监听任务队列执行情况
         while True:
             time.sleep(self.scan_interval)
-            # print("定时扫码的结果是什么", self.process_finish())
             if self.process_finish():
 
                 # 图片处理结束，合成视频
@@ -541,17 +533,26 @@ class VideoProcess:
                     img_size=self.video_info.size,
                 )
 
-                if process_result:
-                    # print("视频处理完成")
-                    print(
-                        json.dumps(
-                            {
-                                "code": 1,
-                                "type": "concat_imgs_to_video",
-                                "video_path": self.client_config.output_dir,
-                            }
-                        )
+                # TODO: 待确认为什么会这样 - 任务队列清空
+                print(
+                    json.dumps(
+                        {
+                            "code": 1,
+                            "type": "concat_imgs_to_video",
+                            "video_path": self.client_config.output_dir,
+                        }
                     )
+                )
+                # if process_result:
+                #     print(
+                #         json.dumps(
+                #             {
+                #                 "code": 1,
+                #                 "type": "concat_imgs_to_video",
+                #                 "video_path": self.client_config.output_dir,
+                #             }
+                #         )
+                #     )
 
                 # print("【退出主线程】")
                 # 发送停止信号给工作线程
@@ -579,16 +580,12 @@ class VideoProcess:
             frame_rate,
             img_size,
         )
-        # print("保存视频的位置", Path(self.client_config.output_dir).as_posix())
 
         frame_img_path = self.cache_config.video_frames_cahce_path
-        # print("图片位置", self.cache_config.video_frames_cahce_path)
-        # print("合成视频的画面大小", img_size)
         filtered_files = glob.glob(f"{frame_img_path}/*_new*")
         sort_imgs = sorted(filtered_files, key=custom_sort)
         imgs_num = len(sort_imgs)
         prev_end = 0
-        # print("画面数量", imgs_num)
 
         for index, frame_img in enumerate(sort_imgs):
             next_index = index + 1 if index + 1 < imgs_num else index
@@ -622,7 +619,6 @@ class VideoProcess:
                 else:
                     videowrite.write(img)
 
-        print("成功保存视频")
         videowrite.release()
         return True
 
@@ -642,7 +638,6 @@ class VideoProcess:
         """
         任务处理函数，主要做调用分发
         """
-        # print("【执行任务】", task_type)
         task.process()
         pass
 
@@ -656,7 +651,6 @@ class VideoProcess:
         while True:
             task = task_queue.get()
             if task is not None:
-                # print("【从任务对列读取任务】", task_type)
                 self.process_task(task, task_type)  # 处理当前任务，并分发子任务
                 # task_queue.task_done()
 
@@ -665,7 +659,6 @@ class VideoProcess:
         初始化工作线程，并监听处理结束
         """
         for task_type in self.task_relations.keys():
-            # print("【创建任务线程】", task_type)
             t = threading.Thread(target=self.worker, args=(task_type,))
             t.start()
             self.threads.append(t)
@@ -678,16 +671,16 @@ def parse_args():
     return parser.parse_args()
 
 
-# args = parse_args()
-# with open(args.config_file, "r") as f:
-#     sd_config = json.load(f)
-# VideoProcess(input_path=args.input_file, config_file=args.config_file)
+args = parse_args()
+with open(args.config_file, "r") as f:
+    sd_config = json.load(f)
+VideoProcess(input_path=args.input_file)
 
 
 # TODO: 调试时打开
-if __name__ == "__main__":
-    config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
-    input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo1.mp4"
-    with open(config_file, "r") as f:
-        sd_config = json.load(f)
-    VideoProcess(input_path=input_file)
+# if __name__ == "__main__":
+#     config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
+#     input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo1.mp4"
+#     with open(config_file, "r") as f:
+#         sd_config = json.load(f)
+#     VideoProcess(input_path=input_file)

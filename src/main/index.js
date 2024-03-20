@@ -107,6 +107,7 @@ app.whenReady().then(() => {
     if (!mainWindow) {
       return
     }
+    event.sender.send('video-output', {})
     console.log('wswTest: 视频处理进程结束', params)
   })
 

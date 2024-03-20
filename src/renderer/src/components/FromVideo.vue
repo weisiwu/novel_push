@@ -1,9 +1,10 @@
 <script setup>
 import { h, ref } from 'vue'
-import { NButton, NProgress, NImage } from 'naive-ui'
+import { NButton, NProgress, NImage, useMessage } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
 
 const imgSize = 250
+const message = useMessage()
 
 const createColumns = () => {
   return [
@@ -70,19 +71,19 @@ const createColumns = () => {
               onClick: () => {}
             },
             '重绘'
-          ),
-          h(
-            NButton,
-            {
-              strong: true,
-              tertiary: true,
-              size: 'small',
-              type: 'info',
-              style: { width: '80px', margin: '8px auto 0px' },
-              onClick: () => {}
-            },
-            '设置'
           )
+          // h(
+          //   NButton,
+          //   {
+          //     strong: true,
+          //     tertiary: true,
+          //     size: 'small',
+          //     type: 'info',
+          //     style: { width: '80px', margin: '8px auto 0px' },
+          //     onClick: () => {}
+          //   },
+          //   '设置'
+          // )
         ])
       }
     }
@@ -92,17 +93,23 @@ const createColumns = () => {
 const tableData = ref([])
 const currentRef = ref(false)
 
-window.ipcRenderer &&
+if (window.ipcRenderer) {
   window.ipcRenderer.receive('update-process', (params) => {
     let isExsist = false
-    const { type, width, height, file_name, img_path, new_img_path } = params || {}
-    console.log('wswTest: 接受到的更新数据是', params)
+    const { type, width, height, file_name, img_path, new_img_path, is_skip, video_path } =
+      params || {}
+    console.log('wswTest: video_pathvideo_path', type, video_path)
+    if (type === 'concat_imgs_to_video') {
+      message.info('生成视频成功!')
+      window.openPath(video_path)
+      return
+    }
     const _tableData = tableData.value.map((item) => {
       console.log('wswTest类型是什么', type, item.value, file_name)
       // 存在名称相同的图片，则是更新为对该图片的追加改动
       if (item.value == file_name.replace('_new', '')) {
         isExsist = true
-        if (type === 'extract_picture') {
+        if (type === 'extract_picture' || (is_skip && type === 'rm_watermark')) {
           return {
             ...item,
             width,
@@ -159,14 +166,14 @@ window.ipcRenderer &&
     }
   })
 
-window.ipcRenderer &&
-  window.ipcRenderer.receive('concat_imgs_to_video', (params) => {
+  window.ipcRenderer.receive('video-output', (params) => {
     const { code, video_path } = params || {}
     console.log('wswTest: video_pathvideo_path', video_path)
     if (code === 1 && video_path) {
       window.openPath(video_path)
     }
   })
+}
 </script>
 
 <template>

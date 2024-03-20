@@ -1,5 +1,5 @@
 {
-  "name": "BaoGan AI Novel Push",
+  "name": "baogao_ai_novel_push",
   "version": "0.1.0",
   "description": "小说推文",
   "main": "./out/main/index.js",
@@ -8,8 +8,8 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "start": "electron-vite preview",
-    "dev": "electron-vite dev",
+    "start": "chcp 65001 && electron-vite preview",
+    "dev": "chcp 65001 && electron-vite dev",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

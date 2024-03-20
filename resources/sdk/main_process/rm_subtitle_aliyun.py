@@ -1,4 +1,4 @@
-import os
+import shutil
 from urllib.request import urlopen
 from alibabacloud_imageenhan20190930.client import Client
 from alibabacloud_imageenhan20190930.models import RemoveImageSubtitlesAdvanceRequest
@@ -16,7 +16,7 @@ runtime_option = RuntimeOptions()
 
 def main(img_path, out_path, skip=False):
     if skip:
-        os.rename(img_path, out_path)
+        shutil.copyfile(img_path, out_path)
         return True
     try:
         img = open(img_path, "rb")

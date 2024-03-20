@@ -21,14 +21,15 @@ const DetectVideoShotByParts = ({ filePath, event }) => {
       dataObj = {}
     }
     if (dataObj.code === 1) {
-      console.log('wswTest: 接收到的数据对象是', dataObj)
+      // dataObj?.type === 'sd_imgtoimg' && console.log('wswTest: ', dataObj)
       event.sender.send('update-process', {
         type: dataObj?.type,
         width: dataObj?.width,
         height: dataObj?.height,
-        file_name: parse(dataObj?.input_file || '')?.name,
+        file_name: parse(dataObj?.input_file || '')?.name || '',
         img_path: dataObj?.input_file || '',
-        new_img_path: dataObj?.output_file || ''
+        new_img_path: dataObj?.output_file || '',
+        is_skip: dataObj?.is_skip || false
       })
     }
   })

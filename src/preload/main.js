@@ -18,7 +18,8 @@ const mainWindowChannels = [
   'finish-process',
   'fetch-config',
   'read-config',
-  'save-config'
+  'save-config',
+  'video-output'
 ]
 
 if (process.contextIsolated) {

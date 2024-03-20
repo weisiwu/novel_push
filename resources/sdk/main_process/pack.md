@@ -11,9 +11,9 @@ pyinstaller main.py --onefile --upx-dir=/opt/homebrew/Cellar/upx/4.1.0
 
 
 python测试命令
-python main.py --input_file C:\Users\Administrator\Desktop\github\novel_push\src\renderer\src\assets\video\demo.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
+python main.py --input_file C:\Users\Administrator\Desktop\demo\3.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
 
-main.exe --input_file C:\Users\Administrator\Desktop\github\novel_push\src\renderer\src\assets\video\demo1.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
+./main.exe --input_file C:\Users\Administrator\Desktop\demo\1.mp4  --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
 
 prompt
 我有三种不同类型的任务： A、B、C，每种任务都有很多子任务，子任务之间是有顺序关系的。

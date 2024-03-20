@@ -15,5 +15,5 @@
   "steps": 25,
   "cfg": 0.5,
   "models": "Anime_Model",
-  "isOriginalSize": true
+  "isOriginalSize": false
 }
