@@ -98,12 +98,12 @@ if (window.ipcRenderer) {
     let isExsist = false
     const { type, width, height, file_name, img_path, new_img_path, is_skip, video_path } =
       params || {}
-    console.log('wswTest: video_pathvideo_path', type, video_path)
-    if (type === 'concat_imgs_to_video') {
+    console.log('wswTest: 视频合并完毕', video_path)
+    if (video_path && type === 'concat_imgs_to_video') {
       message.info('生成视频成功!')
       window.openPath(video_path)
-      return
     }
+
     const _tableData = tableData.value.map((item) => {
       console.log('wswTest类型是什么', type, item.value, file_name)
       // 存在名称相同的图片，则是更新为对该图片的追加改动
@@ -163,14 +163,6 @@ if (window.ipcRenderer) {
 
     if (!currentRef.value) {
       currentRef.value = tableData.value.length || 0
-    }
-  })
-
-  window.ipcRenderer.receive('video-output', (params) => {
-    const { code, video_path } = params || {}
-    console.log('wswTest: video_pathvideo_path', video_path)
-    if (code === 1 && video_path) {
-      window.openPath(video_path)
     }
   })
 }

@@ -8,8 +8,10 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "start": "chcp 65001 && electron-vite preview",
-    "dev": "chcp 65001 && electron-vite dev",
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "start:win": "chcp 65001 && electron-vite preview",
+    "dev:win": "chcp 65001 && electron-vite dev",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

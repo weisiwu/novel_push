@@ -18,6 +18,7 @@ from scenedetect import (
     detect,
     AdaptiveDetector,
     ContentDetector,
+    ThresholdDetector,
 )
 from rm_subtitle_aliyun import main as RmSubtitleAliyun
 
@@ -46,7 +47,7 @@ class ClientConfig:
         segment_time=3,
         output_dir="",
         transition_duration_rate=0.3,
-        extrac_picture_threshold=27,
+        extrac_picture_threshold=20,
         HDImageWidth=512,
         HDImageHeight=512,
         skipRmWatermark=False,
@@ -126,6 +127,8 @@ class ExtractPictureTask(Task):
         task_queues,
         client_config,
         video_frames_cahce_path,
+        update_shot_num,
+        update_already_handled_shot_num,
     ):
         super().__init__("extract_picture_queue")
         self.threshold = threshold
@@ -137,11 +140,15 @@ class ExtractPictureTask(Task):
         self.sub_task_queue = task_queues.rm_watermark_queue
         self.video_frames_cahce_path = video_frames_cahce_path
         self.cap = cv2.VideoCapture(input_file)
+        self.update_shot_num = update_shot_num
+        self.update_already_handled_shot_num = update_already_handled_shot_num
 
     def process(self):
         # 明确每小段视频里，有哪些场景
-        # scene_list = detect(self.input_file, ContentDetector())
-        scene_list = detect(self.input_file, AdaptiveDetector())
+        # https://www.scenedetect.com/docs/latest/api/detectors.html#scenedetect.detectors.threshold_detector.ThresholdDetector
+        # scene_list = detect(self.input_file, ThresholdDetector())
+        # scene_list = detect(self.input_file, AdaptiveDetector())
+        scene_list = detect(self.input_file, ContentDetector(threshold=self.threshold))
         for i, scene in enumerate(scene_list):
             start_index = scene[0].get_frames()  # 起始帧
             end_index = scene[1].get_frames()  # 结束帧
@@ -174,8 +181,10 @@ class ExtractPictureTask(Task):
                     video_info=self.video_info,
                     task_queues=self.task_queues,
                     client_config=self.client_config,
+                    update_already_handled_shot_num=self.update_already_handled_shot_num,
                 )
             )
+            self.update_shot_num()
 
         self.task_queues.extract_picture_queue.task_done()
 
@@ -193,6 +202,7 @@ class RmWatermarkTask(Task):
         video_info,
         task_queues,
         client_config,
+        update_already_handled_shot_num,
     ):
         super().__init__("rm_watermark_queue")
         self.times = 1
@@ -201,6 +211,7 @@ class RmWatermarkTask(Task):
         self.video_info = video_info
         self.client_config = client_config
         self.sub_task_queue = task_queues.sd_imgtoimg_queue
+        self.update_already_handled_shot_num = update_already_handled_shot_num
         directory, filename = os.path.split(input_file)
         name, extension = os.path.splitext(filename)
         self.output_file = os.path.join(directory, f"{name}_new{extension}")
@@ -236,6 +247,7 @@ class RmWatermarkTask(Task):
                     task_queues=self.task_queues,
                     output_file=self.output_file,
                     client_config=self.client_config,
+                    update_already_handled_shot_num=self.update_already_handled_shot_num,
                 )
             )
         else:
@@ -260,7 +272,15 @@ class SDImgToImgTask(Task):
     SD图生图任务，支持云端/本地
     """
 
-    def __init__(self, input_file, output_file, client_config, task_queues, video_info):
+    def __init__(
+        self,
+        input_file,
+        output_file,
+        client_config,
+        task_queues,
+        video_info,
+        update_already_handled_shot_num,
+    ):
         super().__init__("sd_imgtoimg_queue")
         self.times = 1
         self.video_info = video_info
@@ -270,6 +290,7 @@ class SDImgToImgTask(Task):
         self.client_config = client_config
         self.base_url = sd_config["baseUrl"]
         self.i2i_api = sd_config["i2iApi"]
+        self.update_already_handled_shot_num = update_already_handled_shot_num
         # 从配置中读取
         if not client_config.isOriginalSize:
             self.output_width = client_config.HDImageWidth or 512
@@ -310,6 +331,7 @@ class SDImgToImgTask(Task):
             img_data = base64.b64decode(response_data["images"][0])
             with open(self.output_file, "wb") as file:
                 file.write(img_data)
+            self.update_already_handled_shot_num()
             # 【图生图任务】成功
             print(
                 json.dumps(
@@ -367,6 +389,10 @@ class VideoProcess:
         self.current_segment_index = 0  # 当前视频片段序号
         self.videowrite = None  # 当前写视频句柄引用
         self.process_start = False  # 进程是否启动
+        # 已处理完成的镜头数
+        self.shot_nums_already_handled = 0
+        # 最终生成的视频，一共有该数量的镜头
+        self.shot_nums = 0
 
         """
         任务队列相关
@@ -453,19 +479,30 @@ class VideoProcess:
         self.init_workers()
         self.auto_clip_video()
 
+    def update_shot_num(self):
+        """
+        更新总镜头数
+        """
+        self.shot_nums += 1
+
+    def update_already_handled_shot_num(self):
+        """
+        更新总镜头数
+        """
+        self.shot_nums_already_handled += 1
+
     def auto_clip_video(self):
         """
         自动分割视频
         """
         self.cap = cv2.VideoCapture(self.client_config.input_path.as_posix())
 
+        # 【读取视频】失败
         if not self.cap:
-            # print("【读取视频】失败")
             return
 
-        # 是否成功打开
+        # 【打开视频】失败
         if not self.cap.isOpened():
-            # print("【打开视频】失败")
             return
 
         if not self.video_info.frame_rate:
@@ -514,6 +551,8 @@ class VideoProcess:
                     frame_index=self.current_frame_index,
                     threshold=self.client_config.extrac_picture_threshold,
                     video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
+                    update_shot_num=self.update_shot_num,
+                    update_already_handled_shot_num=self.update_already_handled_shot_num,
                 )
             )
             self.current_segment_index += 1
@@ -525,7 +564,6 @@ class VideoProcess:
         while True:
             time.sleep(self.scan_interval)
             if self.process_finish():
-
                 # 图片处理结束，合成视频
                 process_result = self.concat_imgs_to_video(
                     frame_rate=self.video_info.frame_rate,
@@ -533,28 +571,17 @@ class VideoProcess:
                     img_size=self.video_info.size,
                 )
 
-                # TODO: 待确认为什么会这样 - 任务队列清空
-                print(
-                    json.dumps(
-                        {
-                            "code": 1,
-                            "type": "concat_imgs_to_video",
-                            "video_path": self.client_config.output_dir,
-                        }
+                if process_result:
+                    print(
+                        json.dumps(
+                            {
+                                "code": 1,
+                                "type": "concat_imgs_to_video",
+                                "video_path": self.client_config.output_dir,
+                            }
+                        )
                     )
-                )
-                # if process_result:
-                #     print(
-                #         json.dumps(
-                #             {
-                #                 "code": 1,
-                #                 "type": "concat_imgs_to_video",
-                #                 "video_path": self.client_config.output_dir,
-                #             }
-                #         )
-                #     )
 
-                # print("【退出主线程】")
                 # 发送停止信号给工作线程
                 self.task_queues.extract_picture_queue.put(None)
                 self.task_queues.rm_watermark_queue.put(None)
@@ -563,6 +590,8 @@ class VideoProcess:
                 # 等待所有线程结束
                 for t in self.threads:
                     t.join()
+
+                sys.exit(0)
 
     def concat_imgs_to_video(
         self, frame_rate=30, transition_duration_rate=0.5, img_size=(512, 288)
@@ -626,9 +655,18 @@ class VideoProcess:
         """
         检查视频处理任务的所有对列是否完成
         """
+        # 已经处理的镜头数和总镜头数是否相同
+        if self.shot_nums_already_handled != self.shot_nums:
+            return False
         queues = self.task_queues.__dict__
         # for index, queue_name in enumerate(queues):
         #     print("任务队列还剩余多少", queue_name, queues[queue_name].qsize())
+        # print(
+        #     "已处理任务数/任务总数",
+        #     self.shot_nums_already_handled,
+        #     self.shot_nums,
+        # )
+        # 进程是否已经启动
         if self.process_start:
             return all(_queue.empty() for _queue in queues.values())
 

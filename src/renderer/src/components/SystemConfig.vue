@@ -30,8 +30,8 @@
                 :style="{
                   'line-height': '42px',
                   height: '42px',
-                  width: '335px',
-                  maxWidth: '335px',
+                  width: '320px',
+                  maxWidth: '320px',
                   overflow: 'hidden',
                   'white-space': 'nowrap',
                   'text-overflow': 'ellipsis'
@@ -63,8 +63,10 @@
           <n-form-item label="绘图模型" path="models">
             <n-select
               v-model:value="formModel.models"
+              remote
               placeholder="请选择绘画模型"
-              :options="modelsOptions.value"
+              :loading="modelLoading"
+              :options="modelsOptions"
             />
           </n-form-item>
           <n-form-item label="调整视频画面大小" path="imgSize">
@@ -106,14 +108,12 @@ import { ref, defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import axios from 'axios'
 import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
-console.log('wswTest 界面的系统设置中是否存在输出1 ', modelListApi, baseUrl)
 
 const props = defineProps({ toggleShow: Function })
-
 const CFG_SETS = [
-  { value: 0.3, label: '低相似度' },
-  { value: 0.5, label: '中相似度' },
-  { value: 0.8, label: '高相似度' }
+  { value: 7, label: '低相似度' },
+  { value: 14, label: '中相似度' },
+  { value: 20, label: '高相似度' }
 ]
 const active = ref(true)
 const message = useMessage()
@@ -122,16 +122,17 @@ const toggle = () => {
   active.value = !active.value
 }
 const modelsOptions = ref([])
+const modelLoading = ref(true)
 const formRef = ref(null)
 const formModel = ref({
-  cfg: 0.5,
+  cfg: 14,
   steps: 25,
   baseUrl: '',
   outputPath: '',
   HDImageWidth: 512,
   HDImageHeight: 512,
   isOriginalSize: true,
-  models: 'Anime_Model',
+  models: '',
   skipRmWatermark: false
 })
 const selectFolder = () => {
@@ -142,8 +143,10 @@ let retryTimes = 0
 const fetchModelList = () => {
   return axios
     .get(`${baseUrl}${modelListApi}`)
-    .then((model_list) => {
+    .then((result) => {
+      const model_list = result?.data
       console.log('wswTest: model_list', model_list)
+      modelLoading.value = false
       if (model_list?.length) {
         // demoValue
         // "title": "mixProV4.Cqhm.safetensors [61e23e57ea]",
@@ -153,7 +156,8 @@ const fetchModelList = () => {
         // "filename": "/stable-diffusion-webui/models/Stable-diffusion/mixProV4.Cqhm.safetensors",
         // "config": null
         modelsOptions.value =
-          model_list?.map?.((model) => {
+          model_list?.map?.((model, index) => {
+            index === 0 && (formModel.value.models = model?.model_name || '')
             return {
               ...model,
               label: model.title,

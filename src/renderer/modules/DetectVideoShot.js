@@ -21,7 +21,6 @@ const DetectVideoShotByParts = ({ filePath, event }) => {
       dataObj = {}
     }
     if (dataObj.code === 1) {
-      // dataObj?.type === 'sd_imgtoimg' && console.log('wswTest: ', dataObj)
       event.sender.send('update-process', {
         type: dataObj?.type,
         width: dataObj?.width,
@@ -32,11 +31,6 @@ const DetectVideoShotByParts = ({ filePath, event }) => {
         is_skip: dataObj?.is_skip || false
       })
     }
-  })
-
-  mainProcess.on('close', (code) => {
-    console.log('wswTest:视频处理进程结束了', code)
-    event.sender.send('finish-process', { code })
   })
 }
 

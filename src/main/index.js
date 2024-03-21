@@ -100,17 +100,6 @@ app.whenReady().then(() => {
     })
   })
 
-  /**
-   * 结束处理进程，主进程任务完全结束，通知渲染进程
-   */
-  ipcMain.on('finish-process', async (event, params) => {
-    if (!mainWindow) {
-      return
-    }
-    event.sender.send('video-output', {})
-    console.log('wswTest: 视频处理进程结束', params)
-  })
-
   // 监听打开文件夹
   ipcMain.on('open-dialog', (event) => {
     const result = dialog.showOpenDialogSync(mainWindow, {
