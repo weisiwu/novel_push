@@ -460,6 +460,17 @@ class VideoProcess:
             json.dumps({"code": 0, "type": "check_sd_available"})
             sys.exit()
 
+        # 检查保存目录是否为空，如是，则重新指定保存目录为桌面的baogao_ai_novel_push_output文件夹
+        if os.path.exists(self.client_config.output_dir):
+            desktop_path = (
+                Path(os.path.expanduser("~"))
+                / "Desktop"
+                / "baogao_ai_novel_push_output"
+            )
+            self.client_config.output_dir = desktop_path
+            shutil.rmtree(desktop_path)
+            os.makedirs(desktop_path, exist_ok=True)
+
         # 清空并创建后续需要用到的目录
         if os.path.exists(self.cache_config.video_frames_cahce_path):
             shutil.rmtree(self.cache_config.video_frames_cahce_path)

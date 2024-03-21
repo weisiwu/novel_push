@@ -6,7 +6,7 @@
   "modelListApi": "/sdapi/v1/sd-models",
   "amplifyApi": "/sdapi/v1/extra-single-image",
   "amplifyBatchApi": "/sdapi/v1/extra-batch-images",
-  "outputPath": "/Users/siwu/Desktop/github/novel_push/resources/ouput",
+  "outputPath": "",
   "HDImageWidth": 512,
   "defaultFrameRate": 30,
   "positivePrompt": "masterpiece,Highly detailed,extreme detail description,Anime,Concept artists,video game,Makoto Shinkai, Katsuhiro Otomo, Masashi Kishimoto, Kentaro Miura,",
