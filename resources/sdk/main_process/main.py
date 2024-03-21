@@ -290,6 +290,7 @@ class SDImgToImgTask(Task):
         self.client_config = client_config
         self.base_url = sd_config["baseUrl"]
         self.i2i_api = sd_config["i2iApi"]
+        self.samplers_api = sd_config["samplersApi"]
         self.update_already_handled_shot_num = update_already_handled_shot_num
         # 从配置中读取
         if not client_config.isOriginalSize:
@@ -450,6 +451,14 @@ class VideoProcess:
                 "memoryUtil": firstGPU.memoryUtil,  # 显存使用率
             }
             # print("【读取GPU信息失败】成功: ", firstGPU)
+
+        # 检查sd是否可使用
+        check_sd_available = requests.get(f"{self.base_url}{self.samplers_api}")
+
+        # 检查响应状态码，如无接口则不用执行了
+        if check_sd_available.status_code != 200:
+            json.dumps({"code": 0, "type": "check_sd_available"})
+            sys.exit()
 
         # 清空并创建后续需要用到的目录
         if os.path.exists(self.cache_config.video_frames_cahce_path):
