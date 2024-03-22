@@ -3,6 +3,8 @@ import { h, ref } from 'vue'
 import { NIcon, NEllipsis } from 'naive-ui'
 import {
   BugOutline,
+  DownloadOutline,
+  ImagesOutline,
   RocketOutline,
   NotificationsOutline,
   SettingsOutline,
@@ -19,7 +21,8 @@ import AppLogo from '../public/logos/logo_16.svg?asset'
 const pageNames = {
   from_video: 'from_video',
   from_text: 'from_text',
-  tools: 'tools',
+  video_download: 'video_download',
+  video_cover: 'video_cover',
   feedback: 'feedback'
 }
 function renderIcon(icon) {
@@ -48,7 +51,19 @@ const menuOptions = [
   {
     label: renderLabel('工具箱'),
     key: pageNames.tools,
-    icon: renderIcon(MedkitOutline)
+    icon: renderIcon(MedkitOutline),
+    children: [
+      {
+        label: '视频下载',
+        icon: renderIcon(DownloadOutline),
+        key: 'video_download'
+      },
+      {
+        label: '视频封面制作',
+        icon: renderIcon(ImagesOutline),
+        key: 'video_cover'
+      }
+    ]
   },
   {
     label: renderLabel('使用说明'),
@@ -79,16 +94,16 @@ const toggleConfig = (event) => {
 </script>
 
 <template>
-  <n-space vertical>
+  <n-space vertical :style="{ width: '100%', height: '100vh' }">
     <n-loading-bar-provider :loading-bar-style="loadingStyle">
       <n-message-provider>
-        <n-layout has-sider class="layout">
+        <n-layout has-sider class="layout" :style="{ width: '100%', height: '100vh' }">
           <n-layout-sider
             bordered
             class="sidebar"
             collapse-mode="width"
             content-style="padding: 24px;"
-            :collapsed-width="64"
+            :collapsed-width="10"
             :width="240"
             :collapsed="collapsed"
             show-trigger
@@ -101,7 +116,6 @@ const toggleConfig = (event) => {
             <n-menu
               v-model:value="selectMenu"
               :collapsed="collapsed"
-              indent="50"
               :collapsed-width="64"
               :collapsed-icon-size="22"
               :options="menuOptions"
@@ -109,7 +123,7 @@ const toggleConfig = (event) => {
               :expand-icon="expandIcon"
             />
           </n-layout-sider>
-          <n-layout class="content">
+          <n-layout class="content" :style="{ minWidth: '900px', width: '100%' }">
             <div class="statusbar">
               <div class="blank"></div>
               <div class="config topbar_icon" @click="toggleConfig">
@@ -133,10 +147,13 @@ const toggleConfig = (event) => {
             </div>
             <FromVideo v-if="selectMenu === pageNames.from_video" />
             <FromText v-if="selectMenu === pageNames.from_text" />
-            <Tools v-if="selectMenu === pageNames.tools" />
+            <Tools
+              v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
+              :tool="selectMenu"
+            />
             <Feedback v-if="selectMenu === pageNames.feedback" />
             <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
-            <div style="margin-bottom: 200px"></div>
+            <div style="margin-bottom: 80px"></div>
           </n-layout>
         </n-layout>
       </n-message-provider>
@@ -147,8 +164,10 @@ const toggleConfig = (event) => {
 <style>
 .layout {
   display: flex;
-  width: 1920px;
-  height: 1080px;
+  max-width: 1920px;
+  max-height: 1080px;
+  width: 100%;
+  height: 100%;
 }
 .sidebar_title {
   display: flex;
@@ -182,17 +201,11 @@ const toggleConfig = (event) => {
 .sidebar_icon {
   color: #fff;
 }
-.n-menu .n-menu-item-content:hover .n-menu-item-content__icon .sidebar_icon {
-  color: #333;
-}
-.n-menu-item-content--selected {
-  background-color: #2d47d2;
-}
-.n-menu .n-menu-item-content .n-menu-item-content-header .sidebar_text span {
-  color: #fff;
-}
-.n-menu .n-menu-item-content:hover .n-menu-item-content-header .sidebar_text span {
-  color: #333;
+
+.n-icon {
+  svg {
+    color: #fff;
+  }
 }
 .statusbar {
   display: flex;
@@ -201,7 +214,9 @@ const toggleConfig = (event) => {
   height: 50px;
   line-height: 50px;
   .blank {
+    display: flex;
     flex-grow: 1;
+    flex-shrink: 1;
   }
   .topbar_icon {
     display: flex;
@@ -213,6 +228,38 @@ const toggleConfig = (event) => {
     i {
       align-self: center;
       margin-right: 8px;
+    }
+  }
+}
+/* 未选中tab */
+.n-menu-item-content:hover .n-menu-item-content__icon .sidebar_icon svg {
+  color: #333;
+}
+.n-menu-item-content .n-menu-item-content-header .sidebar_text span {
+  color: #fff;
+}
+.n-menu-item-content:hover .n-menu-item-content-header .sidebar_text span {
+  color: #333;
+}
+/* 选中tab */
+.n-menu-item-content--selected {
+  background-color: #2d47d2;
+}
+.n-menu-item-content--selected:hover .n-menu-item-content__icon .sidebar_icon svg {
+  color: #fff;
+}
+.n-menu
+  .n-menu-item-content:not(.n-menu-item-content--disabled).n-menu-item-content--selected:hover
+  .n-menu-item-content-header,
+.n-menu-item-content--selected:hover .n-menu-item-content-header .sidebar_text span {
+  color: #fff;
+}
+
+/* 子目录样式定义 */
+.n-submenu-children {
+  .n-menu-item {
+    .n-menu-item-content .n-menu-item-content-header {
+      color: #fff;
     }
   }
 }
