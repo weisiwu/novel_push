@@ -109,7 +109,7 @@ const toggleConfig = (event) => {
               :expand-icon="expandIcon"
             />
           </n-layout-sider>
-          <n-layout class="content">
+          <n-layout class="content" :style="{ minWidth: '900px' }">
             <div class="statusbar">
               <div class="blank"></div>
               <div class="config topbar_icon" @click="toggleConfig">
@@ -136,7 +136,7 @@ const toggleConfig = (event) => {
             <Tools v-if="selectMenu === pageNames.tools" />
             <Feedback v-if="selectMenu === pageNames.feedback" />
             <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
-            <div style="margin-bottom: 200px"></div>
+            <div style="margin-bottom: 120px"></div>
           </n-layout>
         </n-layout>
       </n-message-provider>
@@ -147,8 +147,10 @@ const toggleConfig = (event) => {
 <style>
 .layout {
   display: flex;
-  width: 1920px;
-  height: 1080px;
+  max-width: 1920px;
+  max-height: 1080px;
+  width: 100%;
+  height: 100%;
 }
 .sidebar_title {
   display: flex;
@@ -201,7 +203,9 @@ const toggleConfig = (event) => {
   height: 50px;
   line-height: 50px;
   .blank {
+    display: flex;
     flex-grow: 1;
+    flex-shrink: 1;
   }
   .topbar_icon {
     display: flex;

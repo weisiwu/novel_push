@@ -54,9 +54,17 @@ function createWindow() {
 
 // 打开指定窗口
 function openSpecialWindow(pageName = 'main') {
+  const size = require('electron').screen.getPrimaryDisplay().workAreaSize
+  const wsWidth = parseInt(size.width)
+  const wsHeight = parseInt(size.height)
+  const targetWidth = 1920
+  const targetHeight = 1080
+  // 自适应放缩，范围在80%-100%
+  const ratio = Math.max(Math.min(wsHeight / targetHeight, wsWidth / targetWidth, 0.8), 1)
+
   mainWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
+    width: 1920 * ratio,
+    height: 1080 * ratio,
     show: true,
     autoHideMenuBar: true,
     contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
