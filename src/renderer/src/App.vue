@@ -79,16 +79,16 @@ const toggleConfig = (event) => {
 </script>
 
 <template>
-  <n-space vertical>
+  <n-space vertical :style="{ width: '100%', height: '100vh' }">
     <n-loading-bar-provider :loading-bar-style="loadingStyle">
       <n-message-provider>
-        <n-layout has-sider class="layout">
+        <n-layout has-sider class="layout" :style="{ width: '100%', height: '100vh' }">
           <n-layout-sider
             bordered
             class="sidebar"
             collapse-mode="width"
             content-style="padding: 24px;"
-            :collapsed-width="64"
+            :collapsed-width="10"
             :width="240"
             :collapsed="collapsed"
             show-trigger
@@ -109,7 +109,7 @@ const toggleConfig = (event) => {
               :expand-icon="expandIcon"
             />
           </n-layout-sider>
-          <n-layout class="content" :style="{ minWidth: '900px' }">
+          <n-layout class="content" :style="{ minWidth: '900px', width: '100%' }">
             <div class="statusbar">
               <div class="blank"></div>
               <div class="config topbar_icon" @click="toggleConfig">
@@ -136,7 +136,7 @@ const toggleConfig = (event) => {
             <Tools v-if="selectMenu === pageNames.tools" />
             <Feedback v-if="selectMenu === pageNames.feedback" />
             <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
-            <div style="margin-bottom: 120px"></div>
+            <div style="margin-bottom: 80px"></div>
           </n-layout>
         </n-layout>
       </n-message-provider>
