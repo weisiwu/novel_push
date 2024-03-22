@@ -15,8 +15,8 @@ const tabs = {
         <n-button size="large" :style="{ width: '120px' }" type="info"> 下载 </n-button>
       </n-input-group>
     </n-tab-pane>
-    <n-tab-pane :name="tabs.TODO" tab="待开发">
-      <n-h3 style="text-align: center"> 待开发 </n-h3>
+    <n-tab-pane :name="tabs.TODO" tab="视频封面制作">
+      <n-h3 style="text-align: center"> 视频封面制作 </n-h3>
       <n-divider />
     </n-tab-pane>
   </n-tabs>

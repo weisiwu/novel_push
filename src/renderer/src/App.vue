@@ -3,6 +3,8 @@ import { h, ref } from 'vue'
 import { NIcon, NEllipsis } from 'naive-ui'
 import {
   BugOutline,
+  DownloadOutline,
+  ImagesOutline,
   RocketOutline,
   NotificationsOutline,
   SettingsOutline,
@@ -48,7 +50,19 @@ const menuOptions = [
   {
     label: renderLabel('工具箱'),
     key: pageNames.tools,
-    icon: renderIcon(MedkitOutline)
+    icon: renderIcon(MedkitOutline),
+    children: [
+      {
+        label: '视频下载',
+        icon: renderIcon(DownloadOutline),
+        key: 'video_download'
+      },
+      {
+        label: '视频封面制作',
+        icon: renderIcon(ImagesOutline),
+        key: 'video_cover'
+      }
+    ]
   },
   {
     label: renderLabel('使用说明'),
@@ -101,7 +115,6 @@ const toggleConfig = (event) => {
             <n-menu
               v-model:value="selectMenu"
               :collapsed="collapsed"
-              indent="50"
               :collapsed-width="64"
               :collapsed-icon-size="22"
               :options="menuOptions"
@@ -184,17 +197,11 @@ const toggleConfig = (event) => {
 .sidebar_icon {
   color: #fff;
 }
-.n-menu .n-menu-item-content:hover .n-menu-item-content__icon .sidebar_icon {
-  color: #333;
-}
-.n-menu-item-content--selected {
-  background-color: #2d47d2;
-}
-.n-menu .n-menu-item-content .n-menu-item-content-header .sidebar_text span {
-  color: #fff;
-}
-.n-menu .n-menu-item-content:hover .n-menu-item-content-header .sidebar_text span {
-  color: #333;
+
+.n-icon {
+  svg {
+    color: #fff;
+  }
 }
 .statusbar {
   display: flex;
@@ -217,6 +224,38 @@ const toggleConfig = (event) => {
     i {
       align-self: center;
       margin-right: 8px;
+    }
+  }
+}
+/* 未选中tab */
+.n-menu-item-content:hover .n-menu-item-content__icon .sidebar_icon svg {
+  color: #333;
+}
+.n-menu-item-content .n-menu-item-content-header .sidebar_text span {
+  color: #fff;
+}
+.n-menu-item-content:hover .n-menu-item-content-header .sidebar_text span {
+  color: #333;
+}
+/* 选中tab */
+.n-menu-item-content--selected {
+  background-color: #2d47d2;
+}
+.n-menu-item-content--selected:hover .n-menu-item-content__icon .sidebar_icon svg {
+  color: #fff;
+}
+.n-menu
+  .n-menu-item-content:not(.n-menu-item-content--disabled).n-menu-item-content--selected:hover
+  .n-menu-item-content-header,
+.n-menu-item-content--selected:hover .n-menu-item-content-header .sidebar_text span {
+  color: #fff;
+}
+
+/* 子目录样式定义 */
+.n-submenu-children {
+  .n-menu-item {
+    .n-menu-item-content .n-menu-item-content-header {
+      color: #fff;
     }
   }
 }
