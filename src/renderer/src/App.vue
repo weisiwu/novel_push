@@ -21,7 +21,8 @@ import AppLogo from '../public/logos/logo_16.svg?asset'
 const pageNames = {
   from_video: 'from_video',
   from_text: 'from_text',
-  tools: 'tools',
+  video_download: 'video_download',
+  video_cover: 'video_cover',
   feedback: 'feedback'
 }
 function renderIcon(icon) {
@@ -146,7 +147,10 @@ const toggleConfig = (event) => {
             </div>
             <FromVideo v-if="selectMenu === pageNames.from_video" />
             <FromText v-if="selectMenu === pageNames.from_text" />
-            <Tools v-if="selectMenu === pageNames.tools" />
+            <Tools
+              v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
+              :tool="selectMenu"
+            />
             <Feedback v-if="selectMenu === pageNames.feedback" />
             <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
             <div style="margin-bottom: 80px"></div>
