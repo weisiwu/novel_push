@@ -15,20 +15,18 @@ const DetectVideoShotByParts = ({ filePath, event }) => {
   mainProcess.stdout.on('data', (data) => {
     let dataStr = data.toString()
     let dataObj = null
+    console.log('wswTest接受到的标准输出: ', dataStr)
     try {
       dataObj = JSON.parse(dataStr) || {}
     } catch (e) {
       dataObj = {}
     }
-    if (dataObj.code === 1) {
+    if (dataObj) {
       event.sender.send('update-process', {
-        type: dataObj?.type,
-        width: dataObj?.width,
-        height: dataObj?.height,
+        ...dataObj,
         file_name: parse(dataObj?.input_file || '')?.name || '',
         img_path: dataObj?.input_file || '',
-        new_img_path: dataObj?.output_file || '',
-        is_skip: dataObj?.is_skip || false
+        new_img_path: dataObj?.output_file || ''
       })
     }
   })

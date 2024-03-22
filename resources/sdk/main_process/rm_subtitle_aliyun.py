@@ -5,16 +5,15 @@ from alibabacloud_imageenhan20190930.models import RemoveImageSubtitlesAdvanceRe
 from alibabacloud_tea_util.models import RuntimeOptions
 from alibabacloud_tea_openapi.models import Config
 
-config = Config(
-    access_key_id="",
-    access_key_secret="",
-    endpoint="imageenhan.cn-shanghai.aliyuncs.com",
-    region_id="cn-shanghai",
-)
-runtime_option = RuntimeOptions()
 
-
-def main(img_path, out_path, skip=False):
+def main(img_path, out_path, skip=False, access_key_id="", access_key_secret=""):
+    config = Config(
+        access_key_id=access_key_id,
+        access_key_secret=access_key_secret,
+        endpoint="imageenhan.cn-shanghai.aliyuncs.com",
+        region_id="cn-shanghai",
+    )
+    runtime_option = RuntimeOptions()
     if skip:
         shutil.copyfile(img_path, out_path)
         return True

@@ -34,6 +34,7 @@ def custom_sort(frame_img):
 1、处理视频前，先将视频压缩，再处理
 2、支持多种视频类型
 3、第一屏只取正常时长的一半
+TODO: 待整理，目前里面的导出变量不全
 """
 
 class ClientConfig:
@@ -55,6 +56,8 @@ class ClientConfig:
         cfg=0.5,
         models="",
         isOriginalSize=True,
+        access_key_id="",
+        access_key_secret="",
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
@@ -71,6 +74,8 @@ class ClientConfig:
         self.cfg = cfg
         self.models = models
         self.isOriginalSize = isOriginalSize
+        self.access_key_id = access_key_id
+        self.access_key_secret = access_key_secret
 
 
 class VideoInfo:
@@ -221,6 +226,8 @@ class RmWatermarkTask(Task):
             self.input_file,
             self.output_file,
             skip=self.client_config.skipRmWatermark,
+            access_key_id=self.client_config.access_key_id,
+            access_key_secret=self.client_config.access_key_secret,
         )
         if result:
             # 【去除图片水印】成功
@@ -290,7 +297,7 @@ class SDImgToImgTask(Task):
         self.client_config = client_config
         self.base_url = sd_config["baseUrl"]
         self.i2i_api = sd_config["i2iApi"]
-        self.samplers_api = sd_config["samplersApi"]
+        # self.samplers_api = sd_config["samplersApi"]
         self.update_already_handled_shot_num = update_already_handled_shot_num
         # 从配置中读取
         if not client_config.isOriginalSize:
@@ -380,6 +387,8 @@ class VideoProcess:
             cfg=sd_config["cfg"] or 0.5,
             models=sd_config["models"] or "",
             isOriginalSize=sd_config["isOriginalSize"],
+            access_key_id=sd_config["access_key_id"],
+            access_key_secret=sd_config["access_key_secret"],
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -453,23 +462,43 @@ class VideoProcess:
             # print("【读取GPU信息失败】成功: ", firstGPU)
 
         # 检查sd是否可使用
-        check_sd_available = requests.get(f"{self.base_url}{self.samplers_api}")
+        sd_base_url = sd_config["baseUrl"] or ""
+        samplers_api = sd_config["samplersApi"] or ""
 
         # 检查响应状态码，如无接口则不用执行了
-        if check_sd_available.status_code != 200:
-            json.dumps({"code": 0, "type": "check_sd_available"})
+        try:
+            check_sd_available = requests.get(f"{sd_base_url}{samplers_api}")
+            if check_sd_available.status_code != 200:
+                print(json.dumps({"code": 0, "type": "check_sd_available"}))
+                sys.stdout.flush()
+                sys.exit()
+        except:
+            # 请求异常，同样直接关闭
+            print(json.dumps({"code": 0, "type": "check_sd_available"}))
+            sys.stdout.flush()
             sys.exit()
 
-        # 检查保存目录是否为空，如是，则重新指定保存目录为桌面的baogao_ai_novel_push_output文件夹
-        if os.path.exists(self.client_config.output_dir):
+        # 检查保存目录是否设置，如未设置，则重新指定保存目录为桌面的baogao_ai_novel_push_output文件夹
+        if not self.client_config.output_dir:
             desktop_path = (
                 Path(os.path.expanduser("~"))
                 / "Desktop"
                 / "baogao_ai_novel_push_output"
             )
             self.client_config.output_dir = desktop_path
-            shutil.rmtree(desktop_path)
-            os.makedirs(desktop_path, exist_ok=True)
+            if not os.path.exists(desktop_path):
+                os.makedirs(desktop_path, exist_ok=True)
+            # 同步通知用户，默认保存
+            print(
+                json.dumps(
+                    {
+                        "code": 1,
+                        "type": "set_output_path_default",
+                        "default_path": desktop_path.as_posix(),
+                    }
+                )
+            )
+            sys.stdout.flush()
 
         # 清空并创建后续需要用到的目录
         if os.path.exists(self.cache_config.video_frames_cahce_path):
@@ -601,6 +630,7 @@ class VideoProcess:
                             }
                         )
                     )
+                    sys.stdout.flush()
 
                 # 发送停止信号给工作线程
                 self.task_queues.extract_picture_queue.put(None)

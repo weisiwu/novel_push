@@ -1,7 +1,9 @@
 <script setup>
 import { h, ref } from 'vue'
-import { NButton, NProgress, NImage, useMessage } from 'naive-ui'
+import { NButton, NProgress, NImage, useMessage, useLoadingBar } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
+
+const loadingBar = useLoadingBar()
 
 const imgSize = 250
 const message = useMessage()
@@ -98,10 +100,25 @@ if (window.ipcRenderer) {
     let isExsist = false
     const { type, width, height, file_name, img_path, new_img_path, is_skip, video_path } =
       params || {}
-    console.log('wswTest: 视频合并完毕', video_path)
+
+    console.log('wswTest: 接受到事件', type, params)
+    // 如果sd接口不可用，给与用户提示
+    if (type === 'check_sd_available') {
+      message.error('进行图像转换的stable diffusion接口不可用')
+      loadingBar.finish()
+      return
+    }
+
+    // 将保存产出视频目录设置为默认
+    if (type === 'set_output_path_default') {
+      message.info(`未发现预设保存结果目录，使用默认值 ${params?.default_path || ''}`)
+    }
+
     if (video_path && type === 'concat_imgs_to_video') {
       message.info('生成视频成功!')
-      window.openPath(video_path)
+      loadingBar.finish()
+      // window.openPath(video_path)
+      window.openPath(`${video_path}/output.mp4`)
     }
 
     const _tableData = tableData.value.map((item) => {

@@ -17,7 +17,7 @@
           <n-form-item label="输入SD服务地址" path="baseUrl">
             <n-input
               v-model:value="formModel.baseUrl"
-              placeholder="请输入您的SD地址，如 http://localhost:7860/"
+              placeholder="请输入您的SD地址，如 http://localhost:7860"
             />
           </n-form-item>
           <n-form-item label="保存地址" path="outputPath">
@@ -203,6 +203,9 @@ if (window.ipcRenderer) {
 
 const saveConfig = () => {
   console.log('wswTest: model', JSON.stringify(formModel.value))
+  if (formModel.value?.baseUrl) {
+    formModel.value.baseUrl = formModel.value.baseUrl.replace(/\/$/, '')
+  }
   window.ipcRenderer.send('save-config', JSON.stringify(formModel.value))
   message.success('修改配置保存成功！将全局生效')
   toggle()
