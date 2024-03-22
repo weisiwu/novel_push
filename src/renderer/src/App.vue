@@ -1,5 +1,5 @@
 <script setup>
-import { h, ref } from 'vue'
+import { h, ref, watchEffect } from 'vue'
 import { NIcon, NEllipsis } from 'naive-ui'
 import {
   BugOutline,
@@ -17,6 +17,17 @@ import Tools from './components/Tools.vue'
 import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
 import AppLogo from '../public/logos/logo_16.svg?asset'
+
+const collapsed = ref(false)
+const isProcessVideo = ref(false)
+const showSystemConfig = ref(false)
+const selectMenu = ref('from_video')
+const loadingStyle = { loading: { height: '12px' } }
+const updateIsProcessVideo = (value) => {
+  console.log('wswTest: 传入的只是', value)
+  isProcessVideo.value = value
+  console.log('wswTest: 修改的只是什么', isProcessVideo.value)
+}
 
 const pageNames = {
   from_video: 'from_video',
@@ -37,21 +48,25 @@ const renderMenuLabel = (option) => {
 const expandIcon = () => {
   return h(NIcon, null, { default: () => h(CaretDownOutline) })
 }
-const menuOptions = [
+console.log('wswTest: isProcessVideo.value', isProcessVideo.value)
+const menuOptions = ref([
   {
     label: renderLabel('二次创作'),
     key: pageNames.from_video,
-    icon: renderIcon(RocketOutline)
+    icon: renderIcon(RocketOutline),
+    disabled: isProcessVideo.value
   },
   {
     label: renderLabel('文生视频'),
     key: pageNames.from_text,
-    icon: renderIcon(RocketOutline)
+    icon: renderIcon(RocketOutline),
+    disabled: isProcessVideo.value
   },
   {
     label: renderLabel('工具箱'),
     key: pageNames.tools,
     icon: renderIcon(MedkitOutline),
+    disabled: isProcessVideo.value,
     children: [
       {
         label: '视频下载',
@@ -68,18 +83,16 @@ const menuOptions = [
   {
     label: renderLabel('使用说明'),
     key: pageNames.feedback,
-    icon: renderIcon(BugOutline)
+    icon: renderIcon(BugOutline),
+    disabled: isProcessVideo.value
   }
-]
+])
 
-const collapsed = ref(false)
-const showSystemConfig = ref(false)
-const selectMenu = ref('from_video')
-const loadingStyle = {
-  loading: {
-    height: '12px'
-  }
-}
+watchEffect(() => {
+  menuOptions.value = menuOptions.value.map((opt) => {
+    return { ...opt, disabled: isProcessVideo.value }
+  })
+})
 
 const jumpUpdate = () => {
   window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
@@ -102,7 +115,7 @@ const toggleConfig = (event) => {
             bordered
             class="sidebar"
             collapse-mode="width"
-            content-style="padding: 24px;"
+            content-style="padding: 24px 24px 24px 10px"
             :collapsed-width="10"
             :width="240"
             :collapsed="collapsed"
@@ -145,10 +158,14 @@ const toggleConfig = (event) => {
                 </n-gradient-text>
               </div>
             </div>
-            <FromVideo v-if="selectMenu === pageNames.from_video" />
+            <FromVideo
+              v-if="selectMenu === pageNames.from_video"
+              :update-is-process-video="updateIsProcessVideo"
+            />
             <FromText v-if="selectMenu === pageNames.from_text" />
             <Tools
               v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
+              :style="{ width: '100%' }"
               :tool="selectMenu"
             />
             <Feedback v-if="selectMenu === pageNames.feedback" />
@@ -180,7 +197,7 @@ const toggleConfig = (event) => {
   justify-content: center;
   img {
     position: absolute;
-    left: 64px;
+    left: 46px;
     top: 44px;
     width: 110px;
     height: 110px;
@@ -202,11 +219,18 @@ const toggleConfig = (event) => {
   color: #fff;
 }
 
-.n-icon {
-  svg {
-    color: #fff;
+.n-menu-item-content__icon {
+  .n-icon {
+    svg {
+      color: #fff;
+    }
   }
 }
+
+.n-menu .n-menu-item-content.n-menu-item-content--child-active .n-menu-item-content__arrow {
+  color: #fff;
+}
+
 .statusbar {
   display: flex;
   flex-direction: row;

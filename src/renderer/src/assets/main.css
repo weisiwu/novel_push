@@ -4,7 +4,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  overflow: scroll;
+  /* overflow: scroll; */
   user-select: none;
 }
 

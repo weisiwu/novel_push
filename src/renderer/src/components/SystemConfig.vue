@@ -97,6 +97,15 @@
             >
             </n-input-number>
           </n-form-item>
+          <n-form-item label="请求失败重试次数" path="retryTimes">
+            <n-input-number
+              v-model:value="formModel.retryTimes"
+              placeholder="请输入重试次数"
+              max="10"
+              min="1"
+            >
+            </n-input-number>
+          </n-form-item>
         </n-form>
       </n-space>
     </n-drawer-content>
@@ -133,13 +142,14 @@ const formModel = ref({
   HDImageHeight: 512,
   isOriginalSize: true,
   models: '',
-  skipRmWatermark: false
+  skipRmWatermark: false,
+  retryTimes: 5
 })
 const selectFolder = () => {
   window.ipcRenderer.send('open-dialog')
 }
 
-let retryTimes = 0
+let _retryTimes = 0
 const fetchModelList = () => {
   return axios
     .get(`${baseUrl}${modelListApi}`)
@@ -169,8 +179,8 @@ const fetchModelList = () => {
       throw new Error('没有发现绘画模型')
     })
     .catch(() => {
-      if (retryTimes < 3) {
-        retryTimes++
+      if (_retryTimes < formModel.value.retryTimes) {
+        _retryTimes++
         return fetchModelList()
       }
     })

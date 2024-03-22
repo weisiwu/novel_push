@@ -1,12 +1,14 @@
 <script setup>
-import { h, ref } from 'vue'
-import { NButton, NProgress, NImage, useMessage, useLoadingBar } from 'naive-ui'
+import { h, ref, defineProps } from 'vue'
+import { NButton, NImage, useMessage, NSpin } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
-
-const loadingBar = useLoadingBar()
 
 const imgSize = 250
 const message = useMessage()
+const tableData = ref([])
+const processPercentage = ref(0)
+const currentRef = ref(false)
+const props = defineProps({ updateIsProcessVideo: Function })
 
 const createColumns = () => {
   return [
@@ -42,13 +44,11 @@ const createColumns = () => {
             null
           ),
           h(
-            NProgress,
+            NSpin,
             {
               type: 'dashboard',
-              style: `position:absolute;top:20px;left:192px;height:100px;width:100px;display:${row?.finish ? 'none' : 'block'}`,
-              'show-indicator': false,
-              percentage: row?.percentage || 0,
-              'gap-degree': 0
+              size: 'large',
+              style: `position:absolute;justify-content:center;align-items:center;top:20px;left:192px;height:100px;width:100px;display:${row?.finish ? 'none' : 'flex'}`
             },
             null
           )
@@ -92,20 +92,28 @@ const createColumns = () => {
   ]
 }
 
-const tableData = ref([])
-const currentRef = ref(false)
-
 if (window.ipcRenderer) {
   window.ipcRenderer.receive('update-process', (params) => {
+    console.log('wswTest: 数量是什么', tableData.value.length)
+    props.updateIsProcessVideo(true)
     let isExsist = false
-    const { type, width, height, file_name, img_path, new_img_path, is_skip, video_path } =
-      params || {}
+    const {
+      type,
+      width,
+      height,
+      file_name,
+      index: output_index,
+      img_path,
+      new_img_path,
+      is_skip,
+      video_path
+    } = params || {}
 
     console.log('wswTest: 接受到事件', type, params)
     // 如果sd接口不可用，给与用户提示
     if (type === 'check_sd_available') {
       message.error('进行图像转换的stable diffusion接口不可用')
-      loadingBar.finish()
+      processPercentage.value = 100
       return
     }
 
@@ -116,9 +124,13 @@ if (window.ipcRenderer) {
 
     if (video_path && type === 'concat_imgs_to_video') {
       message.info('生成视频成功!')
-      loadingBar.finish()
+      processPercentage.value = 100
       // window.openPath(video_path)
       window.openPath(`${video_path}/output.mp4`)
+      props.updateIsProcessVideo(false)
+      tableData.value = []
+      currentRef.value = false
+      return
     }
 
     const _tableData = tableData.value.map((item) => {
@@ -148,6 +160,8 @@ if (window.ipcRenderer) {
             finish: false
           }
         } else if (type === 'sd_imgtoimg') {
+          console.log('wswTest: 进度是多少output_index', output_index, tableData.value.length)
+          processPercentage.value = Number((output_index / tableData.value.length) * 100).toFixed(2)
           return {
             ...item,
             width,
@@ -186,6 +200,13 @@ if (window.ipcRenderer) {
 </script>
 
 <template>
+  <n-progress
+    v-if="processPercentage < 100"
+    type="line"
+    :percentage="processPercentage"
+    :indicator-placement="'inside'"
+    processing
+  />
   <SelectVideo v-if="!currentRef" />
   <div v-if="currentRef" class="details">
     <n-data-table

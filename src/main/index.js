@@ -138,6 +138,7 @@ app.whenReady().then(() => {
         steps: userConfig.steps || 25,
         cfg: userConfig.cfg || 0.5,
         models: userConfig.models || true,
+        retry_times: userConfig.retryTimes || '',
         isOriginalSize: userConfig.isOriginalSize,
         outputPath: userConfig.outputPath || config.outputPath || '',
         HDImageWidth: userConfig.HDImageWidth || config.HDImageWidth || '',

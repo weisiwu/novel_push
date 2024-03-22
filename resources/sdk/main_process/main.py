@@ -58,6 +58,7 @@ class ClientConfig:
         isOriginalSize=True,
         access_key_id="",
         access_key_secret="",
+        retry_times=5,
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
@@ -76,6 +77,7 @@ class ClientConfig:
         self.isOriginalSize = isOriginalSize
         self.access_key_id = access_key_id
         self.access_key_secret = access_key_secret
+        self.retry_times = retry_times
 
 
 class VideoInfo:
@@ -133,6 +135,7 @@ class ExtractPictureTask(Task):
         client_config,
         video_frames_cahce_path,
         update_shot_num,
+        video_process_ins,
         update_already_handled_shot_num,
     ):
         super().__init__("extract_picture_queue")
@@ -145,6 +148,7 @@ class ExtractPictureTask(Task):
         self.sub_task_queue = task_queues.rm_watermark_queue
         self.video_frames_cahce_path = video_frames_cahce_path
         self.cap = cv2.VideoCapture(input_file)
+        self.video_process_ins = video_process_ins
         self.update_shot_num = update_shot_num
         self.update_already_handled_shot_num = update_already_handled_shot_num
 
@@ -186,6 +190,7 @@ class ExtractPictureTask(Task):
                     video_info=self.video_info,
                     task_queues=self.task_queues,
                     client_config=self.client_config,
+                    video_process_ins=self.video_process_ins,
                     update_already_handled_shot_num=self.update_already_handled_shot_num,
                 )
             )
@@ -207,6 +212,7 @@ class RmWatermarkTask(Task):
         video_info,
         task_queues,
         client_config,
+        video_process_ins,
         update_already_handled_shot_num,
     ):
         super().__init__("rm_watermark_queue")
@@ -216,6 +222,7 @@ class RmWatermarkTask(Task):
         self.video_info = video_info
         self.client_config = client_config
         self.sub_task_queue = task_queues.sd_imgtoimg_queue
+        self.video_process_ins = video_process_ins
         self.update_already_handled_shot_num = update_already_handled_shot_num
         directory, filename = os.path.split(input_file)
         name, extension = os.path.splitext(filename)
@@ -254,6 +261,7 @@ class RmWatermarkTask(Task):
                     task_queues=self.task_queues,
                     output_file=self.output_file,
                     client_config=self.client_config,
+                    video_process_ins=self.video_process_ins,
                     update_already_handled_shot_num=self.update_already_handled_shot_num,
                 )
             )
@@ -266,7 +274,7 @@ class RmWatermarkTask(Task):
             )
             sys.stdout.flush()
             # 失败重试三次
-            if self.times <= 3:
+            if self.times <= self.client_config.retry_times:
                 self.times += self.times
                 self.process()
                 return
@@ -286,6 +294,7 @@ class SDImgToImgTask(Task):
         client_config,
         task_queues,
         video_info,
+        video_process_ins,
         update_already_handled_shot_num,
     ):
         super().__init__("sd_imgtoimg_queue")
@@ -297,7 +306,7 @@ class SDImgToImgTask(Task):
         self.client_config = client_config
         self.base_url = sd_config["baseUrl"]
         self.i2i_api = sd_config["i2iApi"]
-        # self.samplers_api = sd_config["samplersApi"]
+        self.video_process_ins = video_process_ins
         self.update_already_handled_shot_num = update_already_handled_shot_num
         # 从配置中读取
         if not client_config.isOriginalSize:
@@ -350,6 +359,8 @@ class SDImgToImgTask(Task):
                         "output_file": self.output_file,
                         "width": self.video_info.width,
                         "height": self.video_info.height,
+                        "index": self.video_process_ins.shot_nums_already_handled,
+                        "total_num": self.video_process_ins.shot_nums,
                     }
                 )
             )
@@ -363,7 +374,7 @@ class SDImgToImgTask(Task):
             )
             sys.stdout.flush()
             # 失败重试三次
-            if self.times <= 3:
+            if self.times <= self.client_config.retry_times:
                 self.times += self.times
                 self.process()
                 return
@@ -389,6 +400,7 @@ class VideoProcess:
             isOriginalSize=sd_config["isOriginalSize"],
             access_key_id=sd_config["access_key_id"],
             access_key_secret=sd_config["access_key_secret"],
+            retry_times=sd_config["retry_times"],
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -600,6 +612,7 @@ class VideoProcess:
                     frame_index=self.current_frame_index,
                     threshold=self.client_config.extrac_picture_threshold,
                     video_frames_cahce_path=self.cache_config.video_frames_cahce_path,
+                    video_process_ins=self,
                     update_shot_num=self.update_shot_num,
                     update_already_handled_shot_num=self.update_already_handled_shot_num,
                 )

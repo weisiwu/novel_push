@@ -1,12 +1,7 @@
 <script setup>
-import { useLoadingBar } from 'naive-ui'
 import { ArchiveOutline } from '@vicons/ionicons5'
 
-const loadingBar = useLoadingBar()
-
 const parseVideo = async (file) => {
-  // 开始loading效果
-  loadingBar.start()
   // 开始解析视频，切割视频需要再主进程里，所以需要通过ipc形式进行访问
   window.ipcRenderer.send(
     'start-process',
