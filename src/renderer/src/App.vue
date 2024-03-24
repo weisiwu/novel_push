@@ -9,7 +9,11 @@ import {
   NotificationsOutline,
   SettingsOutline,
   MedkitOutline,
-  CaretDownOutline
+  CaretDownOutline,
+  DocumentTextOutline,
+  AppsSharp,
+  GiftOutline,
+  RibbonOutline
 } from '@vicons/ionicons5'
 import FromVideo from './components/FromVideo.vue'
 import FromText from './components/FromText.vue'
@@ -24,9 +28,7 @@ const showSystemConfig = ref(false)
 const selectMenu = ref('from_video')
 const loadingStyle = { loading: { height: '12px' } }
 const updateIsProcessVideo = (value) => {
-  console.log('wswTest: 传入的只是', value)
   isProcessVideo.value = value
-  console.log('wswTest: 修改的只是什么', isProcessVideo.value)
 }
 
 const pageNames = {
@@ -34,7 +36,8 @@ const pageNames = {
   from_text: 'from_text',
   video_download: 'video_download',
   video_cover: 'video_cover',
-  feedback: 'feedback'
+  feedback: 'feedback',
+  system_config: 'system_config'
 }
 function renderIcon(icon) {
   return () => h(NIcon, { class: 'sidebar_icon' }, { default: () => h(icon) })
@@ -51,15 +54,15 @@ const expandIcon = () => {
 console.log('wswTest: isProcessVideo.value', isProcessVideo.value)
 const menuOptions = ref([
   {
-    label: renderLabel('二次创作'),
+    label: renderLabel('一键追爆款'),
     key: pageNames.from_video,
     icon: renderIcon(RocketOutline),
     disabled: isProcessVideo.value
   },
   {
-    label: renderLabel('文生视频'),
+    label: renderLabel('小说转视频'),
     key: pageNames.from_text,
-    icon: renderIcon(RocketOutline),
+    icon: renderIcon(DocumentTextOutline),
     disabled: isProcessVideo.value
   },
   {
@@ -77,6 +80,16 @@ const menuOptions = ref([
         label: '视频封面制作',
         icon: renderIcon(ImagesOutline),
         key: 'video_cover'
+      },
+      {
+        label: '模型管理',
+        icon: renderIcon(GiftOutline),
+        key: 'models'
+      },
+      {
+        label: 'Lora管理',
+        icon: renderIcon(RibbonOutline),
+        key: 'loras'
       }
     ]
   },
@@ -84,6 +97,12 @@ const menuOptions = ref([
     label: renderLabel('使用说明'),
     key: pageNames.feedback,
     icon: renderIcon(BugOutline),
+    disabled: isProcessVideo.value
+  },
+  {
+    label: renderLabel('系统设置'),
+    key: pageNames.system_config,
+    icon: renderIcon(AppsSharp),
     disabled: isProcessVideo.value
   }
 ])
@@ -136,8 +155,16 @@ const toggleConfig = (event) => {
               :expand-icon="expandIcon"
             />
           </n-layout-sider>
-          <n-layout class="content" :style="{ minWidth: '900px', width: '100%' }">
-            <div class="statusbar">
+          <n-layout class="content" :style="{ minWidth: '900px' }">
+            <div
+              class="statusbar"
+              :style="{
+                position: 'fixed',
+                height: '50px',
+                right: '0px',
+                'z-index': 999
+              }"
+            >
               <div class="blank"></div>
               <div class="config topbar_icon" @click="toggleConfig">
                 <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
@@ -145,7 +172,7 @@ const toggleConfig = (event) => {
                   style="font-size: 16px; cursor: pointer; font-weight: bold"
                   type="info"
                 >
-                  软件设置
+                  快捷设置
                 </n-gradient-text>
               </div>
               <div class="update topbar_icon" @click="jumpUpdate">
@@ -158,18 +185,21 @@ const toggleConfig = (event) => {
                 </n-gradient-text>
               </div>
             </div>
-            <FromVideo
-              v-if="selectMenu === pageNames.from_video"
-              :update-is-process-video="updateIsProcessVideo"
-            />
-            <FromText v-if="selectMenu === pageNames.from_text" />
-            <Tools
-              v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
-              :style="{ width: '100%' }"
-              :tool="selectMenu"
-            />
-            <Feedback v-if="selectMenu === pageNames.feedback" />
-            <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
+            <div :style="{ position: 'relative', top: '50px' }">
+              <FromVideo
+                v-if="selectMenu === pageNames.from_video"
+                style="margin-top: 50px"
+                :update-is-process-video="updateIsProcessVideo"
+              />
+              <FromText v-if="selectMenu === pageNames.from_text" />
+              <Tools
+                v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
+                :style="{ width: '100%' }"
+                :tool="selectMenu"
+              />
+              <Feedback v-if="selectMenu === pageNames.feedback" />
+              <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
+            </div>
             <div style="margin-bottom: 80px"></div>
           </n-layout>
         </n-layout>
@@ -214,6 +244,7 @@ const toggleConfig = (event) => {
   width: 240px;
   height: 100%;
   background-color: #0f1222;
+  z-index: 9999;
 }
 .sidebar_icon {
   color: #fff;
@@ -234,17 +265,22 @@ const toggleConfig = (event) => {
 .statusbar {
   display: flex;
   flex-direction: row;
-  width: 100%;
+  flex-grow: 1;
   height: 50px;
   line-height: 50px;
+  background-color: #fff;
+  width: 100%;
   .blank {
     display: flex;
     flex-grow: 1;
     flex-shrink: 1;
+    height: 50px;
   }
   .topbar_icon {
     display: flex;
     flex-grow: 0;
+    flex-shrink: 1;
+    flex-basis: 100px;
     flex-direction: row;
     font-size: 16px;
     font-weight: bold;

@@ -24,7 +24,7 @@ const parseVideo = async (file) => {
         <n-icon size="48" :depth="3" :component="ArchiveOutline" />
       </div>
       <n-text style="font-size: 16px"> 点击或者拖动文件到该区域来上传 </n-text>
-      <n-p depth="3" style="margin: 8px 0 0 0"> 上传需要进行二次创作的视频 </n-p>
+      <n-p depth="3" style="margin: 8px 0 0 0"> 上传需要进行一键追爆款的视频 </n-p>
     </n-upload-dragger>
   </n-upload>
 </template>

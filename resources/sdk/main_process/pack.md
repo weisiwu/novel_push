@@ -13,6 +13,9 @@ python测试命令
 window
 python main.py --input_file C:\Users\Administrator\Desktop\demo\3.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
 
+出视频
+python main.py --input_file C:\Users\Administrator\Desktop\demo\3.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --is_concat_imgs_to_video True
+
 mac
 python main.py --input_file /Users/siwu/Desktop/github/novel_push/resources/sdk/main_process/1.mp4  --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json
 

@@ -14,8 +14,10 @@ const mainWindowChannels = [
   'open-dialog',
   'select-folder',
   'start-process',
+  'stop-process',
   'update-process',
   'finish-process',
+  'concat-video',
   'fetch-config',
   'read-config',
   'save-config'

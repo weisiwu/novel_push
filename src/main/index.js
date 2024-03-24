@@ -5,7 +5,7 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
-import DetectVideoShotByParts from '../renderer/modules/DetectVideoShot'
+import DetectVideoShotByParts, { ConcatImagesToVideo } from '../renderer/modules/DetectVideoShot'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
 console.log('wswTest: ', '防止读取resources中配置存在问题=====开始')
@@ -15,6 +15,7 @@ console.log('wswTest: ', '防止读取resources中配置存在问题=====结束'
 
 let startWindow = null
 let mainWindow = null
+let inputFilePath = ''
 const resourcesPath = process.resourcesPath
 const asarPath = join(process.resourcesPath, 'app.asar')
 
@@ -83,6 +84,7 @@ function openSpecialWindow(pageName = 'main') {
 }
 
 app.whenReady().then(() => {
+  let detectVideoShotProcess = null
   electronApp.setAppUserModelId('com.electron')
 
   app.on('browser-window-created', (_, window) => {
@@ -102,10 +104,22 @@ app.whenReady().then(() => {
     if (!mainWindow) {
       return
     }
-    DetectVideoShotByParts({
-      filePath,
-      event
-    })
+    inputFilePath = filePath
+    detectVideoShotProcess = DetectVideoShotByParts({ filePath, event })
+  })
+
+  ipcMain.on('stop-process', async (event) => {
+    if (!mainWindow || !detectVideoShotProcess) {
+      return
+    }
+    detectVideoShotProcess?.kill('SIGTERM')
+  })
+
+  ipcMain.on('concat-video', async (event) => {
+    if (!mainWindow) {
+      return
+    }
+    ConcatImagesToVideo({ event, filePath: inputFilePath })
   })
 
   // 监听打开文件夹
@@ -136,9 +150,10 @@ app.whenReady().then(() => {
         ...config,
         skipRmWatermark: userConfig.skipRmWatermark || false,
         steps: userConfig.steps || 25,
-        cfg: userConfig.cfg || 0.5,
+        cfg: userConfig.cfg || 10,
+        denoising_strength: userConfig.denoising_strength || 0.8,
         models: userConfig.models || true,
-        retry_times: userConfig.retryTimes || '',
+        retry_times: userConfig.retryTimes || 5,
         isOriginalSize: userConfig.isOriginalSize,
         outputPath: userConfig.outputPath || config.outputPath || '',
         HDImageWidth: userConfig.HDImageWidth || config.HDImageWidth || '',

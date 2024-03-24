@@ -1,21 +1,22 @@
 <script setup>
 import { h, ref, defineProps } from 'vue'
-import { NButton, NImage, useMessage, NSpin } from 'naive-ui'
+import { NCarousel, NButton, NImage, useMessage, NSpin } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
 
-const imgSize = 250
+const imgSize = 120
 const message = useMessage()
 const tableData = ref([])
+const showFinishBtn = ref(false)
 const processPercentage = ref(0)
 const currentRef = ref(false)
 const props = defineProps({ updateIsProcessVideo: Function })
+const bodyWidth = document.body.clientWidth - 240
 
 const createColumns = () => {
   return [
-    { title: '镜头', align: 'center', key: 'index', minWidth: 40 },
-    { title: '字幕', align: 'center', key: 'text', minWidth: 200 },
+    { title: '镜头', align: 'center', key: 'index', width: 60 },
     {
-      title: '原图',
+      title: '素材图',
       align: 'center',
       key: 'ori_img',
       minWidth: imgSize,
@@ -23,15 +24,32 @@ const createColumns = () => {
         return h(NImage, { src: row?.ori_img || '', width: imgSize, class: 'ori_img' }, null)
       }
     },
+    // { title: '画面运动', align: 'center', key: 'img_move', width: 80 },
     {
       title: '二创图',
       align: 'center',
       key: 'new_img',
-      minWidth: imgSize,
+      width: imgSize,
       render(row) {
         const height = row?.height / (row?.width / imgSize || 1)
-        console.log('wswTest: 是否展示进度条', row?.finish)
-        return h('div', { class: 'new_img_ctn' }, [
+        if (row?.new_img instanceof Array) {
+          return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
+            row?.new_img?.map?.((imgObj) => {
+              return h(
+                NImage,
+                {
+                  src: imgObj ? `${imgObj}?t=${Date.now()}` : imgObj || '',
+                  width: imgSize,
+                  style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
+                  height: height,
+                  class: 'new_img'
+                },
+                null
+              )
+            })
+          ])
+        }
+        return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
           h(
             NImage,
             {
@@ -48,7 +66,7 @@ const createColumns = () => {
             {
               type: 'dashboard',
               size: 'large',
-              style: `position:absolute;justify-content:center;align-items:center;top:20px;left:192px;height:100px;width:100px;display:${row?.finish ? 'none' : 'flex'}`
+              style: `position:absolute;justify-content:center;align-items:center;top:-15px;left:30px;height:100px;width:100px;display:${row?.finish ? 'none' : 'flex'}`
             },
             null
           )
@@ -74,27 +92,26 @@ const createColumns = () => {
             },
             '重绘'
           )
-          // h(
-          //   NButton,
-          //   {
-          //     strong: true,
-          //     tertiary: true,
-          //     size: 'small',
-          //     type: 'info',
-          //     style: { width: '80px', margin: '8px auto 0px' },
-          //     onClick: () => {}
-          //   },
-          //   '设置'
-          // )
         ])
       }
     }
   ]
 }
+// 重选视频
+const chooseVideo = () => {
+  props.updateIsProcessVideo(false)
+  tableData.value = []
+  currentRef.value = false
+  processPercentage.value = 0
+  window.ipcRenderer.send('stop-process')
+}
+// 导出视频
+const concatVideo = () => {
+  window.ipcRenderer.send('concat-video')
+}
 
 if (window.ipcRenderer) {
   window.ipcRenderer.receive('update-process', (params) => {
-    console.log('wswTest: 数量是什么', tableData.value.length)
     props.updateIsProcessVideo(true)
     let isExsist = false
     const {
@@ -104,16 +121,15 @@ if (window.ipcRenderer) {
       file_name,
       index: output_index,
       img_path,
-      new_img_path,
       is_skip,
+      output_file = [],
       video_path
     } = params || {}
 
-    console.log('wswTest: 接受到事件', type, params)
     // 如果sd接口不可用，给与用户提示
     if (type === 'check_sd_available') {
       message.error('进行图像转换的stable diffusion接口不可用')
-      processPercentage.value = 100
+      chooseVideo()
       return
     }
 
@@ -122,14 +138,9 @@ if (window.ipcRenderer) {
       message.info(`未发现预设保存结果目录，使用默认值 ${params?.default_path || ''}`)
     }
 
-    if (video_path && type === 'concat_imgs_to_video') {
-      message.info('生成视频成功!')
-      processPercentage.value = 100
-      // window.openPath(video_path)
-      window.openPath(`${video_path}/output.mp4`)
-      props.updateIsProcessVideo(false)
-      tableData.value = []
-      currentRef.value = false
+    if (video_path && type === 'video_imgs_ready') {
+      // 已就绪，可以合成视频
+      showFinishBtn.value = true
       return
     }
 
@@ -149,24 +160,17 @@ if (window.ipcRenderer) {
             percentage: Math.floor(Math.random() * 40),
             finish: false
           }
-        } else if (type === 'rm_watermark') {
-          return {
-            ...item,
-            width,
-            height,
-            new_img: new_img_path,
-            new_img_mask_opacity: 0.7,
-            percentage: Math.floor(Math.random() * 88),
-            finish: false
-          }
         } else if (type === 'sd_imgtoimg') {
           console.log('wswTest: 进度是多少output_index', output_index, tableData.value.length)
           processPercentage.value = Number((output_index / tableData.value.length) * 100).toFixed(2)
+          if (processPercentage.value >= 100) {
+            showFinishBtn.value = true
+          }
           return {
             ...item,
             width,
             height,
-            new_img: new_img_path,
+            new_img: output_file,
             new_img_mask_opacity: 1,
             percentage: 100,
             finish: true
@@ -196,6 +200,20 @@ if (window.ipcRenderer) {
       currentRef.value = tableData.value.length || 0
     }
   })
+
+  window.ipcRenderer.receive('finish-process', (params) => {
+    const { outputPath, outputFile } = params || {}
+    console.log('wswTest: ', '进程结束了少时诵诗书')
+    console.log('wswTest:outputPath ', outputPath)
+    console.log('wswTest:outputFile ', outputFile)
+    message.info('生成视频成功!')
+    processPercentage.value = 0
+    window.openPath(outputFile)
+    props.updateIsProcessVideo(false)
+    tableData.value = []
+    currentRef.value = false
+    showFinishBtn.value = false
+  })
 }
 </script>
 
@@ -203,12 +221,22 @@ if (window.ipcRenderer) {
   <n-progress
     v-if="processPercentage < 100"
     type="line"
+    :style="{
+      position: 'fixed',
+      top: '40px',
+      'z-index': 999,
+      width: `${bodyWidth}px`
+    }"
     :percentage="processPercentage"
     :indicator-placement="'inside'"
     processing
   />
   <SelectVideo v-if="!currentRef" />
   <div v-if="currentRef" class="details">
+    <n-flex :style="{ margin: '20px 0px 0px 20px' }">
+      <n-button type="primary" @click="chooseVideo">重选视频</n-button>
+      <n-button v-if="showFinishBtn" type="primary" @click="concatVideo">导出视频</n-button>
+    </n-flex>
     <n-data-table
       style="margin-top: 50px"
       :columns="createColumns({})"
@@ -233,5 +261,28 @@ if (window.ipcRenderer) {
 }
 .new_img_ctn {
   position: relative;
+}
+.n-carousel {
+  width: 140%;
+}
+.n-carousel.n-carousel--bottom .n-carousel__arrow-group {
+  position: absolute;
+  left: 6px;
+  border: 0px;
+  background: transparent;
+  height: 26px;
+  top: 20px;
+  justify-content: space-between;
+}
+.n-carousel .n-carousel__arrow svg {
+  width: 2em;
+  height: 2em;
+  color: black;
+}
+.n-carousel.n-carousel--show-arrow.n-carousel--bottom .n-carousel__dots {
+  display: none;
+}
+.n-progress.n-progress--line {
+  width: auto;
 }
 </style>

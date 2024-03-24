@@ -34,7 +34,6 @@ def custom_sort(frame_img):
 1、处理视频前，先将视频压缩，再处理
 2、支持多种视频类型
 3、第一屏只取正常时长的一半
-TODO: 待整理，目前里面的导出变量不全
 """
 
 class ClientConfig:
@@ -47,13 +46,12 @@ class ClientConfig:
         input_path="",
         segment_time=3,
         output_dir="",
-        transition_duration_rate=0.3,
         extrac_picture_threshold=20,
         HDImageWidth=512,
         HDImageHeight=512,
         skipRmWatermark=False,
         steps=25,
-        cfg=0.5,
+        cfg=10,
         models="",
         isOriginalSize=True,
         access_key_id="",
@@ -64,7 +62,6 @@ class ClientConfig:
         # 视频分段长度，单位秒
         self.segment_time = segment_time
         self.output_dir = output_dir  # 输出目录
-        self.transition_duration_rate = transition_duration_rate
         # 抽取关键帧决断值
         self.extrac_picture_threshold = extrac_picture_threshold
         # 用户写入配置
@@ -304,14 +301,12 @@ class SDImgToImgTask(Task):
         self.output_file = output_file
         self.task_queues = task_queues
         self.client_config = client_config
-        self.base_url = sd_config["baseUrl"]
-        self.i2i_api = sd_config["i2iApi"]
         self.video_process_ins = video_process_ins
         self.update_already_handled_shot_num = update_already_handled_shot_num
         # 从配置中读取
-        if not client_config.isOriginalSize:
-            self.output_width = client_config.HDImageWidth or 512
-            self.output_height = client_config.HDImageHeight or 512
+        if not sd_config["isOriginalSize"]:
+            self.output_width = sd_config["HDImageWidth"] or 512
+            self.output_height = sd_config["HDImageHeight"] or 512
         else:
             self.output_width = video_info.width or 512
             self.output_height = video_info.height or 512
@@ -322,21 +317,22 @@ class SDImgToImgTask(Task):
         return base64_string
 
     def process(self):
+        baseUrl = sd_config["baseUrl"]
+        i2iApi = sd_config["i2iApi"]
         # 发起 POST 请求
         result = requests.post(
-            f"{self.base_url}{self.i2i_api}",
+            f"{baseUrl}{i2iApi}",
             json={
                 "prompt": sd_config["positivePrompt"],
                 "init_images": [self.image_to_base64()],
                 "negative_prompt": sd_config["negativePrompt"],
                 "styles": ["Anime"],
-                "batch_size": 1,
-                "n_iter": 1,
+                "batch_size": sd_config["batch_size"],
                 "steps": 25,
-                "cfg_scale": 7,
+                "cfg_scale": sd_config["cfg"],
                 "width": self.output_width,
                 "height": self.output_height,
-                "denoising_strength": 0.5,
+                "denoising_strength": sd_config["denoising_strength"],
                 "sampler_index": "DPM++ 3M SDE Exponential",
                 "include_init_images": True,
             },
@@ -345,9 +341,17 @@ class SDImgToImgTask(Task):
         # 检查响应状态码
         if result.status_code == 200:
             response_data = result.json()
-            img_data = base64.b64decode(response_data["images"][0])
-            with open(self.output_file, "wb") as file:
-                file.write(img_data)
+            images = response_data["images"]
+            batch_imgs = []
+            for image_index, image_file in enumerate(images):
+                img_data = base64.b64decode(image_file)
+                # 拆分文件名和扩展名
+                basename, extension = os.path.splitext(self.output_file)
+                # 生成新的文件名，加上 "_1" 后缀
+                new_filename = basename + f"_{str(image_index)}" + extension
+                with open(new_filename, "wb") as file:
+                    file.write(img_data)
+                batch_imgs.append(new_filename)
             self.update_already_handled_shot_num()
             # 【图生图任务】成功
             print(
@@ -356,7 +360,7 @@ class SDImgToImgTask(Task):
                         "code": 1,
                         "type": "sd_imgtoimg",
                         "input_file": self.input_file,
-                        "output_file": self.output_file,
+                        "output_file": batch_imgs,
                         "width": self.video_info.width,
                         "height": self.video_info.height,
                         "index": self.video_process_ins.shot_nums_already_handled,
@@ -390,12 +394,11 @@ class VideoProcess:
         self.client_config = ClientConfig(
             input_path=Path(input_path),
             output_dir=sd_config["outputPath"],
-            transition_duration_rate=0.3,
             HDImageWidth=sd_config["HDImageWidth"] or 512,
             HDImageHeight=sd_config["HDImageHeight"] or 512,
             skipRmWatermark=sd_config["skipRmWatermark"] or False,
             steps=sd_config["steps"] or 25,
-            cfg=sd_config["cfg"] or 0.5,
+            cfg=sd_config["cfg"] or 10,
             models=sd_config["models"] or "",
             isOriginalSize=sd_config["isOriginalSize"],
             access_key_id=sd_config["access_key_id"],
@@ -626,24 +629,16 @@ class VideoProcess:
         while True:
             time.sleep(self.scan_interval)
             if self.process_finish():
-                # 图片处理结束，合成视频
-                process_result = self.concat_imgs_to_video(
-                    frame_rate=self.video_info.frame_rate,
-                    transition_duration_rate=self.client_config.transition_duration_rate,
-                    img_size=self.video_info.size,
-                )
-
-                if process_result:
-                    print(
-                        json.dumps(
-                            {
-                                "code": 1,
-                                "type": "concat_imgs_to_video",
-                                "video_path": self.client_config.output_dir,
-                            }
-                        )
+                print(
+                    json.dumps(
+                        {
+                            "code": 1,
+                            "type": "video_imgs_ready",
+                            "video_path": self.client_config.output_dir,
+                        }
                     )
-                    sys.stdout.flush()
+                )
+                sys.stdout.flush()
 
                 # 发送停止信号给工作线程
                 self.task_queues.extract_picture_queue.put(None)
@@ -655,64 +650,6 @@ class VideoProcess:
                     t.join()
 
                 sys.exit(0)
-
-    def concat_imgs_to_video(
-        self, frame_rate=30, transition_duration_rate=0.5, img_size=(512, 288)
-    ):
-        """
-        将关键帧合成视频
-        img_duration: 图片尺寸时间，单位S
-        frame_rate: 视频帧率
-        transition_duration_rate: 过渡百分比，比如当前图片出现时长是10S，过渡百分比15，那么会有1.5S的过渡，目前过渡效果仅支持透明过渡
-        """
-        # TODO: 这个文件名称也需要最终从外面传递
-        videowrite = cv2.VideoWriter(
-            (Path(self.client_config.output_dir) / "output.mp4").as_posix(),
-            cv2.VideoWriter_fourcc(*"mp4v"),
-            frame_rate,
-            img_size,
-        )
-
-        frame_img_path = self.cache_config.video_frames_cahce_path
-        filtered_files = glob.glob(f"{frame_img_path}/*_new*")
-        sort_imgs = sorted(filtered_files, key=custom_sort)
-        imgs_num = len(sort_imgs)
-        prev_end = 0
-
-        for index, frame_img in enumerate(sort_imgs):
-            next_index = index + 1 if index + 1 < imgs_num else index
-            img = cv2.resize(cv2.imread(frame_img), img_size)
-            next_img = cv2.resize(cv2.imread(sort_imgs[next_index]), img_size)
-
-            if img is None:
-                continue
-
-            img_duration = (custom_sort(frame_img) - prev_end) / frame_rate
-            prev_end = custom_sort(frame_img)
-            total_num = int(frame_rate * img_duration)
-            transition_num = int(total_num * transition_duration_rate) or 1
-            transition_start_index = int(total_num * (1 - transition_duration_rate))
-
-            for cur_index in range(total_num):
-                # 计算过渡效果的每一帧
-                if (
-                    next_img is not None
-                    and next_index != index
-                    and cur_index >= transition_start_index
-                ):
-                    # 计算过渡权重（0到1之间）
-                    alpha = (cur_index - transition_start_index) / transition_num
-
-                    # 使用 alpha 权重进行混合
-                    blended_img = cv2.addWeighted(img, 1 - alpha, next_img, alpha, 0)
-
-                    # 将混合后的图像写入视频文件
-                    videowrite.write(np.uint8(blended_img))
-                else:
-                    videowrite.write(img)
-
-        videowrite.release()
-        return True
 
     def process_finish(self):
         """
@@ -769,19 +706,97 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_file", type=str, default="")
     parser.add_argument("--config_file", type=str, default="")
+    parser.add_argument("--is_concat_imgs_to_video", type=bool, default=False)
+    parser.add_argument("--selected_imgs_str", type=str, default="")
     return parser.parse_args()
+
+
+def concat_imgs_to_video(input_path, selected_imgs_str=""):
+    """
+    将关键帧合成视频
+    img_duration: 图片尺寸时间，单位S
+    frame_rate: 视频帧率
+    transition_duration_rate: 过渡百分比，比如当前图片出现时长是10S，过渡百分比15，那么会有1.5S的过渡，目前过渡效果仅支持透明过渡
+    """
+    frame_rate = sd_config["frame_rate"]
+    cache_config = CacheConfig()
+    selected_imgs = selected_imgs_str.split(",")
+    print("选中的图片序号", selected_imgs)
+    transition_duration_rate = sd_config["transition_duration_rate"]
+    if not sd_config["isOriginalSize"]:
+        videoFrameWidth = sd_config["HDImageWidth"] or 512
+        videoFrameHeight = sd_config["HDImageHeight"] or 512
+    else:
+        cap = cv2.VideoCapture(Path(input_path).as_posix())
+        videoFrameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 512
+        videoFrameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 512
+    img_size = (videoFrameWidth, videoFrameHeight)
+    outputPath = Path(sd_config["outputPath"])
+    outputFile = outputPath / sd_config["saveFileName"]
+    videowrite = cv2.VideoWriter(
+        outputFile.as_posix(),
+        cv2.VideoWriter_fourcc(*"mp4v"),
+        sd_config["frame_rate"],
+        img_size,
+    )
+    frame_img_path = cache_config.video_frames_cahce_path
+    filtered_files = glob.glob(f"{frame_img_path}/*_new*")
+    sort_imgs = sorted(filtered_files, key=custom_sort)
+    imgs_num = len(sort_imgs)
+    prev_end = 0
+
+    for index, frame_img in enumerate(sort_imgs):
+        next_index = index + 1 if index + 1 < imgs_num else index
+        img = cv2.resize(cv2.imread(frame_img), img_size)
+        next_img = cv2.resize(cv2.imread(sort_imgs[next_index]), img_size)
+
+        if img is None:
+            continue
+
+        img_duration = (custom_sort(frame_img) - prev_end) / frame_rate
+        prev_end = custom_sort(frame_img)
+        total_num = int(frame_rate * img_duration)
+        transition_num = int(total_num * transition_duration_rate) or 1
+        transition_start_index = int(total_num * (1 - transition_duration_rate))
+
+        for cur_index in range(total_num):
+            # 计算过渡效果的每一帧
+            if (
+                next_img is not None
+                and next_index != index
+                and cur_index >= transition_start_index
+            ):
+                # 计算过渡权重（0到1之间）
+                alpha = (cur_index - transition_start_index) / transition_num
+
+                # 使用 alpha 权重进行混合
+                blended_img = cv2.addWeighted(img, 1 - alpha, next_img, alpha, 0)
+
+                # 将混合后的图像写入视频文件
+                videowrite.write(np.uint8(blended_img))
+            else:
+                videowrite.write(img)
+
+    videowrite.release()
+    print(
+        json.dumps(
+            {
+                "code": 1,
+                "type": "concat_video",
+                "outputPath": outputPath.as_posix(),
+                "outputFile": outputFile.as_posix(),
+            }
+        )
+    )
+    sys.stdout.flush()
+    return True
 
 
 args = parse_args()
 with open(args.config_file, "r") as f:
     sd_config = json.load(f)
-VideoProcess(input_path=args.input_file)
 
-
-# TODO: 调试时打开
-# if __name__ == "__main__":
-#     config_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json"
-#     input_file = r"C:\Users\Administrator\Desktop\github\novel_push\resources\sdk\main_process\demo1.mp4"
-#     with open(config_file, "r") as f:
-#         sd_config = json.load(f)
-#     VideoProcess(input_path=input_file)
+if args.is_concat_imgs_to_video:
+    concat_imgs_to_video(input_path=args.input_file)
+else:
+    VideoProcess(input_path=args.input_file)

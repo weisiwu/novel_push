@@ -7,7 +7,7 @@
     :block-scroll="false"
     @update:show="toggle"
   >
-    <n-drawer-content title="软件设置" :style="{ 'margin-top': '20px' }">
+    <n-drawer-content title="快捷设置" :style="{ 'margin-top': '20px' }">
       <n-space class="actionbars">
         <n-button @click="toggle">取消</n-button>
         <n-button type="primary" @click="saveConfig">保存</n-button>
@@ -44,19 +44,19 @@
           </n-form-item>
           <n-form-item
             label-placement="left"
-            label-width="90"
-            label="是否去水印"
+            label-width="110"
+            label="是否跳过去水印"
             path="skipRmWatermark"
           >
             <n-switch v-model:value="formModel.skipRmWatermark" size="large" />
           </n-form-item>
-          <n-form-item label="原图相关度" path="steps">
-            <n-radio-group v-model:value="formModel.cfg" name="原图相关度">
+          <n-form-item label="原图相关度" path="denoising_strength">
+            <n-radio-group v-model:value="formModel.denoising_strength" name="原图相关度">
               <n-radio-button
-                v-for="cfg in CFG_SETS"
-                :key="cfg.value"
-                :value="cfg.value"
-                :label="cfg.label"
+                v-for="denoising_strength in CFG_SETS"
+                :key="denoising_strength.value"
+                :value="denoising_strength.value"
+                :label="denoising_strength.label"
               />
             </n-radio-group>
           </n-form-item>
@@ -120,9 +120,9 @@ import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json
 
 const props = defineProps({ toggleShow: Function })
 const CFG_SETS = [
-  { value: 7, label: '低相似度' },
-  { value: 14, label: '中相似度' },
-  { value: 20, label: '高相似度' }
+  { value: 0.8, label: '高度重绘' },
+  { value: 0.6, label: '中度重绘' },
+  { value: 0.45, label: '低度重绘' }
 ]
 const active = ref(true)
 const message = useMessage()
@@ -134,16 +134,17 @@ const modelsOptions = ref([])
 const modelLoading = ref(true)
 const formRef = ref(null)
 const formModel = ref({
-  cfg: 14,
+  cfg: 10,
   steps: 25,
+  models: '',
   baseUrl: '',
+  retryTimes: 5,
   outputPath: '',
   HDImageWidth: 512,
   HDImageHeight: 512,
   isOriginalSize: true,
-  models: '',
-  skipRmWatermark: false,
-  retryTimes: 5
+  denoising_strength: CFG_SETS[0].value,
+  skipRmWatermark: false
 })
 const selectFolder = () => {
   window.ipcRenderer.send('open-dialog')
@@ -151,8 +152,9 @@ const selectFolder = () => {
 
 let _retryTimes = 0
 const fetchModelList = () => {
+  const _baseUrl = baseUrl.replace(/\/$/, '')
   return axios
-    .get(`${baseUrl}${modelListApi}`)
+    .get(`${_baseUrl}${modelListApi}`)
     .then((result) => {
       const model_list = result?.data
       console.log('wswTest: model_list', model_list)
@@ -187,7 +189,6 @@ const fetchModelList = () => {
 }
 
 onMounted(() => {
-  // 获取模型列表
   fetchModelList()
 })
 
@@ -204,6 +205,7 @@ if (window.ipcRenderer) {
     console.log('wswTest: 读取本地的配置', params, typeof params)
     try {
       const localConfig = JSON.parse(params)
+      localConfig.baseUrl = localConfig.baseUrl.replace(/\/$/, '')
       formModel.value = localConfig
     } catch (e) {
       console.log('wswTest: 传入的本地配置异常', params, e)
@@ -212,10 +214,15 @@ if (window.ipcRenderer) {
 }
 
 const saveConfig = () => {
-  console.log('wswTest: model', JSON.stringify(formModel.value))
   if (formModel.value?.baseUrl) {
     formModel.value.baseUrl = formModel.value.baseUrl.replace(/\/$/, '')
   }
+  const denoising_strength =
+    CFG_SETS.filter((item) => item.value === formModel.value.denoising_strength)?.[0]?.value ||
+    CFG_SETS[0].value
+  formModel.value.denoising_strength = denoising_strength
+  // 绘画不需要去水印
+  formModel.value.skipRmWatermark = true
   window.ipcRenderer.send('save-config', JSON.stringify(formModel.value))
   message.success('修改配置保存成功！将全局生效')
   toggle()
