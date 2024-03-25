@@ -9,17 +9,17 @@ import {
   NotificationsOutline,
   SettingsOutline,
   MedkitOutline,
-  CaretDownOutline,
-  DocumentTextOutline,
-  AppsSharp,
-  GiftOutline,
-  RibbonOutline
+  CaretDownOutline
+  // DocumentTextOutline,
+  // AppsSharp,
+  // GiftOutline,
+  // RibbonOutline
 } from '@vicons/ionicons5'
 import FromVideo from './components/FromVideo.vue'
-import FromText from './components/FromText.vue'
 import Tools from './components/Tools.vue'
 import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
+import HeaderBar from './components/HeaderBar.vue'
 import AppLogo from '../public/logos/logo_16.svg?asset'
 
 const collapsed = ref(false)
@@ -30,7 +30,7 @@ const loadingStyle = { loading: { height: '12px' } }
 const updateIsProcessVideo = (value) => {
   isProcessVideo.value = value
 }
-const globalLoading = ref(false)
+const globalLoading = ref(true)
 const updateGlobalLoading = (value) => {
   globalLoading.value = value
 }
@@ -160,35 +160,11 @@ const toggleConfig = (event) => {
               />
             </n-layout-sider>
             <n-layout class="content" :style="{ minWidth: '900px' }">
-              <div
-                class="statusbar"
-                :style="{
-                  position: 'fixed',
-                  height: '50px',
-                  right: '0px',
-                  'z-index': 999
-                }"
-              >
-                <div class="blank"></div>
-                <div class="config topbar_icon" @click="toggleConfig">
-                  <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
-                  <n-gradient-text
-                    style="font-size: 16px; cursor: pointer; font-weight: bold"
-                    type="info"
-                  >
-                    快捷设置
-                  </n-gradient-text>
-                </div>
-                <div class="update topbar_icon" @click="jumpUpdate">
-                  <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
-                  <n-gradient-text
-                    style="font-size: 16px; cursor: pointer; font-weight: bold"
-                    type="info"
-                  >
-                    更新说明
-                  </n-gradient-text>
-                </div>
-              </div>
+              <HeaderBar
+                :toggle-config="toggleConfig"
+                :jump-update="jumpUpdate"
+                :update-global-loading="updateGlobalLoading"
+              />
               <div :style="{ position: 'relative', top: '50px' }">
                 <FromVideo
                   v-if="selectMenu === pageNames.from_video"
@@ -211,7 +187,11 @@ const toggleConfig = (event) => {
                   v-if="selectMenu === pageNames.feedback"
                   :update-global-loading="updateGlobalLoading"
                 />
-                <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
+                <SystemConfig
+                  v-if="showSystemConfig"
+                  :toggle-show="toggleConfig"
+                  :update-global-loading="updateGlobalLoading"
+                />
               </div>
               <div style="margin-bottom: 80px"></div>
             </n-layout>

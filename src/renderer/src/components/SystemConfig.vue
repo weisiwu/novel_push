@@ -118,7 +118,7 @@ import { useMessage } from 'naive-ui'
 import axios from 'axios'
 import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 
-const props = defineProps({ toggleShow: Function })
+const props = defineProps({ toggleShow: Function, updateGlobalLoading: Function })
 const CFG_SETS = [
   { value: 0.8, label: '高原创度' },
   { value: 0.6, label: '中原创度' },
@@ -153,9 +153,15 @@ const selectFolder = () => {
 let _retryTimes = 0
 const fetchModelList = () => {
   const _baseUrl = baseUrl.replace(/\/$/, '')
+  if (!_baseUrl) {
+    props.updateGlobalLoading(false)
+    message.error('未填写stable diffusion地址')
+    return
+  }
   return axios
     .get(`${_baseUrl}${modelListApi}`)
     .then((result) => {
+      props.updateGlobalLoading(false)
       const model_list = result?.data
       console.log('wswTest: model_list', model_list)
       modelLoading.value = false
@@ -185,6 +191,8 @@ const fetchModelList = () => {
         _retryTimes++
         return fetchModelList()
       }
+      message.error('stable diffusion地址不可用')
+      props.updateGlobalLoading(false)
     })
 }
 

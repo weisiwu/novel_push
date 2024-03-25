@@ -483,9 +483,7 @@ class VideoProcess:
         try:
             check_sd_available = requests.get(f"{sd_base_url}{samplers_api}")
             if check_sd_available.status_code != 200:
-                print(json.dumps({"code": 0, "type": "check_sd_available"}))
-                sys.stdout.flush()
-                sys.exit()
+                raise TypeError("wrong in api")
         except:
             # 请求异常，同样直接关闭
             print(json.dumps({"code": 0, "type": "check_sd_available"}))
@@ -716,7 +714,6 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     """
     frame_rate = sd_config["frame_rate"]
     cache_config = CacheConfig()
-    # selected_imgs = selected_imgs_str.split(",")
     transition_duration_rate = sd_config["transition_duration_rate"]
     if not sd_config["isOriginalSize"]:
         videoFrameWidth = sd_config["HDImageWidth"] or 512
@@ -788,7 +785,7 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     # 将生成视频的输出重定向，防止输出
     sysout = sys.stdout
     sys.stdout = NullWriter()
-    video_with_audio.write_videofile(outputFile.as_posix(), codec="mpeg4")
+    video_with_audio.write_videofile(outputFile.as_posix(), codec="libx264")
     sys.stdout = sysout
 
     video_file.close()
@@ -796,7 +793,7 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     silent_audio_clip.close()
     video_with_audio.close()
     # 删除临时文件
-    # os.remove(tmpSavePath)
+    os.remove(tmpSavePath)
     print(
         json.dumps(
             {
@@ -870,6 +867,7 @@ def redraw_image(input_path):
 args = parse_args()
 with open(args.config_file, "r") as f:
     sd_config = json.load(f)
+    sd_config["baseUrl"] = sd_config["baseUrl"].rstrip("/") or ""
 
 if args.is_concat_imgs_to_video:
     concat_imgs_to_video(input_path=args.input_file)

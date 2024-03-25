@@ -14,7 +14,6 @@ const DetectVideoShotByParts = ({ filePath, event }) => {
   shotsProcess.stdout.on('data', (data) => {
     let dataStr = data.toString()
     let dataObj = null
-    console.log('wswTest接受到的标准输出: ', dataStr)
     try {
       dataObj = JSON.parse(dataStr) || {}
     } catch (e) {
