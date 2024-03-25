@@ -11,10 +11,14 @@ pyinstaller main.py --onefile --upx-dir=/opt/homebrew/Cellar/upx/4.1.0
 
 python测试命令
 window
-python main.py --input_file C:\Users\Administrator\Desktop\demo\3.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
+python main.py --input_file C:\Users\Administrator\Desktop\demo\5.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
 
 出视频
-python main.py --input_file C:\Users\Administrator\Desktop\demo\3.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --is_concat_imgs_to_video True
+python main.py --input_file C:\Users\Administrator\Desktop\demo\5.mp4 --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --is_concat_imgs_to_video True
+
+重绘
+python main.py --input_file C:\Users\Administrator\Desktop\demo\test.png --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --redraw True
+
 
 mac
 python main.py --input_file /Users/siwu/Desktop/github/novel_push/resources/sdk/main_process/1.mp4  --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json

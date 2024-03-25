@@ -13,6 +13,8 @@ import argparse
 import threading
 import numpy as np
 from pathlib import *
+from PIL import Image
+import moviepy.editor as mp
 from types import SimpleNamespace
 from scenedetect import (
     detect,
@@ -21,7 +23,6 @@ from scenedetect import (
     ThresholdDetector,
 )
 from rm_subtitle_aliyun import main as RmSubtitleAliyun
-
 
 def custom_sort(frame_img):
     name = Path(frame_img).name
@@ -343,15 +344,23 @@ class SDImgToImgTask(Task):
             response_data = result.json()
             images = response_data["images"]
             batch_imgs = []
-            for image_index, image_file in enumerate(images):
-                img_data = base64.b64decode(image_file)
-                # 拆分文件名和扩展名
-                basename, extension = os.path.splitext(self.output_file)
-                # 生成新的文件名，加上 "_1" 后缀
-                new_filename = basename + f"_{str(image_index)}" + extension
-                with open(new_filename, "wb") as file:
+            # 单图模式
+            if len(images) == 1:
+                img_data = base64.b64decode(images[0])
+                with open(self.output_file, "wb") as file:
                     file.write(img_data)
-                batch_imgs.append(new_filename)
+                batch_imgs.append(self.output_file)
+            else:
+                # 多图模式
+                for image_index, image_file in enumerate(images):
+                    img_data = base64.b64decode(image_file)
+                    # 拆分文件名和扩展名
+                    basename, extension = os.path.splitext(self.output_file)
+                    # 生成新的文件名，加上 "_1" 后缀
+                    new_filename = basename + f"_{str(image_index)}" + extension
+                    with open(new_filename, "wb") as file:
+                        file.write(img_data)
+                    batch_imgs.append(new_filename)
             self.update_already_handled_shot_num()
             # 【图生图任务】成功
             print(
@@ -708,6 +717,7 @@ def parse_args():
     parser.add_argument("--config_file", type=str, default="")
     parser.add_argument("--is_concat_imgs_to_video", type=bool, default=False)
     parser.add_argument("--selected_imgs_str", type=str, default="")
+    parser.add_argument("--redraw", type=bool, default=False)
     return parser.parse_args()
 
 
@@ -720,8 +730,7 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     """
     frame_rate = sd_config["frame_rate"]
     cache_config = CacheConfig()
-    selected_imgs = selected_imgs_str.split(",")
-    print("选中的图片序号", selected_imgs)
+    # selected_imgs = selected_imgs_str.split(",")
     transition_duration_rate = sd_config["transition_duration_rate"]
     if not sd_config["isOriginalSize"]:
         videoFrameWidth = sd_config["HDImageWidth"] or 512
@@ -778,6 +787,16 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
                 videowrite.write(img)
 
     videowrite.release()
+
+    video_file = mp.VideoFileClip(outputFile.as_posix())
+    audio_file = mp.AudioFileClip(input_path)
+    video_with_audio = video_file.set_audio(audio_file)
+    video_with_audio.write_videofile(outputFile.as_posix(), codec="libx264")
+
+    video_file.close()
+    audio_file.close()
+    sys.stdout.flush()
+
     print(
         json.dumps(
             {
@@ -792,11 +811,70 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     return True
 
 
+def image_to_base64(input_file):
+    with open(input_file, "rb") as image_file:
+        base64_string = base64.b64encode(image_file.read()).decode("utf-8")
+    return base64_string
+
+
+def redraw_image(input_path):
+    baseUrl = sd_config["baseUrl"]
+    i2iApi = sd_config["i2iApi"]
+
+    with Image.open(input_path) as img:
+        # 获取图片的尺寸
+        output_width, output_height = img.size
+
+    # 发起 POST 请求
+    result = requests.post(
+        f"{baseUrl}{i2iApi}",
+        json={
+            "prompt": sd_config["positivePrompt"],
+            "init_images": [image_to_base64(input_path)],
+            "negative_prompt": sd_config["negativePrompt"],
+            "styles": ["Anime"],
+            "batch_size": sd_config["batch_size"],
+            "steps": 25,
+            "cfg_scale": sd_config["cfg"],
+            "width": output_width,
+            "height": output_height,
+            "denoising_strength": sd_config["denoising_strength"],
+            "sampler_index": "DPM++ 3M SDE Exponential",
+            "include_init_images": True,
+        },
+    )
+
+    # 检查响应状态码
+    if result.status_code == 200:
+        response_data = result.json()
+        images = response_data["images"]
+        img_data = base64.b64decode(images[0])
+        with open(input_path, "wb") as file:
+            file.write(img_data)
+        # 【图生图任务】成功
+        print(
+            json.dumps(
+                {
+                    "code": 1,
+                    "type": "re_draw",
+                    "input_file": input_path,
+                }
+            )
+        )
+        sys.stdout.flush()
+    else:
+        # 【图生图任务】失败
+        print(json.dumps({"code": 0, "type": "re_draw", "input_file": input_path}))
+        sys.stdout.flush()
+
+
 args = parse_args()
 with open(args.config_file, "r") as f:
     sd_config = json.load(f)
 
 if args.is_concat_imgs_to_video:
     concat_imgs_to_video(input_path=args.input_file)
+elif args.redraw:
+    redraw_image(input_path=args.input_file)
 else:
     VideoProcess(input_path=args.input_file)

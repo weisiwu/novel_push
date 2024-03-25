@@ -5,7 +5,10 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
-import DetectVideoShotByParts, { ConcatImagesToVideo } from '../renderer/modules/DetectVideoShot'
+import DetectVideoShotByParts, {
+  ConcatImagesToVideo,
+  ReDrawImage
+} from '../renderer/modules/DetectVideoShot'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
 console.log('wswTest: ', '防止读取resources中配置存在问题=====开始')
@@ -120,6 +123,13 @@ app.whenReady().then(() => {
       return
     }
     ConcatImagesToVideo({ event, filePath: inputFilePath })
+  })
+
+  ipcMain.on('start-redraw', async (event, filePath) => {
+    if (!mainWindow) {
+      return
+    }
+    ReDrawImage({ event, filePath })
   })
 
   // 监听打开文件夹

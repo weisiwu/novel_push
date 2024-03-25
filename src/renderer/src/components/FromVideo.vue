@@ -32,28 +32,29 @@ const createColumns = () => {
       width: imgSize,
       render(row) {
         const height = row?.height / (row?.width / imgSize || 1)
-        if (row?.new_img instanceof Array) {
-          return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
-            row?.new_img?.map?.((imgObj) => {
-              return h(
-                NImage,
-                {
-                  src: imgObj ? `${imgObj}?t=${Date.now()}` : imgObj || '',
-                  width: imgSize,
-                  style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
-                  height: height,
-                  class: 'new_img'
-                },
-                null
-              )
-            })
-          ])
-        }
+        // if (row?.new_img instanceof Array) {
+        //   return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
+        //     row?.new_img?.map?.((imgObj) => {
+        //       return h(
+        //         NImage,
+        //         {
+        //           src: imgObj ? `${imgObj}?t=${Date.now()}` : imgObj || '',
+        //           width: imgSize,
+        //           style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
+        //           height: height,
+        //           class: 'new_img'
+        //         },
+        //         null
+        //       )
+        //     })
+        //   ])
+        // }
+        const new_img = row?.new_img?.[0] || row?.new_img
         return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
           h(
             NImage,
             {
-              src: row?.new_img ? `${row?.new_img}?t=${Date.now()}` : row?.ori_img || '',
+              src: new_img ? `${new_img}?t=${Date.now()}` : row?.ori_img || '',
               width: imgSize,
               style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
               height: height,
@@ -78,7 +79,9 @@ const createColumns = () => {
       align: 'center',
       key: 'actions',
       minWidth: 120,
-      render() {
+      render(row) {
+        console.log('wswTest: rowrowrowrow', row)
+        const new_img = row?.new_img?.[0] || row?.new_img
         return h('p', { style: 'display: flex;flex-direction: column', 'align-items': 'center' }, [
           h(
             NButton,
@@ -88,7 +91,7 @@ const createColumns = () => {
               size: 'small',
               type: 'info',
               style: { width: '80px', margin: '0 auto' },
-              onClick: () => {}
+              onClick: () => reDrawImage(new_img)
             },
             '重绘'
           )
@@ -108,6 +111,11 @@ const chooseVideo = () => {
 // 导出视频
 const concatVideo = () => {
   window.ipcRenderer.send('concat-video')
+}
+// 重绘
+const reDrawImage = (new_img) => {
+  console.log('wswTest: new_img重绘的图是什么', new_img)
+  window.ipcRenderer.send('start-redraw', new_img)
 }
 
 if (window.ipcRenderer) {
@@ -213,6 +221,10 @@ if (window.ipcRenderer) {
     tableData.value = []
     currentRef.value = false
     showFinishBtn.value = false
+  })
+
+  window.ipcRenderer.receive('finish-redraw', (params) => {
+    message.info('重绘成功!')
   })
 }
 </script>

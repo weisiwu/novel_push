@@ -16,8 +16,11 @@ const mainWindowChannels = [
   'start-process',
   'stop-process',
   'update-process',
-  'finish-process',
   'concat-video',
+  // TODO:(wsw) 名字代替换
+  'finish-process',
+  'start-redraw',
+  'finish-redraw',
   'fetch-config',
   'read-config',
   'save-config'
