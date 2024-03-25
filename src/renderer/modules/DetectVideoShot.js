@@ -4,15 +4,14 @@ import { configPath, mainProcessBin } from '../src/config.js'
 
 // 大视频片段，分块处理
 const DetectVideoShotByParts = ({ filePath, event }) => {
-  console.log('wswTest: filePath', filePath)
   // 启动切片进程
-  const mainProcess = spawn(
+  const shotsProcess = spawn(
     mainProcessBin,
     ['--input_file', filePath, '--config_file', configPath],
     { stdio: 'pipe' }
   )
 
-  mainProcess.stdout.on('data', (data) => {
+  shotsProcess.stdout.on('data', (data) => {
     let dataStr = data.toString()
     let dataObj = null
     console.log('wswTest接受到的标准输出: ', dataStr)
@@ -32,20 +31,18 @@ const DetectVideoShotByParts = ({ filePath, event }) => {
     }
   })
 
-  return mainProcess
+  return shotsProcess
 }
 
 export const ConcatImagesToVideo = ({ filePath, event }) => {
   // 合并视频
-  const mainProcess = spawn(
+  const concatProcess = spawn(
     mainProcessBin,
     ['--input_file', filePath, '--config_file', configPath, '--is_concat_imgs_to_video', true],
     { stdio: 'pipe' }
   )
 
-  console.log('wswTest: ', '开始合并视频11212')
-
-  mainProcess.stdout.on('data', (data) => {
+  concatProcess.stdout.on('data', (data) => {
     let dataStr = data.toString()
     let dataObj = null
     console.log('wswTest接受到的标准输出: ', dataStr)
@@ -62,18 +59,18 @@ export const ConcatImagesToVideo = ({ filePath, event }) => {
     }
   })
 
-  return mainProcess
+  return concatProcess
 }
 
 export const ReDrawImage = ({ filePath, event }) => {
   // 合并视频
-  const mainProcess = spawn(
+  const redrawProcess = spawn(
     mainProcessBin,
     ['--input_file', filePath, '--config_file', configPath, '--redraw', true],
     { stdio: 'pipe' }
   )
 
-  mainProcess.stdout.on('data', (data) => {
+  redrawProcess.stdout.on('data', (data) => {
     let dataStr = data.toString()
     let dataObj = null
     console.log('wswTest接受到的标准输出: ', dataStr)
@@ -87,7 +84,7 @@ export const ReDrawImage = ({ filePath, event }) => {
     }
   })
 
-  return mainProcess
+  return redrawProcess
 }
 
 export default DetectVideoShotByParts

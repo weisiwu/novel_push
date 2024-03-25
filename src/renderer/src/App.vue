@@ -189,6 +189,7 @@ const toggleConfig = (event) => {
               <FromVideo
                 v-if="selectMenu === pageNames.from_video"
                 style="margin-top: 50px"
+                :is-process-video="isProcessVideo"
                 :update-is-process-video="updateIsProcessVideo"
               />
               <FromText v-if="selectMenu === pageNames.from_text" />

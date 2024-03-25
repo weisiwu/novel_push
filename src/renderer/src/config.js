@@ -4,9 +4,9 @@
  */
 import configPath from '../../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 // windows下调试
-import mainProcessBin from '../../../resources/sdk/main_process/bin/main.exe?asset&asarUnpack'
+// import mainProcessBin from '../../../resources/sdk/main_process/bin/main.exe?asset&asarUnpack'
 // macos 下调试
-// import mainProcessBin from '../../../resources/sdk/main_process/bin/main?asset&asarUnpack'
+import mainProcessBin from '../../../resources/sdk/main_process/bin/main?asset&asarUnpack'
 
 // 所有路径，统一在初始化的时候进行测试和创建
 console.log('wswTestconfigPath: ', configPath)

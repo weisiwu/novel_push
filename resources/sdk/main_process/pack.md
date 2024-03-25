@@ -20,8 +20,14 @@ python main.py --input_file C:\Users\Administrator\Desktop\demo\5.mp4 --config_f
 python main.py --input_file C:\Users\Administrator\Desktop\demo\test.png --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --redraw True
 
 
-mac
+Mac
 python main.py --input_file /Users/siwu/Desktop/github/novel_push/resources/sdk/main_process/1.mp4  --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json
+
+出视频
+python main.py --input_file /Users/siwu/Desktop/github/novel_push/resources/sdk/main_process/1.mp4  --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json --is_concat_imgs_to_video True
+
+重绘
+python main.py --input_file /Users/siwu/Desktop/github/novel_push/resources/sdk/main_process/1.mp4  --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json --redraw True
 
 ./main.exe --input_file C:\Users\Administrator\Desktop\demo\1.mp4  --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json
 

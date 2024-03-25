@@ -1,7 +1,8 @@
 <script setup>
 import { h, ref, defineProps } from 'vue'
-import { NCarousel, NButton, NImage, useMessage, NSpin } from 'naive-ui'
+import { NButton, NImage, useMessage, NSpin } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
+import defaultImg from '../../public/imgs/icon.png?assets'
 
 const imgSize = 120
 const message = useMessage()
@@ -9,7 +10,7 @@ const tableData = ref([])
 const showFinishBtn = ref(false)
 const processPercentage = ref(0)
 const currentRef = ref(false)
-const props = defineProps({ updateIsProcessVideo: Function })
+const props = defineProps({ updateIsProcessVideo: Function, isProcessVideo: Boolean })
 const bodyWidth = document.body.clientWidth - 240
 
 const createColumns = () => {
@@ -24,7 +25,6 @@ const createColumns = () => {
         return h(NImage, { src: row?.ori_img || '', width: imgSize, class: 'ori_img' }, null)
       }
     },
-    // { title: '画面运动', align: 'center', key: 'img_move', width: 80 },
     {
       title: '二创图',
       align: 'center',
@@ -32,29 +32,14 @@ const createColumns = () => {
       width: imgSize,
       render(row) {
         const height = row?.height / (row?.width / imgSize || 1)
-        // if (row?.new_img instanceof Array) {
-        //   return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
-        //     row?.new_img?.map?.((imgObj) => {
-        //       return h(
-        //         NImage,
-        //         {
-        //           src: imgObj ? `${imgObj}?t=${Date.now()}` : imgObj || '',
-        //           width: imgSize,
-        //           style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
-        //           height: height,
-        //           class: 'new_img'
-        //         },
-        //         null
-        //       )
-        //     })
-        //   ])
-        // }
-        const new_img = row?.new_img?.[0] || row?.new_img
+        const new_img = row?.sd_imgtoimg_error ? '' : row?.new_img || row?.new_img?.[0]
         return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
           h(
             NImage,
             {
+              lazy: true,
               src: new_img ? `${new_img}?t=${Date.now()}` : row?.ori_img || '',
+              'fallback-src': defaultImg,
               width: imgSize,
               style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
               height: height,
@@ -80,12 +65,12 @@ const createColumns = () => {
       key: 'actions',
       minWidth: 120,
       render(row) {
-        console.log('wswTest: rowrowrowrow', row)
-        const new_img = row?.new_img?.[0] || row?.new_img
+        const new_img = row?.new_img || row?.new_img?.[0]
         return h('p', { style: 'display: flex;flex-direction: column', 'align-items': 'center' }, [
           h(
             NButton,
             {
+              disabled: props.isProcessVideo,
               strong: true,
               tertiary: true,
               size: 'small',
@@ -114,7 +99,6 @@ const concatVideo = () => {
 }
 // 重绘
 const reDrawImage = (new_img) => {
-  console.log('wswTest: new_img重绘的图是什么', new_img)
   window.ipcRenderer.send('start-redraw', new_img)
 }
 
@@ -124,12 +108,12 @@ if (window.ipcRenderer) {
     let isExsist = false
     const {
       type,
+      code,
       width,
       height,
       file_name,
       index: output_index,
       img_path,
-      is_skip,
       output_file = [],
       video_path
     } = params || {}
@@ -153,11 +137,10 @@ if (window.ipcRenderer) {
     }
 
     const _tableData = tableData.value.map((item) => {
-      console.log('wswTest类型是什么', type, item.value, file_name)
       // 存在名称相同的图片，则是更新为对该图片的追加改动
       if (item.value == file_name.replace('_new', '')) {
         isExsist = true
-        if (type === 'extract_picture' || (is_skip && type === 'rm_watermark')) {
+        if (type === 'extract_picture') {
           return {
             ...item,
             width,
@@ -165,11 +148,10 @@ if (window.ipcRenderer) {
             ori_img: img_path,
             new_img: img_path,
             new_img_mask_opacity: 0.2,
-            percentage: Math.floor(Math.random() * 40),
             finish: false
           }
         } else if (type === 'sd_imgtoimg') {
-          console.log('wswTest: 进度是多少output_index', output_index, tableData.value.length)
+          // 更新生成视频进度
           processPercentage.value = Number((output_index / tableData.value.length) * 100).toFixed(2)
           if (processPercentage.value >= 100) {
             showFinishBtn.value = true
@@ -180,8 +162,8 @@ if (window.ipcRenderer) {
             height,
             new_img: output_file,
             new_img_mask_opacity: 1,
-            percentage: 100,
-            finish: true
+            finish: true,
+            sd_imgtoimg_error: code === 0
           }
         }
       }
@@ -198,7 +180,6 @@ if (window.ipcRenderer) {
         height,
         ori_img: img_path,
         new_img_mask_opacity: 0.2,
-        percentage: Math.floor(Math.random() * 15),
         finish: false
       })
     }
@@ -211,9 +192,7 @@ if (window.ipcRenderer) {
 
   window.ipcRenderer.receive('finish-process', (params) => {
     const { outputPath, outputFile } = params || {}
-    console.log('wswTest: ', '进程结束了少时诵诗书')
-    console.log('wswTest:outputPath ', outputPath)
-    console.log('wswTest:outputFile ', outputFile)
+    console.log('wswTest:生成视频成功,视频结果路径 ', outputFile)
     message.info('生成视频成功!')
     processPercentage.value = 0
     window.openPath(outputFile)

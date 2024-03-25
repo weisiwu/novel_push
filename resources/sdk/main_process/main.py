@@ -6,7 +6,6 @@ import json
 import glob
 import queue
 import base64
-import GPUtil
 import shutil
 import requests
 import argparse
@@ -15,6 +14,7 @@ import numpy as np
 from pathlib import *
 from PIL import Image
 import moviepy.editor as mp
+from moviepy.audio.AudioClip import AudioClip
 from types import SimpleNamespace
 from scenedetect import (
     detect,
@@ -28,6 +28,12 @@ def custom_sort(frame_img):
     name = Path(frame_img).name
     num = int(name.split("_")[0])
     return num
+
+
+# 创建一个类用于“吞噬”输出
+class NullWriter(object):
+    def write(self, s):
+        pass
 
 
 """
@@ -468,22 +474,6 @@ class VideoProcess:
         目前仅检查了是否为N卡和基础信息
         https://blog.csdn.net/LuohenYJ/article/details/125857613
         """
-        # 获取所有可用GPU列表，id号从0开始
-        GPUs = GPUtil.getGPUs()
-
-        if not len(GPUs):
-            self.gpuInfo = False
-            # print("【读取GPU信息失败】失败")
-        else:
-            firstGPU = GPUs[0]
-            self.gpuInfo = {
-                "name": firstGPU.name,  # 显卡名称
-                "memoryTotal": firstGPU.memoryTotal,  # 总内存
-                "driver": firstGPU.driver,  # 驱动名称
-                "load": firstGPU.load,  # GPU负载率
-                "memoryUtil": firstGPU.memoryUtil,  # 显存使用率
-            }
-            # print("【读取GPU信息失败】成功: ", firstGPU)
 
         # 检查sd是否可使用
         sd_base_url = sd_config["baseUrl"] or ""
@@ -588,7 +578,9 @@ class VideoProcess:
             self.video_info.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             self.video_info.size = (self.video_info.width, self.video_info.height)
         if not self.video_info.total_frames:
-            self.video_info.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            clip = mp.VideoFileClip(self.client_config.input_path.as_posix())
+            self.video_info.total_frames = int(clip.fps * clip.duration)
+            clip.close()
         if not self.video_info.split_frames:
             # 计算切割点
             self.video_info.split_frames = int(
@@ -668,13 +660,6 @@ class VideoProcess:
         if self.shot_nums_already_handled != self.shot_nums:
             return False
         queues = self.task_queues.__dict__
-        # for index, queue_name in enumerate(queues):
-        #     print("任务队列还剩余多少", queue_name, queues[queue_name].qsize())
-        # print(
-        #     "已处理任务数/任务总数",
-        #     self.shot_nums_already_handled,
-        #     self.shot_nums,
-        # )
         # 进程是否已经启动
         if self.process_start:
             return all(_queue.empty() for _queue in queues.values())
@@ -699,7 +684,8 @@ class VideoProcess:
             task = task_queue.get()
             if task is not None:
                 self.process_task(task, task_type)  # 处理当前任务，并分发子任务
-                # task_queue.task_done()
+            else:
+                return
 
     def init_workers(self):
         """
@@ -737,15 +723,17 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
         videoFrameHeight = sd_config["HDImageHeight"] or 512
     else:
         cap = cv2.VideoCapture(Path(input_path).as_posix())
+        frame_rate = cap.get(cv2.CAP_PROP_FPS)  # 获取视频帧率
         videoFrameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 512
         videoFrameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 512
     img_size = (videoFrameWidth, videoFrameHeight)
     outputPath = Path(sd_config["outputPath"])
+    tmpSavePath = outputPath / "tmp_save.mp4"
     outputFile = outputPath / sd_config["saveFileName"]
     videowrite = cv2.VideoWriter(
-        outputFile.as_posix(),
+        tmpSavePath.as_posix(),
         cv2.VideoWriter_fourcc(*"mp4v"),
-        sd_config["frame_rate"],
+        frame_rate,
         img_size,
     )
     frame_img_path = cache_config.video_frames_cahce_path
@@ -755,48 +743,60 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     prev_end = 0
 
     for index, frame_img in enumerate(sort_imgs):
-        next_index = index + 1 if index + 1 < imgs_num else index
+        next_index = index + 1 if index + 1 < imgs_num else None
         img = cv2.resize(cv2.imread(frame_img), img_size)
-        next_img = cv2.resize(cv2.imread(sort_imgs[next_index]), img_size)
+        next_img = (
+            cv2.resize(cv2.imread(sort_imgs[next_index]), img_size)
+            if next_index is not None
+            else None
+        )
 
         if img is None:
             continue
 
         img_duration = (custom_sort(frame_img) - prev_end) / frame_rate
-        prev_end = custom_sort(frame_img)
         total_num = int(frame_rate * img_duration)
         transition_num = int(total_num * transition_duration_rate) or 1
         transition_start_index = int(total_num * (1 - transition_duration_rate))
-
         for cur_index in range(total_num):
             # 计算过渡效果的每一帧
-            if (
-                next_img is not None
-                and next_index != index
-                and cur_index >= transition_start_index
-            ):
+            if next_img is not None and cur_index >= transition_start_index:
                 # 计算过渡权重（0到1之间）
                 alpha = (cur_index - transition_start_index) / transition_num
-
-                # 使用 alpha 权重进行混合
+                # 使用alpha权重进行混合
                 blended_img = cv2.addWeighted(img, 1 - alpha, next_img, alpha, 0)
-
                 # 将混合后的图像写入视频文件
                 videowrite.write(np.uint8(blended_img))
             else:
                 videowrite.write(img)
 
-    videowrite.release()
+        prev_end = custom_sort(frame_img)
 
-    video_file = mp.VideoFileClip(outputFile.as_posix())
-    audio_file = mp.AudioFileClip(input_path)
+    videowrite.release()
+    video_file = mp.VideoFileClip(tmpSavePath.as_posix())
+    v_duration = video_file.duration
+    silent_audio_clip = AudioClip(lambda t: [0, 0], duration=v_duration, fps=44100)
+    # 如果视频无音轨，则创建静音音轨
+    audio_file = mp.VideoFileClip(str(input_path)).audio or silent_audio_clip
+    a_duration = audio_file.duration
+    if v_duration > a_duration:
+        video_file = video_file.subclip(0, a_duration)
+    else:
+        audio_file = audio_file.subclip(0, v_duration)
     video_with_audio = video_file.set_audio(audio_file)
-    video_with_audio.write_videofile(outputFile.as_posix(), codec="libx264")
+
+    # 将生成视频的输出重定向，防止输出
+    sysout = sys.stdout
+    sys.stdout = NullWriter()
+    video_with_audio.write_videofile(
+        outputFile.as_posix(), codec="mpeg4", verbose=False
+    )
+    sys.stdout = sysout
 
     video_file.close()
     audio_file.close()
-    sys.stdout.flush()
-
+    # 删除临时文件
+    # os.remove(tmpSavePath)
     print(
         json.dumps(
             {
@@ -861,12 +861,11 @@ def redraw_image(input_path):
                 }
             )
         )
-        sys.stdout.flush()
     else:
         # 【图生图任务】失败
         print(json.dumps({"code": 0, "type": "re_draw", "input_file": input_path}))
-        sys.stdout.flush()
 
+    sys.stdout.flush()
 
 args = parse_args()
 with open(args.config_file, "r") as f:

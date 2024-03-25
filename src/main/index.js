@@ -11,11 +11,6 @@ import DetectVideoShotByParts, {
 } from '../renderer/modules/DetectVideoShot'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
-console.log('wswTest: ', '防止读取resources中配置存在问题=====开始')
-console.log('wswTest: DetectVideoShotByParts(这是函数)', DetectVideoShotByParts)
-console.log('wswTest: configPath(这是路径)', configPath)
-console.log('wswTest: ', '防止读取resources中配置存在问题=====结束')
-
 let startWindow = null
 let mainWindow = null
 let inputFilePath = ''

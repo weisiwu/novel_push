@@ -42,14 +42,14 @@
               <n-button type="primary" @click="selectFolder">重新选择</n-button>
             </n-space>
           </n-form-item>
-          <n-form-item
+          <!-- <n-form-item
             label-placement="left"
             label-width="110"
             label="是否跳过去水印"
             path="skipRmWatermark"
           >
             <n-switch v-model:value="formModel.skipRmWatermark" size="large" />
-          </n-form-item>
+          </n-form-item> -->
           <n-form-item label="原图相关度" path="denoising_strength">
             <n-radio-group v-model:value="formModel.denoising_strength" name="原图相关度">
               <n-radio-button
