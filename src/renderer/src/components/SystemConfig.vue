@@ -50,7 +50,7 @@
           >
             <n-switch v-model:value="formModel.skipRmWatermark" size="large" />
           </n-form-item> -->
-          <n-form-item label="原图相关度" path="denoising_strength">
+          <n-form-item label="图片原创度" path="denoising_strength">
             <n-radio-group v-model:value="formModel.denoising_strength" name="原图相关度">
               <n-radio-button
                 v-for="denoising_strength in CFG_SETS"
@@ -69,13 +69,13 @@
               :options="modelsOptions"
             />
           </n-form-item>
-          <n-form-item label="调整视频画面大小" path="imgSize">
+          <n-form-item label="画面大小" path="imgSize">
             <n-switch v-model:value="formModel.isOriginalSize">
               <template #checked> 保持原画面大小 </template>
               <template #unchecked> 使用下列尺寸 </template>
             </n-switch>
           </n-form-item>
-          <n-form-item label="图像宽(512~2000)" path="HDImageWidth">
+          <n-form-item label="宽度(512~2000)" path="HDImageWidth">
             <n-input-number
               v-model:value="formModel.HDImageWidth"
               max="2000"
@@ -86,7 +86,7 @@
             >
             </n-input-number>
           </n-form-item>
-          <n-form-item label="图像高(512~2000)" path="HDImageHeight">
+          <n-form-item label="高度(512~2000)" path="HDImageHeight">
             <n-input-number
               v-model:value="formModel.HDImageHeight"
               max="2000"
@@ -120,9 +120,9 @@ import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json
 
 const props = defineProps({ toggleShow: Function })
 const CFG_SETS = [
-  { value: 0.8, label: '高度重绘' },
-  { value: 0.6, label: '中度重绘' },
-  { value: 0.45, label: '低度重绘' }
+  { value: 0.8, label: '高原创度' },
+  { value: 0.6, label: '中原创度' },
+  { value: 0.45, label: '低原创度' }
 ]
 const active = ref(true)
 const message = useMessage()

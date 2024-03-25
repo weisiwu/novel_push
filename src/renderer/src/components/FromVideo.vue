@@ -4,11 +4,33 @@ import { NButton, NImage, useMessage, NSpin } from 'naive-ui'
 import SelectVideo from './SelectVideo.vue'
 import defaultImg from '../../public/imgs/icon.png?assets'
 
-const imgSize = 120
+const imgWidth = 200
+const imgHeight = 100
 const message = useMessage()
+// TODO:(wsw) 调试表格数据
+// const tableData = ref([
+//   {
+//     index: 1,
+//     finish: true,
+//     ori_img: '/Users/siwu/Desktop/github/novel_push/video_frames_cahce/49.png',
+//     new_img: 'https://img.alicdn.com/tps/TB1GVGFNXXXXXaTapXXXXXXXXXX-4436-4244.jpg'
+//   },
+//   {
+//     index: 2,
+//     ori_img: '/Users/siwu/Desktop/github/novel_push/video_frames_cahce/49.png',
+//     new_img: '/Users/siwu/Desktop/github/novel_push/video_frames_cahce/49_new.png'
+//   },
+//   {
+//     index: 3,
+//     ori_img: '/Users/siwu/Desktop/github/novel_push/video_frames_cahce/49.png',
+//     new_img: '/Users/siwu/Desktop/github/novel_push/video_frames_cahce/49_new.png'
+//   }
+// ])
 const tableData = ref([])
 const showFinishBtn = ref(false)
 const processPercentage = ref(0)
+// TODO:(wsw) 调试表格
+// const currentRef = ref(true)
 const currentRef = ref(false)
 const props = defineProps({ updateIsProcessVideo: Function, isProcessVideo: Boolean })
 const bodyWidth = document.body.clientWidth - 240
@@ -20,39 +42,68 @@ const createColumns = () => {
       title: '素材图',
       align: 'center',
       key: 'ori_img',
-      minWidth: imgSize,
+      minWidth: imgWidth,
+      minHeight: imgHeight,
       render(row) {
-        return h(NImage, { src: row?.ori_img || '', width: imgSize, class: 'ori_img' }, null)
+        return h(
+          NImage,
+          {
+            src: row?.ori_img || '',
+            width: imgWidth,
+            height: imgHeight,
+            'fallback-src': defaultImg,
+            class: 'ori_img',
+            'object-fit': 'contain'
+          },
+          null
+        )
       }
     },
     {
       title: '二创图',
       align: 'center',
       key: 'new_img',
-      width: imgSize,
+      minWidth: imgWidth,
+      minHeight: imgHeight,
       render(row) {
-        const height = row?.height / (row?.width / imgSize || 1)
-        const new_img = row?.sd_imgtoimg_error ? '' : row?.new_img || row?.new_img?.[0]
-        return h('div', { class: 'new_img_ctn', style: `width: 160px;` }, [
-          h(
-            NImage,
-            {
-              lazy: true,
-              src: new_img ? `${new_img}?t=${Date.now()}` : row?.ori_img || '',
-              'fallback-src': defaultImg,
-              width: imgSize,
-              style: `opacity:${row?.new_img_mask_opacity || 1};width: ${imgSize}px;`,
-              height: height,
-              class: 'new_img'
-            },
-            null
-          ),
+        const new_img = row?.new_img || row?.new_img?.[0] || ''
+        return h('div', { class: 'new_img_ctn' }, [
           h(
             NSpin,
             {
               type: 'dashboard',
               size: 'large',
-              style: `position:absolute;justify-content:center;align-items:center;top:-15px;left:30px;height:100px;width:100px;display:${row?.finish ? 'none' : 'flex'}`
+              class: 'new_img_pin',
+              style: `display:${row?.finish ? 'none' : 'flex'};`
+            },
+            [
+              h(
+                NImage,
+                {
+                  lazy: true,
+                  src: defaultImg,
+                  width: imgWidth,
+                  height: imgHeight,
+                  'object-fit': 'contain',
+                  'preview-disabled': true,
+                  class: 'new_img'
+                },
+                null
+              )
+            ]
+          ),
+          h(
+            NImage,
+            {
+              lazy: true,
+              src: new_img ? `${new_img}?t=${Date.now()}` : row?.ori_img || '',
+              width: imgWidth,
+              height: imgHeight,
+              'fallback-src': defaultImg,
+              'show-toolbar': false,
+              'object-fit': 'contain',
+              style: `opacity:${row?.new_img_mask_opacity || 1};display:${row?.finish ? 'flex' : 'none'};`,
+              class: 'new_img'
             },
             null
           )
@@ -85,7 +136,7 @@ const createColumns = () => {
     }
   ]
 }
-// 重选视频
+// 取消
 const chooseVideo = () => {
   props.updateIsProcessVideo(false)
   tableData.value = []
@@ -147,7 +198,7 @@ if (window.ipcRenderer) {
             height,
             ori_img: img_path,
             new_img: img_path,
-            new_img_mask_opacity: 0.2,
+            new_img_mask_opacity: 0.5,
             finish: false
           }
         } else if (type === 'sd_imgtoimg') {
@@ -162,8 +213,7 @@ if (window.ipcRenderer) {
             height,
             new_img: output_file,
             new_img_mask_opacity: 1,
-            finish: true,
-            sd_imgtoimg_error: code === 0
+            finish: true
           }
         }
       }
@@ -179,7 +229,7 @@ if (window.ipcRenderer) {
         width,
         height,
         ori_img: img_path,
-        new_img_mask_opacity: 0.2,
+        new_img_mask_opacity: 0.5,
         finish: false
       })
     }
@@ -225,7 +275,7 @@ if (window.ipcRenderer) {
   <SelectVideo v-if="!currentRef" />
   <div v-if="currentRef" class="details">
     <n-flex :style="{ margin: '20px 0px 0px 20px' }">
-      <n-button type="primary" @click="chooseVideo">重选视频</n-button>
+      <n-button type="primary" @click="chooseVideo">取消</n-button>
       <n-button v-if="showFinishBtn" type="primary" @click="concatVideo">导出视频</n-button>
     </n-flex>
     <n-data-table
@@ -246,34 +296,17 @@ if (window.ipcRenderer) {
 }
 .ori_img,
 .new_img {
-  width: 120px;
   height: auto;
   text-align: center;
 }
 .new_img_ctn {
   position: relative;
 }
-.n-carousel {
-  width: 140%;
-}
-.n-carousel.n-carousel--bottom .n-carousel__arrow-group {
-  position: absolute;
-  left: 6px;
-  border: 0px;
-  background: transparent;
-  height: 26px;
-  top: 20px;
-  justify-content: space-between;
-}
-.n-carousel .n-carousel__arrow svg {
-  width: 2em;
-  height: 2em;
-  color: black;
-}
-.n-carousel.n-carousel--show-arrow.n-carousel--bottom .n-carousel__dots {
-  display: none;
-}
 .n-progress.n-progress--line {
   width: auto;
+}
+.new_img,
+.new_img_pin {
+  justify-content: center;
 }
 </style>

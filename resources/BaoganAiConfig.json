@@ -17,7 +17,7 @@
   "skipRmWatermark": true,
   "steps": 20,
   "cfg": 10,
-  "models": "",
+  "models": "mixProV4.Cqhm",
   "retry_times": 5,
   "isOriginalSize": true,
   "access_key_id": "",

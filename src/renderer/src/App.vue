@@ -51,7 +51,6 @@ const renderMenuLabel = (option) => {
 const expandIcon = () => {
   return h(NIcon, null, { default: () => h(CaretDownOutline) })
 }
-console.log('wswTest: isProcessVideo.value', isProcessVideo.value)
 const menuOptions = ref([
   {
     label: renderLabel('一键追爆款'),
@@ -59,12 +58,12 @@ const menuOptions = ref([
     icon: renderIcon(RocketOutline),
     disabled: isProcessVideo.value
   },
-  {
-    label: renderLabel('小说转视频'),
-    key: pageNames.from_text,
-    icon: renderIcon(DocumentTextOutline),
-    disabled: isProcessVideo.value
-  },
+  // {
+  //   label: renderLabel('小说转视频'),
+  //   key: pageNames.from_text,
+  //   icon: renderIcon(DocumentTextOutline),
+  //   disabled: isProcessVideo.value
+  // },
   {
     label: renderLabel('工具箱'),
     key: pageNames.tools,
@@ -80,17 +79,17 @@ const menuOptions = ref([
         label: '视频封面制作',
         icon: renderIcon(ImagesOutline),
         key: 'video_cover'
-      },
-      {
-        label: '模型管理',
-        icon: renderIcon(GiftOutline),
-        key: 'models'
-      },
-      {
-        label: 'Lora管理',
-        icon: renderIcon(RibbonOutline),
-        key: 'loras'
       }
+      // {
+      //   label: '模型管理',
+      //   icon: renderIcon(GiftOutline),
+      //   key: 'models'
+      // },
+      // {
+      //   label: 'Lora管理',
+      //   icon: renderIcon(RibbonOutline),
+      //   key: 'loras'
+      // }
     ]
   },
   {
@@ -98,13 +97,13 @@ const menuOptions = ref([
     key: pageNames.feedback,
     icon: renderIcon(BugOutline),
     disabled: isProcessVideo.value
-  },
-  {
-    label: renderLabel('系统设置'),
-    key: pageNames.system_config,
-    icon: renderIcon(AppsSharp),
-    disabled: isProcessVideo.value
   }
+  // {
+  //   label: renderLabel('系统设置'),
+  //   key: pageNames.system_config,
+  //   icon: renderIcon(AppsSharp),
+  //   disabled: isProcessVideo.value
+  // }
 ])
 
 watchEffect(() => {
