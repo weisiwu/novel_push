@@ -7,6 +7,7 @@ import defaultImg from '../../public/imgs/icon.png?assets'
 const imgWidth = 200
 const imgHeight = 100
 const message = useMessage()
+const redrawImgs = ref([])
 // TODO:(wsw) 调试表格数据
 // const tableData = ref([
 //   {
@@ -32,7 +33,11 @@ const processPercentage = ref(0)
 // TODO:(wsw) 调试表格
 // const currentRef = ref(true)
 const currentRef = ref(false)
-const props = defineProps({ updateIsProcessVideo: Function, isProcessVideo: Boolean })
+const props = defineProps({
+  updateIsProcessVideo: Function,
+  updateGlobalLoading: Function,
+  isProcessVideo: Boolean
+})
 const bodyWidth = document.body.clientWidth - 240
 
 const createColumns = () => {
@@ -53,6 +58,7 @@ const createColumns = () => {
             height: imgHeight,
             'fallback-src': defaultImg,
             class: 'ori_img',
+            'show-toolbar': false,
             'object-fit': 'contain'
           },
           null
@@ -66,7 +72,7 @@ const createColumns = () => {
       minWidth: imgWidth,
       minHeight: imgHeight,
       render(row) {
-        const new_img = row?.new_img || row?.new_img?.[0] || ''
+        const new_img = typeof row?.new_img === 'string' ? row?.new_img : row?.new_img?.[0]
         return h('div', { class: 'new_img_ctn' }, [
           h(
             NSpin,
@@ -85,6 +91,7 @@ const createColumns = () => {
                   width: imgWidth,
                   height: imgHeight,
                   'object-fit': 'contain',
+                  'show-toolbar': false,
                   'preview-disabled': true,
                   class: 'new_img'
                 },
@@ -116,7 +123,7 @@ const createColumns = () => {
       key: 'actions',
       minWidth: 120,
       render(row) {
-        const new_img = row?.new_img || row?.new_img?.[0]
+        const new_img = typeof row?.new_img === 'string' ? row?.new_img : row?.new_img?.[0]
         return h('p', { style: 'display: flex;flex-direction: column', 'align-items': 'center' }, [
           h(
             NButton,
@@ -127,7 +134,7 @@ const createColumns = () => {
               size: 'small',
               type: 'info',
               style: { width: '80px', margin: '0 auto' },
-              onClick: () => reDrawImage(new_img)
+              onClick: () => reDrawImage(new_img, row?.index)
             },
             '重绘'
           )
@@ -146,20 +153,26 @@ const chooseVideo = () => {
 }
 // 导出视频
 const concatVideo = () => {
+  props.updateGlobalLoading(true)
   window.ipcRenderer.send('concat-video')
 }
 // 重绘
-const reDrawImage = (new_img) => {
-  window.ipcRenderer.send('start-redraw', new_img)
+const reDrawImage = (new_img, frame_index) => {
+  window.ipcRenderer.send('start-redraw', { frameIndex: frame_index, filePath: new_img || '' })
+  redrawImgs.value.push(frame_index)
+  const _tableData = tableData.value.map((item) => {
+    return { ...item, finish: !redrawImgs.value.includes(item.index) }
+  })
+  tableData.value = _tableData
 }
 
 if (window.ipcRenderer) {
   window.ipcRenderer.receive('update-process', (params) => {
+    props.updateGlobalLoading(false)
     props.updateIsProcessVideo(true)
     let isExsist = false
     const {
       type,
-      code,
       width,
       height,
       file_name,
@@ -171,19 +184,20 @@ if (window.ipcRenderer) {
 
     // 如果sd接口不可用，给与用户提示
     if (type === 'check_sd_available') {
-      message.error('进行图像转换的stable diffusion接口不可用')
+      message.error('进行图像转换的stable diffusion地址不可用')
       chooseVideo()
       return
     }
 
     // 将保存产出视频目录设置为默认
     if (type === 'set_output_path_default') {
-      message.info(`未发现预设保存结果目录，使用默认值 ${params?.default_path || ''}`)
+      message.info(`未找到保存目录，使用默认值 ${params?.default_path || ''}`)
     }
 
     if (video_path && type === 'video_imgs_ready') {
       // 已就绪，可以合成视频
       showFinishBtn.value = true
+      props.updateIsProcessVideo(false)
       return
     }
 
@@ -240,10 +254,11 @@ if (window.ipcRenderer) {
     }
   })
 
-  window.ipcRenderer.receive('finish-process', (params) => {
-    const { outputPath, outputFile } = params || {}
+  window.ipcRenderer.receive('finish-concat', (params) => {
+    const { outputFile } = params || {}
     console.log('wswTest:生成视频成功,视频结果路径 ', outputFile)
     message.info('生成视频成功!')
+    props.updateGlobalLoading(false)
     processPercentage.value = 0
     window.openPath(outputFile)
     props.updateIsProcessVideo(false)
@@ -252,7 +267,10 @@ if (window.ipcRenderer) {
     showFinishBtn.value = false
   })
 
-  window.ipcRenderer.receive('finish-redraw', (params) => {
+  window.ipcRenderer.receive('finish-redraw', (params = {}) => {
+    const redrawIndex = redrawImgs.value.findIndex((img) => img?.index === params?.frameIndex)
+    redrawImgs.value.splice(redrawIndex, 1)
+    tableData.value[params?.frameIndex - 1].finish = true
     message.info('重绘成功!')
   })
 }
@@ -272,7 +290,7 @@ if (window.ipcRenderer) {
     :indicator-placement="'inside'"
     processing
   />
-  <SelectVideo v-if="!currentRef" />
+  <SelectVideo v-if="!currentRef" :update-global-loading="updateGlobalLoading" />
   <div v-if="currentRef" class="details">
     <n-flex :style="{ margin: '20px 0px 0px 20px' }">
       <n-button type="primary" @click="chooseVideo">取消</n-button>

@@ -52,7 +52,7 @@ export const ConcatImagesToVideo = ({ filePath, event }) => {
       dataObj = {}
     }
     if (dataObj?.type === 'concat_video') {
-      event.sender.send('finish-process', {
+      event.sender.send('finish-concat', {
         outputPath: dataObj?.outputPath || '',
         outputFile: dataObj?.outputFile || ''
       })
@@ -62,7 +62,7 @@ export const ConcatImagesToVideo = ({ filePath, event }) => {
   return concatProcess
 }
 
-export const ReDrawImage = ({ filePath, event }) => {
+export const ReDrawImage = ({ filePath, frameIndex, event }) => {
   // 合并视频
   const redrawProcess = spawn(
     mainProcessBin,
@@ -80,7 +80,7 @@ export const ReDrawImage = ({ filePath, event }) => {
       dataObj = {}
     }
     if (dataObj?.type === 're_draw') {
-      event.sender.send('finish-redraw', { input_file: dataObj?.input_file || '' })
+      event.sender.send('finish-redraw', { frameIndex, input_file: dataObj?.input_file || '' })
     }
   })
 

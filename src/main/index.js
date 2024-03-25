@@ -120,11 +120,12 @@ app.whenReady().then(() => {
     ConcatImagesToVideo({ event, filePath: inputFilePath })
   })
 
-  ipcMain.on('start-redraw', async (event, filePath) => {
+  ipcMain.on('start-redraw', async (event, params) => {
+    const { filePath, frameIndex } = params || {}
     if (!mainWindow) {
       return
     }
-    ReDrawImage({ event, filePath })
+    ReDrawImage({ event, filePath, frameIndex })
   })
 
   // 监听打开文件夹

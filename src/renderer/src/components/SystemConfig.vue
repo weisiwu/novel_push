@@ -194,7 +194,6 @@ onMounted(() => {
 
 if (window.ipcRenderer) {
   window.ipcRenderer.receive('select-folder', (params) => {
-    console.log('wswTest: 选了的实例拉到', params)
     formModel.value.outputPath = params
   })
 

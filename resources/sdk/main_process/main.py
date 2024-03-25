@@ -788,13 +788,13 @@ def concat_imgs_to_video(input_path, selected_imgs_str=""):
     # 将生成视频的输出重定向，防止输出
     sysout = sys.stdout
     sys.stdout = NullWriter()
-    video_with_audio.write_videofile(
-        outputFile.as_posix(), codec="mpeg4", verbose=False
-    )
+    video_with_audio.write_videofile(outputFile.as_posix(), codec="mpeg4")
     sys.stdout = sysout
 
     video_file.close()
     audio_file.close()
+    silent_audio_clip.close()
+    video_with_audio.close()
     # 删除临时文件
     # os.remove(tmpSavePath)
     print(

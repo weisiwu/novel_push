@@ -1,7 +1,11 @@
 <script setup>
 import { ArchiveOutline } from '@vicons/ionicons5'
 
+const props = defineProps({
+  updateGlobalLoading: Function
+})
 const parseVideo = async (file) => {
+  props.updateGlobalLoading(true)
   // 开始解析视频，切割视频需要再主进程里，所以需要通过ipc形式进行访问
   window.ipcRenderer.send(
     'start-process',

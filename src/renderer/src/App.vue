@@ -30,6 +30,10 @@ const loadingStyle = { loading: { height: '12px' } }
 const updateIsProcessVideo = (value) => {
   isProcessVideo.value = value
 }
+const globalLoading = ref(false)
+const updateGlobalLoading = (value) => {
+  globalLoading.value = value
+}
 
 const pageNames = {
   from_video: 'from_video',
@@ -126,85 +130,95 @@ const toggleConfig = (event) => {
 
 <template>
   <n-space vertical :style="{ width: '100%', height: '100vh' }">
-    <n-loading-bar-provider :loading-bar-style="loadingStyle">
-      <n-message-provider>
-        <n-layout has-sider class="layout" :style="{ width: '100%', height: '100vh' }">
-          <n-layout-sider
-            bordered
-            class="sidebar"
-            collapse-mode="width"
-            content-style="padding: 24px 24px 24px 10px"
-            :collapsed-width="10"
-            :width="240"
-            :collapsed="collapsed"
-            show-trigger
-            @collapse="collapsed = true"
-            @expand="collapsed = false"
-          >
-            <div v-if="!collapsed" class="sidebar_title">
-              <img :src="AppLogo" />
-            </div>
-            <n-menu
-              v-model:value="selectMenu"
+    <n-spin :show="globalLoading" size="large" type="dashboard">
+      <n-loading-bar-provider :loading-bar-style="loadingStyle">
+        <n-message-provider>
+          <n-layout has-sider class="layout" :style="{ width: '100%', height: '100vh' }">
+            <n-layout-sider
+              bordered
+              class="sidebar"
+              collapse-mode="width"
+              content-style="padding: 24px 24px 24px 10px"
+              :collapsed-width="10"
+              :width="240"
               :collapsed="collapsed"
-              :collapsed-width="64"
-              :collapsed-icon-size="22"
-              :options="menuOptions"
-              :render-label="renderMenuLabel"
-              :expand-icon="expandIcon"
-            />
-          </n-layout-sider>
-          <n-layout class="content" :style="{ minWidth: '900px' }">
-            <div
-              class="statusbar"
-              :style="{
-                position: 'fixed',
-                height: '50px',
-                right: '0px',
-                'z-index': 999
-              }"
+              show-trigger
+              @collapse="collapsed = true"
+              @expand="collapsed = false"
             >
-              <div class="blank"></div>
-              <div class="config topbar_icon" @click="toggleConfig">
-                <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
-                <n-gradient-text
-                  style="font-size: 16px; cursor: pointer; font-weight: bold"
-                  type="info"
-                >
-                  快捷设置
-                </n-gradient-text>
+              <div v-if="!collapsed" class="sidebar_title">
+                <img :src="AppLogo" />
               </div>
-              <div class="update topbar_icon" @click="jumpUpdate">
-                <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
-                <n-gradient-text
-                  style="font-size: 16px; cursor: pointer; font-weight: bold"
-                  type="info"
-                >
-                  更新说明
-                </n-gradient-text>
+              <n-menu
+                v-model:value="selectMenu"
+                :collapsed="collapsed"
+                :collapsed-width="64"
+                :collapsed-icon-size="22"
+                :options="menuOptions"
+                :render-label="renderMenuLabel"
+                :expand-icon="expandIcon"
+              />
+            </n-layout-sider>
+            <n-layout class="content" :style="{ minWidth: '900px' }">
+              <div
+                class="statusbar"
+                :style="{
+                  position: 'fixed',
+                  height: '50px',
+                  right: '0px',
+                  'z-index': 999
+                }"
+              >
+                <div class="blank"></div>
+                <div class="config topbar_icon" @click="toggleConfig">
+                  <n-icon size="24" color="#2080f0" :component="SettingsOutline" />
+                  <n-gradient-text
+                    style="font-size: 16px; cursor: pointer; font-weight: bold"
+                    type="info"
+                  >
+                    快捷设置
+                  </n-gradient-text>
+                </div>
+                <div class="update topbar_icon" @click="jumpUpdate">
+                  <n-icon size="24" color="#2080f0" :component="NotificationsOutline" />
+                  <n-gradient-text
+                    style="font-size: 16px; cursor: pointer; font-weight: bold"
+                    type="info"
+                  >
+                    更新说明
+                  </n-gradient-text>
+                </div>
               </div>
-            </div>
-            <div :style="{ position: 'relative', top: '50px' }">
-              <FromVideo
-                v-if="selectMenu === pageNames.from_video"
-                style="margin-top: 50px"
-                :is-process-video="isProcessVideo"
-                :update-is-process-video="updateIsProcessVideo"
-              />
-              <FromText v-if="selectMenu === pageNames.from_text" />
-              <Tools
-                v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
-                :style="{ width: '100%' }"
-                :tool="selectMenu"
-              />
-              <Feedback v-if="selectMenu === pageNames.feedback" />
-              <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
-            </div>
-            <div style="margin-bottom: 80px"></div>
+              <div :style="{ position: 'relative', top: '50px' }">
+                <FromVideo
+                  v-if="selectMenu === pageNames.from_video"
+                  style="margin-top: 50px"
+                  :is-process-video="isProcessVideo"
+                  :update-global-loading="updateGlobalLoading"
+                  :update-is-process-video="updateIsProcessVideo"
+                />
+                <!-- <FromText
+                  v-if="selectMenu === pageNames.from_text"
+                  :update-global-loading="updateGlobalLoading"
+                /> -->
+                <Tools
+                  v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
+                  :update-global-loading="updateGlobalLoading"
+                  :style="{ width: '100%' }"
+                  :tool="selectMenu"
+                />
+                <Feedback
+                  v-if="selectMenu === pageNames.feedback"
+                  :update-global-loading="updateGlobalLoading"
+                />
+                <SystemConfig v-if="showSystemConfig" :toggle-show="toggleConfig" />
+              </div>
+              <div style="margin-bottom: 80px"></div>
+            </n-layout>
           </n-layout>
-        </n-layout>
-      </n-message-provider>
-    </n-loading-bar-provider>
+        </n-message-provider>
+      </n-loading-bar-provider>
+    </n-spin>
   </n-space>
 </template>
 
