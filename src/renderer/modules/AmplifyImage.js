@@ -8,7 +8,7 @@ const AmplifyImageByAliyun = ({ event, imgs } = {}) => {
   imgs.reduce((sum, img, index) => {
     return sum.then(() => {
       return axios
-        .post(`${config.baseUrl}${config.amplifyApi}`, {
+        .post(`${config.sdBaseUrl}${config.amplifyApi}`, {
           resize_mode: 0,
           upscaling_resize: 2,
           upscaling_crop: true,
@@ -43,7 +43,7 @@ const AmplifyBatchImageByAliyun = ({ event, imgs, batchSize = 5 } = {}) => {
 
         return sum.then(() => {
           return axios
-            .post(`${config.baseUrl}${config.amplifyBatchApi}`, {
+            .post(`${config.sdBaseUrl}${config.amplifyBatchApi}`, {
               resize_mode: 0,
               upscaling_resize: 2,
               upscaling_crop: true,

@@ -24,6 +24,7 @@ from scenedetect import (
 )
 from rm_subtitle_aliyun import main as RmSubtitleAliyun
 
+
 def custom_sort(frame_img):
     name = Path(frame_img).name
     num = int(name.split("_")[0])
@@ -42,6 +43,7 @@ class NullWriter(object):
 2、支持多种视频类型
 3、第一屏只取正常时长的一半
 """
+
 
 class ClientConfig:
     """
@@ -63,7 +65,7 @@ class ClientConfig:
         isOriginalSize=True,
         access_key_id="",
         access_key_secret="",
-        retry_times=5,
+        drawRetryTimes=5,
     ):
         self.input_path = input_path  # 待处理视频
         # 视频分段长度，单位秒
@@ -81,7 +83,7 @@ class ClientConfig:
         self.isOriginalSize = isOriginalSize
         self.access_key_id = access_key_id
         self.access_key_secret = access_key_secret
-        self.retry_times = retry_times
+        self.drawRetryTimes = drawRetryTimes
 
 
 class VideoInfo:
@@ -202,6 +204,7 @@ class ExtractPictureTask(Task):
 
         self.task_queues.extract_picture_queue.task_done()
 
+
 class RmWatermarkTask(Task):
     """
     对执行图片去除水印、字幕
@@ -278,7 +281,7 @@ class RmWatermarkTask(Task):
             )
             sys.stdout.flush()
             # 失败重试三次
-            if self.times <= self.client_config.retry_times:
+            if self.times <= self.client_config.drawRetryTimes:
                 self.times += self.times
                 self.process()
                 return
@@ -324,11 +327,11 @@ class SDImgToImgTask(Task):
         return base64_string
 
     def process(self):
-        baseUrl = sd_config["baseUrl"]
+        sdBaseUrl = sd_config["sdBaseUrl"]
         i2iApi = sd_config["i2iApi"]
         # 发起 POST 请求
         result = requests.post(
-            f"{baseUrl}{i2iApi}",
+            f"{sdBaseUrl}{i2iApi}",
             json={
                 "prompt": sd_config["positivePrompt"],
                 "init_images": [self.image_to_base64()],
@@ -393,7 +396,7 @@ class SDImgToImgTask(Task):
             )
             sys.stdout.flush()
             # 失败重试三次
-            if self.times <= self.client_config.retry_times:
+            if self.times <= self.client_config.drawRetryTimes:
                 self.times += self.times
                 self.process()
                 return
@@ -418,7 +421,7 @@ class VideoProcess:
             isOriginalSize=sd_config["isOriginalSize"],
             access_key_id=sd_config["access_key_id"],
             access_key_secret=sd_config["access_key_secret"],
-            retry_times=sd_config["retry_times"],
+            drawRetryTimes=sd_config["drawRetryTimes"],
         )
         self.cache_config = CacheConfig()
         self.cap = None
@@ -476,7 +479,7 @@ class VideoProcess:
         """
 
         # 检查sd是否可使用
-        sd_base_url = sd_config["baseUrl"] or ""
+        sd_base_url = sd_config["sdBaseUrl"] or ""
         samplers_api = sd_config["samplersApi"] or ""
 
         # 检查响应状态码，如无接口则不用执行了
@@ -815,7 +818,7 @@ def image_to_base64(input_file):
 
 
 def redraw_image(input_path):
-    baseUrl = sd_config["baseUrl"]
+    sdBaseUrl = sd_config["sdBaseUrl"]
     i2iApi = sd_config["i2iApi"]
 
     with Image.open(input_path) as img:
@@ -824,7 +827,7 @@ def redraw_image(input_path):
 
     # 发起 POST 请求
     result = requests.post(
-        f"{baseUrl}{i2iApi}",
+        f"{sdBaseUrl}{i2iApi}",
         json={
             "prompt": sd_config["positivePrompt"],
             "init_images": [image_to_base64(input_path)],
@@ -864,10 +867,11 @@ def redraw_image(input_path):
 
     sys.stdout.flush()
 
+
 args = parse_args()
 with open(args.config_file, "r") as f:
     sd_config = json.load(f)
-    sd_config["baseUrl"] = sd_config["baseUrl"].rstrip("/") or ""
+    sd_config["sdBaseUrl"] = sd_config["sdBaseUrl"].rstrip("/") or ""
 
 if args.is_concat_imgs_to_video:
     concat_imgs_to_video(input_path=args.input_file)

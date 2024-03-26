@@ -1,6 +1,6 @@
 {
   "name": "baogao_ai_novel_push",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "小说推文",
   "main": "./out/main/index.js",
   "author": "example.com",

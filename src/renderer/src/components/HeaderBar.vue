@@ -28,7 +28,7 @@
 import { defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import axios from 'axios'
-import { baseUrl, samplersApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
+import { sdBaseUrl, samplersApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 
 const props = defineProps({
   toggleConfig: Function,
@@ -39,14 +39,14 @@ const message = useMessage()
 props.updateGlobalLoading(true)
 
 const fetchModelList = () => {
-  const _baseUrl = baseUrl.replace(/\/$/, '')
-  if (!_baseUrl) {
+  const _sdBaseUrl = sdBaseUrl.replace(/\/$/, '')
+  if (!_sdBaseUrl) {
     props.updateGlobalLoading(false)
     message.error('未填写stable diffusion地址')
     return
   }
   return axios
-    .get(`${_baseUrl}${samplersApi}`)
+    .get(`${_sdBaseUrl}${samplersApi}`)
     .then((result) => {
       if (result.status === 200) {
         message.success('stable diffusion可用')

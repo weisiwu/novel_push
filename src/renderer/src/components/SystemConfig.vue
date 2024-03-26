@@ -14,9 +14,9 @@
       </n-space>
       <n-space vertical>
         <n-form ref="formRef" :model="formModel" :label-width="200" :style="{ maxWidth: '640px' }">
-          <n-form-item label="输入SD服务地址" path="baseUrl">
+          <n-form-item label="输入SD服务地址" path="sdBaseUrl">
             <n-input
-              v-model:value="formModel.baseUrl"
+              v-model:value="formModel.sdBaseUrl"
               placeholder="请输入您的SD地址，如 http://localhost:7860"
             />
           </n-form-item>
@@ -42,21 +42,13 @@
               <n-button type="primary" @click="selectFolder">重新选择</n-button>
             </n-space>
           </n-form-item>
-          <!-- <n-form-item
-            label-placement="left"
-            label-width="110"
-            label="是否跳过去水印"
-            path="skipRmWatermark"
-          >
-            <n-switch v-model:value="formModel.skipRmWatermark" size="large" />
-          </n-form-item> -->
-          <n-form-item label="图片原创度" path="denoising_strength">
-            <n-radio-group v-model:value="formModel.denoising_strength" name="原图相关度">
+          <n-form-item label="图片原创度" path="cfg">
+            <n-radio-group v-model:value="formModel.cfg" name="原图相关度">
               <n-radio-button
-                v-for="denoising_strength in CFG_SETS"
-                :key="denoising_strength.value"
-                :value="denoising_strength.value"
-                :label="denoising_strength.label"
+                v-for="cfg in CFG_SETS"
+                :key="cfg.value"
+                :value="cfg.value"
+                :label="cfg.label"
               />
             </n-radio-group>
           </n-form-item>
@@ -69,31 +61,23 @@
               :options="modelsOptions"
             />
           </n-form-item>
-          <n-form-item label="画面大小" path="imgSize">
-            <n-switch v-model:value="formModel.isOriginalSize">
-              <template #checked> 保持原画面大小 </template>
-              <template #unchecked> 使用下列尺寸 </template>
-            </n-switch>
-          </n-form-item>
-          <n-form-item label="宽度(512~2000)" path="HDImageWidth">
+          <n-form-item label="画面宽(500~2000)" path="HDImageWidth">
             <n-input-number
               v-model:value="formModel.HDImageWidth"
               max="2000"
-              min="512"
+              min="500"
               :show-button="false"
-              :disabled="formModel.isOriginalSize"
-              placeholder=""
+              placeholder="画面宽"
             >
             </n-input-number>
           </n-form-item>
-          <n-form-item label="高度(512~2000)" path="HDImageHeight">
+          <n-form-item label="画面高(500~2000)" path="HDImageHeight">
             <n-input-number
               v-model:value="formModel.HDImageHeight"
               max="2000"
-              min="512"
+              min="500"
               :show-button="false"
-              :disabled="formModel.isOriginalSize"
-              placeholder=""
+              placeholder="画面高"
             >
             </n-input-number>
           </n-form-item>
@@ -116,50 +100,51 @@
 import { ref, defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import axios from 'axios'
-import { baseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
+import {
+  sdBaseUrl,
+  modelListApi,
+  cfgHigh,
+  cfgLow,
+  cfgMiddle
+} from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 
 const props = defineProps({ toggleShow: Function, updateGlobalLoading: Function })
 const CFG_SETS = [
-  { value: 0.8, label: '高原创度' },
-  { value: 0.6, label: '中原创度' },
-  { value: 0.45, label: '低原创度' }
+  { value: cfgLow, label: '高原创度' },
+  { value: cfgMiddle, label: '中原创度' },
+  { value: cfgHigh, label: '低原创度' }
 ]
 const active = ref(true)
 const message = useMessage()
-const toggle = () => {
-  props.toggleShow(active.value)
-  active.value = !active.value
-}
 const modelsOptions = ref([])
 const modelLoading = ref(true)
 const formRef = ref(null)
 const formModel = ref({
-  cfg: 10,
-  steps: 25,
+  cfg: cfgMiddle,
   models: '',
-  baseUrl: '',
+  sdBaseUrl: '',
   retryTimes: 5,
   outputPath: '',
   HDImageWidth: 512,
-  HDImageHeight: 512,
-  isOriginalSize: true,
-  denoising_strength: CFG_SETS[0].value,
-  skipRmWatermark: false
+  HDImageHeight: 512
 })
+const toggle = () => {
+  props.toggleShow(active.value)
+  active.value = !active.value
+}
 const selectFolder = () => {
   window.ipcRenderer.send('open-dialog')
 }
-
 let _retryTimes = 0
 const fetchModelList = () => {
-  const _baseUrl = baseUrl.replace(/\/$/, '')
-  if (!_baseUrl) {
+  const _sdBaseUrl = sdBaseUrl.replace(/\/$/, '')
+  if (!_sdBaseUrl) {
     props.updateGlobalLoading(false)
     message.error('未填写stable diffusion地址')
     return
   }
   return axios
-    .get(`${_baseUrl}${modelListApi}`)
+    .get(`${_sdBaseUrl}${modelListApi}`)
     .then((result) => {
       props.updateGlobalLoading(false)
       const model_list = result?.data
@@ -212,7 +197,7 @@ if (window.ipcRenderer) {
     console.log('wswTest: 读取本地的配置', params, typeof params)
     try {
       const localConfig = JSON.parse(params)
-      localConfig.baseUrl = localConfig.baseUrl.replace(/\/$/, '')
+      localConfig.sdBaseUrl = localConfig.sdBaseUrl.replace(/\/$/, '')
       formModel.value = localConfig
     } catch (e) {
       console.log('wswTest: 传入的本地配置异常', params, e)
@@ -221,15 +206,10 @@ if (window.ipcRenderer) {
 }
 
 const saveConfig = () => {
-  if (formModel.value?.baseUrl) {
-    formModel.value.baseUrl = formModel.value.baseUrl.replace(/\/$/, '')
+  // 请求api地址去除末尾/，防止接口请求不通
+  if (formModel.value?.sdBaseUrl) {
+    formModel.value.sdBaseUrl = formModel.value.sdBaseUrl.replace(/\/$/, '')
   }
-  const denoising_strength =
-    CFG_SETS.filter((item) => item.value === formModel.value.denoising_strength)?.[0]?.value ||
-    CFG_SETS[0].value
-  formModel.value.denoising_strength = denoising_strength
-  // 绘画不需要去水印
-  formModel.value.skipRmWatermark = true
   window.ipcRenderer.send('save-config', JSON.stringify(formModel.value))
   message.success('修改配置保存成功！将全局生效')
   toggle()

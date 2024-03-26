@@ -159,12 +159,12 @@ app.whenReady().then(() => {
         cfg: userConfig.cfg || 10,
         denoising_strength: userConfig.denoising_strength || 0.8,
         models: userConfig.models || true,
-        retry_times: userConfig.retryTimes || 5,
+        drawRetryTimes: userConfig.retryTimes || 5,
         isOriginalSize: userConfig.isOriginalSize,
         outputPath: userConfig.outputPath || config.outputPath || '',
         HDImageWidth: userConfig.HDImageWidth || config.HDImageWidth || '',
         HDImageHeight: userConfig.HDImageHeight || config.HDImageHeight || '',
-        baseUrl: userConfig.baseUrl || config.baseUrl || ''
+        sdBaseUrl: userConfig.sdBaseUrl || config.sdBaseUrl || ''
       })
       writeFileSync(configPath, localConfig)
       console.log('wswTest:写入配置文件', config)

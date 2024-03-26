@@ -1,31 +1,18 @@
 <script setup>
 import { h, ref, watchEffect } from 'vue'
 import { NIcon, NEllipsis } from 'naive-ui'
-import {
-  BugOutline,
-  DownloadOutline,
-  ImagesOutline,
-  RocketOutline,
-  NotificationsOutline,
-  SettingsOutline,
-  MedkitOutline,
-  CaretDownOutline
-  // DocumentTextOutline,
-  // AppsSharp,
-  // GiftOutline,
-  // RibbonOutline
-} from '@vicons/ionicons5'
-import FromVideo from './components/FromVideo.vue'
-import Tools from './components/Tools.vue'
+import { BugOutline, RocketOutline, CaretDownOutline } from '@vicons/ionicons5'
+import FromText from './components/FromText.vue'
 import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import AppLogo from '../public/logos/logo_16.svg?asset'
+import { updateYuqueLink } from '../../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
 const collapsed = ref(false)
 const isProcessVideo = ref(false)
 const showSystemConfig = ref(false)
-const selectMenu = ref('from_video')
+const selectMenu = ref('from_text')
 const loadingStyle = { loading: { height: '12px' } }
 const updateIsProcessVideo = (value) => {
   isProcessVideo.value = value
@@ -34,12 +21,8 @@ const globalLoading = ref(true)
 const updateGlobalLoading = (value) => {
   globalLoading.value = value
 }
-
 const pageNames = {
-  from_video: 'from_video',
   from_text: 'from_text',
-  video_download: 'video_download',
-  video_cover: 'video_cover',
   feedback: 'feedback',
   system_config: 'system_config'
 }
@@ -62,52 +45,12 @@ const menuOptions = ref([
     icon: renderIcon(RocketOutline),
     disabled: isProcessVideo.value
   },
-  // {
-  //   label: renderLabel('小说转视频'),
-  //   key: pageNames.from_text,
-  //   icon: renderIcon(DocumentTextOutline),
-  //   disabled: isProcessVideo.value
-  // },
-  {
-    label: renderLabel('工具箱'),
-    key: pageNames.tools,
-    icon: renderIcon(MedkitOutline),
-    disabled: isProcessVideo.value,
-    children: [
-      {
-        label: '视频下载',
-        icon: renderIcon(DownloadOutline),
-        key: 'video_download'
-      }
-      // {
-      //   label: '视频封面制作',
-      //   icon: renderIcon(ImagesOutline),
-      //   key: 'video_cover'
-      // }
-      // {
-      //   label: '模型管理',
-      //   icon: renderIcon(GiftOutline),
-      //   key: 'models'
-      // },
-      // {
-      //   label: 'Lora管理',
-      //   icon: renderIcon(RibbonOutline),
-      //   key: 'loras'
-      // }
-    ]
-  },
   {
     label: renderLabel('使用说明'),
     key: pageNames.feedback,
     icon: renderIcon(BugOutline),
     disabled: isProcessVideo.value
   }
-  // {
-  //   label: renderLabel('系统设置'),
-  //   key: pageNames.system_config,
-  //   icon: renderIcon(AppsSharp),
-  //   disabled: isProcessVideo.value
-  // }
 ])
 
 watchEffect(() => {
@@ -115,9 +58,8 @@ watchEffect(() => {
     return { ...opt, disabled: isProcessVideo.value }
   })
 })
-
 const jumpUpdate = () => {
-  window.openExternal('https://www.yuque.com/weisiwu/xs8rvm/enodzflk3zxi11m7')
+  window.openExternal(updateYuqueLink)
 }
 const toggleConfig = (event) => {
   if (event.value !== undefined) {
@@ -166,22 +108,9 @@ const toggleConfig = (event) => {
                 :update-global-loading="updateGlobalLoading"
               />
               <div :style="{ position: 'relative', top: '50px' }">
-                <FromVideo
-                  v-if="selectMenu === pageNames.from_video"
-                  style="margin-top: 50px"
-                  :is-process-video="isProcessVideo"
-                  :update-global-loading="updateGlobalLoading"
-                  :update-is-process-video="updateIsProcessVideo"
-                />
-                <!-- <FromText
+                <FromText
                   v-if="selectMenu === pageNames.from_text"
                   :update-global-loading="updateGlobalLoading"
-                /> -->
-                <Tools
-                  v-if="[pageNames.video_download, pageNames.video_cover].includes(selectMenu)"
-                  :update-global-loading="updateGlobalLoading"
-                  :style="{ width: '100%' }"
-                  :tool="selectMenu"
                 />
                 <Feedback
                   v-if="selectMenu === pageNames.feedback"
