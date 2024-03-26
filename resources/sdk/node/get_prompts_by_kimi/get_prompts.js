@@ -1,9 +1,11 @@
 import fs from 'fs'
 import axios from 'axios'
 import { kimiBaseUrl, kimiChatApi, kimiToken } from '../../../BaoganAiConfig.json'
+import initPromptPath from './init_prompt?asset&asarUnpack'
+import getScenePrompt from './get_scene_prompt?asset&asarUnpack'
 
-const init_prompt = fs.readFileSync('./init_prompt', { encoding: 'utf8' })
-const get_scene_prompt = fs.readFileSync('./get_scene_prompt', { encoding: 'utf8' })
+const init_prompt = fs.readFileSync(initPromptPath, { encoding: 'utf8' })
+const get_scene_prompt = fs.readFileSync(getScenePrompt, { encoding: 'utf8' })
 
 function getPromptsFromText(text) {
   return axios

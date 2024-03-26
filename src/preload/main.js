@@ -1,21 +1,13 @@
 import { contextBridge, ipcRenderer, shell, dialog } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-/**
- * 新版流程
- * 主线程和渲染进程的交互只有三个事件
- * start-process: 启动处理进程，渲染告诉主进程，本地视频位置，主进程处理
- * update-process: 返回处理进度（每个关键帧都是新进度），主进程的每个处理子任务完成，都会通知渲染进程更新页面
- * finish-concat: 结束处理进程，主进程任务完全结束，通知渲染进程
- *
- */
 const mainWindowChannels = [
   'open-new-window',
   'open-dialog',
   'select-folder',
-  'start-process',
-  'stop-process',
-  'update-process',
+  'start-process-texttovideo',
+  'finish-process-texttovideo',
+  'text-parse-finish',
   'concat-video',
   'finish-concat',
   'start-redraw',

@@ -6,13 +6,10 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
+import drawScene from '../../resources/sdk/node/text_to_img/textToImg.js'
 
-const DetectVideoShotByParts = () => {}
-const ConcatImagesToVideo = () => {}
-const ReDrawImage = () => {}
 let startWindow = null
 let mainWindow = null
-let inputFilePath = ''
 const resourcesPath = process.resourcesPath
 const asarPath = join(process.resourcesPath, 'app.asar')
 
@@ -81,7 +78,6 @@ function openSpecialWindow(pageName = 'main') {
 }
 
 app.whenReady().then(() => {
-  let detectVideoShotProcess = null
   electronApp.setAppUserModelId('com.electron')
 
   app.on('browser-window-created', (_, window) => {
@@ -94,37 +90,26 @@ app.whenReady().then(() => {
     }
   })
 
-  /**
-   * 启动处理进程，渲染告诉主进程，本地视频位置，主进程处理
-   */
-  ipcMain.on('start-process', async (event, filePath) => {
+  ipcMain.on('start-process-texttovideo', async (event, text) => {
     if (!mainWindow) {
       return
     }
-    inputFilePath = filePath
-    detectVideoShotProcess = DetectVideoShotByParts({ filePath, event })
-  })
-
-  ipcMain.on('stop-process', async () => {
-    if (!mainWindow || !detectVideoShotProcess) {
-      return
-    }
-    detectVideoShotProcess?.kill('SIGTERM')
+    drawScene(text, event).then((result) => {
+      console.log('wswTest: 在主线程接受大了', result)
+      event.sender.send('finish-process-texttovideo', result)
+    })
   })
 
   ipcMain.on('concat-video', async (event) => {
     if (!mainWindow) {
       return
     }
-    ConcatImagesToVideo({ event, filePath: inputFilePath })
   })
 
   ipcMain.on('start-redraw', async (event, params) => {
-    const { filePath, frameIndex } = params || {}
     if (!mainWindow) {
       return
     }
-    ReDrawImage({ event, filePath, frameIndex })
   })
 
   // 监听打开文件夹

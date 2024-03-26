@@ -14,7 +14,9 @@ const isProcessVideo = ref(false)
 const showSystemConfig = ref(false)
 const selectMenu = ref('from_text')
 const loadingStyle = { loading: { height: '12px' } }
-const globalLoading = ref(true)
+// TODO:(wsw) 停止启动检查
+const globalLoading = ref(false)
+// const globalLoading = ref(true)
 const updateGlobalLoading = (value) => {
   globalLoading.value = value
 }
@@ -38,7 +40,7 @@ const expandIcon = () => {
 const menuOptions = ref([
   {
     label: renderLabel('一键追爆款'),
-    key: pageNames.from_video,
+    key: pageNames.from_text,
     icon: renderIcon(RocketOutline),
     disabled: isProcessVideo.value
   },

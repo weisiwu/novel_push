@@ -1,5 +1,12 @@
 import fs from 'fs'
-import { sdBaseUrl, t2iApi, positivePrompt, negativePrompt } from '../../../BaoganAiConfig.json'
+import path from 'path'
+import {
+  sdBaseUrl,
+  t2iApi,
+  positivePrompt,
+  negativePrompt,
+  outputPath
+} from '../../../BaoganAiConfig.json'
 import getPromptsFromText from '../get_prompts_by_kimi/get_prompts'
 import axios from 'axios'
 const baseDrawConfig = {
@@ -66,7 +73,8 @@ function drawSceneByPrompts(promptsConfig = {}) {
       .replace(new RegExp(name, 'g'), charactorPrompts[name])
   }
   const finalPrompts = scenePromptsStr.split(sceneSperator)
-  console.log('最终使用的prompt', finalPrompts)
+  const totalLen = finalPrompts.length || 0
+  const resultImgs = []
 
   return finalPrompts.reduce((sum, currentPrompt, index) => {
     return sum.then(() => {
@@ -79,15 +87,25 @@ function drawSceneByPrompts(promptsConfig = {}) {
           console.log('wswTest: resJson', res)
           const imgBase64 = res?.data?.images?.[0] || ''
           if (imgBase64) {
-            fs.writeFileSync(`${index}.png`, Buffer.from(imgBase64, 'base64'))
+            const _path = path.join(outputPath, `${index}.png`)
+            fs.writeFileSync(_path, Buffer.from(imgBase64, 'base64'))
+            resultImgs.push(_path)
+          }
+          if (index === totalLen - 1) {
+            return resultImgs
           }
         })
     })
   }, Promise.resolve())
 }
 
-function drawScene(text) {
-  return getPromptsFromText(text).then((promptsConfig) => drawSceneByPrompts(promptsConfig))
+function drawScene(text, event) {
+  return getPromptsFromText(text).then((promptsConfig) => {
+    if (event?.sender?.send) {
+      event.sender.send?.('text-parse-finish')
+    }
+    return drawSceneByPrompts(promptsConfig)
+  })
 }
 
 export default drawScene
