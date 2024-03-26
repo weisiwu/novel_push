@@ -1,12 +1,7 @@
-// import { charactors } from './scene_prompt_demo.json'
-const { charactors, scene } = require('./scene_prompt_demo.json')
-const {
-  sdBaseUrl,
-  t2iApi,
-  positivePrompt,
-  negativePrompt
-} = require('../../../BaoganAiConfig.json')
-const axios = require('axios')
+import fs from 'fs'
+import { sdBaseUrl, t2iApi, positivePrompt, negativePrompt } from '../../../BaoganAiConfig.json'
+import getPromptsFromText from '../get_prompts_by_kimi/get_prompts'
+import axios from 'axios'
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
   batch_size: 1,
@@ -16,45 +11,10 @@ const baseDrawConfig = {
   height: 512,
   sampler_index: 'DPM++ 3M SDE Exponential'
 }
+const fullT2iApi = `${sdBaseUrl.replace(/\/$/, '')}${t2iApi}`
 
-/**
- * 绘制人物图，并获取seed
- */
-// function getCharactorSeed(draw_config = {}) {
-//   Promise.all(
-//     charactors.map?.((charactor = {}) => {
-//       const charactorProperties = Object.keys(charactor) || []
-//       // 角色提示词，统一增强1.2倍
-//       const charactorPrompt = charactorProperties
-//         .map((property) => {
-//           const propertyDesc = charactor[property] || ''
-//           const validPrompts = propertyDesc
-//             .split(',')
-//             // .map((prompt) => `((${prompt}))`)
-//             .map((prompt) => `${prompt}`)
-//             .join(',')
-//           return property !== 'name' ? validPrompts : ''
-//         })
-//         .join(',')
-//       console.log(charactorPrompt)
-//       // return axios
-//       //   .post(`${sdBaseUrl}${t2iApi}`, {
-//       //     ...baseDrawConfig,
-//       //     ...draw_config,
-//       //     prompt: `${charactorPrompt},${positivePrompt}`
-//       //   })
-//       //   .then((res) => {
-//       //     const resJson = res.json()
-//       //     console.log('wswTest: resJson', resJson)
-//       //   })
-//     })
-//   )
-// }
-
-/**
- * 绘制场景图
- */
-function drawScene() {
+function drawSceneByPrompts(promptsConfig = {}) {
+  const { charactors, scene } = promptsConfig
   const charactorPrompts = {}
   charactors.forEach?.((charactor = {}) => {
     const charactorProperties = Object.keys(charactor) || []
@@ -63,6 +23,7 @@ function drawScene() {
       .map((property) => {
         const propertyDesc = charactor[property] || ''
         const validPrompts = propertyDesc
+          .replace('.', '')
           .split(',')
           // .map((prompt) => `((${prompt}))`)
           .map((prompt) => `${prompt}`)
@@ -104,10 +65,30 @@ function drawScene() {
       .replace(name, charactorPrompts[name])
       .replace(new RegExp(name, 'g'), charactorPrompts[name])
   }
-  console.log(scenePromptsStr.split(sceneSperator))
-  return scenePromptsStr.split(sceneSperator)
+  const finalPrompts = scenePromptsStr.split(sceneSperator)
+  console.log('最终使用的prompt', finalPrompts)
+
+  return finalPrompts.reduce((sum, currentPrompt, index) => {
+    return sum.then(() => {
+      return axios
+        .post(fullT2iApi, {
+          ...baseDrawConfig,
+          prompt: `${currentPrompt},${positivePrompt}`
+        })
+        .then((res) => {
+          console.log('wswTest: resJson', res)
+          const imgBase64 = res?.data?.images?.[0] || ''
+          if (imgBase64) {
+            fs.writeFileSync(`${index}.png`, Buffer.from(imgBase64, 'base64'))
+          }
+        })
+    })
+  }, Promise.resolve())
 }
 
-// getCharactorSeed()
-// module.exports = getCharactorSeed
-drawScene()
+function drawScene(text) {
+  return getPromptsFromText(text).then((promptsConfig) => drawSceneByPrompts(promptsConfig))
+}
+
+export default drawScene
+export { drawSceneByPrompts }

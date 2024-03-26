@@ -1,5 +1,5 @@
 {
-  "sdBaseUrl": "http://sd-7ad15a--sd.fcv3.1229125983044594.cn-hangzhou.fc.devsapp.net/",
+  "sdBaseUrl": "http://sd-7ad15a--sd.fcv3.1229125983044594.cn-hangzhou.fc.devsapp.net",
   "taggerApi": "/tagger/v1/interrogate",
   "samplersApi": "/sdapi/v1/samplers",
   "t2iApi": "/sdapi/v1/txt2img",
@@ -7,6 +7,9 @@
   "modelListApi": "/sdapi/v1/sd-models",
   "amplifyApi": "/sdapi/v1/extra-single-image",
   "amplifyBatchApi": "/sdapi/v1/extra-batch-images",
+  "kimiBaseUrl": "https://api.moonshot.cn",
+  "kimiChatApi": "/v1/chat/completions",
+  "kimiToken": "sk-vPCot6xqxgi3sf7rAV4h61erYNifRLZwCziFprCrr3g6pLo4",
   "outputPath": "/Users/siwu/Desktop/baogao_ai_novel_push_output",
   "saveFileName": "output.mp4",
   "HDImageWidth": 512,
