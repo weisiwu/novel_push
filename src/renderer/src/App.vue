@@ -78,12 +78,12 @@ const menuOptions = ref([
         label: '视频下载',
         icon: renderIcon(DownloadOutline),
         key: 'video_download'
-      },
-      {
-        label: '视频封面制作',
-        icon: renderIcon(ImagesOutline),
-        key: 'video_cover'
       }
+      // {
+      //   label: '视频封面制作',
+      //   icon: renderIcon(ImagesOutline),
+      //   key: 'video_cover'
+      // }
       // {
       //   label: '模型管理',
       //   icon: renderIcon(GiftOutline),
