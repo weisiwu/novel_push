@@ -5,12 +5,11 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
-import DetectVideoShotByParts, {
-  ConcatImagesToVideo,
-  ReDrawImage
-} from '../renderer/modules/DetectVideoShot'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
+const DetectVideoShotByParts = () => {}
+const ConcatImagesToVideo = () => {}
+const ReDrawImage = () => {}
 let startWindow = null
 let mainWindow = null
 let inputFilePath = ''
@@ -106,7 +105,7 @@ app.whenReady().then(() => {
     detectVideoShotProcess = DetectVideoShotByParts({ filePath, event })
   })
 
-  ipcMain.on('stop-process', async (event) => {
+  ipcMain.on('stop-process', async () => {
     if (!mainWindow || !detectVideoShotProcess) {
       return
     }
@@ -159,7 +158,7 @@ app.whenReady().then(() => {
         cfg: userConfig.cfg || 10,
         denoising_strength: userConfig.denoising_strength || 0.8,
         models: userConfig.models || true,
-        drawRetryTimes: userConfig.retryTimes || 5,
+        retry_times: userConfig.retryTimes || 5,
         isOriginalSize: userConfig.isOriginalSize,
         outputPath: userConfig.outputPath || config.outputPath || '',
         HDImageWidth: userConfig.HDImageWidth || config.HDImageWidth || '',

@@ -7,16 +7,13 @@ import Feedback from './components/Feedback.vue'
 import SystemConfig from './components/SystemConfig.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import AppLogo from '../public/logos/logo_16.svg?asset'
-import { updateYuqueLink } from '../../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
+import { updateYuqueLink } from '../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 
 const collapsed = ref(false)
 const isProcessVideo = ref(false)
 const showSystemConfig = ref(false)
 const selectMenu = ref('from_text')
 const loadingStyle = { loading: { height: '12px' } }
-const updateIsProcessVideo = (value) => {
-  isProcessVideo.value = value
-}
 const globalLoading = ref(true)
 const updateGlobalLoading = (value) => {
   globalLoading.value = value

@@ -4,7 +4,7 @@
  */
 import configPath from '../../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 // windows下调试
-import mainProcessBin from '../../../resources/sdk/main_process/bin/main.exe?asset&asarUnpack'
+// import mainProcessBin from '../../../resources/sdk/main_process/bin/main.exe?asset&asarUnpack'
 // macos 下调试
 // import mainProcessBin from '../../../resources/sdk/main_process/bin/main?asset&asarUnpack'
 
@@ -15,4 +15,5 @@ console.log('wswTestconfigPath: ', configPath)
 const isWindows = process.platform === 'win32'
 const isMac = process.platform === 'darwin'
 
-export { isMac, isWindows, configPath, mainProcessBin }
+// export { isMac, isWindows, configPath, mainProcessBin }
+export { isMac, isWindows, configPath }
