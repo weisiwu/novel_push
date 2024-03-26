@@ -1,0 +1,77 @@
+{
+  "charactors": [
+    {
+      "name": "Ling Yao",
+      "outfit": "Green robe with a mystical aura",
+      "face": "Serene and beautiful",
+      "height": "Tall and graceful",
+      "gender": "1girl",
+      "expression": "Calm and focused",
+      "temperament": "Ethereal and wise",
+      "dress": "Flowing green robes adorned with intricate patterns",
+      "ornament": "A luminous pearl held in her hand",
+      "shoe": "Delicate sandals",
+      "weapon": ""
+    },
+    {
+      "name": "Zi Xiao Long Huang",
+      "outfit": "Majestic purple-gold dragon scales",
+      "face": "Dignified with piercing eyes",
+      "height": "Imposing and powerful",
+      "gender": "1boy",
+      "expression": "Stern and authoritative",
+      "temperament": "Mighty and noble",
+      "dress": "Transformed into a regal figure in purple-gold armor",
+      "ornament": "Dragon horns adorned with purple crystals",
+      "shoe": "Warrior boots",
+      "weapon": ""
+    }
+  ],
+  "scene": [
+    {
+      "charactors": "Ling Yao, Zi Xiao Long Huang",
+      "desc": "Vast clouds undulate like an ocean, surrounding the mystical Tianqiong Xiangong palace.",
+      "loc": "Kunlun Mountains",
+      "building": "Jade-built palace with ethereal music and fragrant flowers",
+      "weather": "Cloud sea, auspicious atmosphere",
+      "viewer": "Aerial view",
+      "light": "Bright with rays of auspicious light"
+    },
+    {
+      "charactors": "Ling Yao",
+      "desc": "A green-robed fairy sits in meditation, holding a luminous pearl, absorbing the essence of heaven and earth.",
+      "loc": "Inside Tianqiong Xiangong palace",
+      "building": "Ethereal palace interior with floating musical notes",
+      "weather": "Indigo and serene",
+      "viewer": "Close-up on Ling Yao",
+      "light": "Soft and spiritual"
+    },
+    {
+      "charactors": "Zi Xiao Long Huang",
+      "desc": "A majestic purple-gold dragon soars across the sky, its scales shimmering in the sunlight.",
+      "loc": "Above the Kunlun Mountains",
+      "building": "None",
+      "weather": "Clear with a hint of cosmic energy",
+      "viewer": "Skyward view",
+      "light": "Dramatic, highlighting the dragon's grandeur"
+    },
+    {
+      "charactors": "Ling Yao, Zi Xiao Long Huang",
+      "desc": "The fairy Ling Yao stands gracefully as the guardian dragon Zi Xiao Long Huang transforms into a dignified man.",
+      "loc": "On the expansive platform in front of the palace",
+      "building": "The jade palace in the background",
+      "weather": "A surge of spiritual energy in the air",
+      "viewer": "Eye-level view",
+      "light": "Bright, with a divine glow"
+    },
+    {
+      "charactors": "Ling Yao",
+      "desc": "Ling Yao prepares for the upcoming challenge, her figure disappearing into the depths of the palace.",
+      "loc": "Inside Tianqiong Xiangong palace",
+      "building": "The palace's inner sanctum",
+      "weather": "Anticipatory stillness",
+      "viewer": "Following Ling Yao's retreating figure",
+      "light": "Dim, with a sense of mystery"
+    }
+  ]
+}
