@@ -107,7 +107,6 @@ app.whenReady().then(() => {
       if (!event?.sender?.send) {
         return
       }
-      console.log('wswTest: 单个更新图片-everyDraw', args)
       event.sender.send('texttovideo-process-update', args)
     }
     processTextToImgs(text, parseTextFinish, everyDraw).then((result) => {

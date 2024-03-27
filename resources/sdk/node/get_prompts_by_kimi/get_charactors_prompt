@@ -17,31 +17,8 @@
 鞋子 => shoe
 武器 => weapon
 
-同时，将原文拆分为句子。要求句子不能是语气、省略之类的过渡。
-最后将拆分出来的句子，存放到指定的json格式的sentences字段中，chinese的值是句子的中文原文，english的值是对应的英文提示词。
-
 指定的json格式为:
-{
-  "charactors": [
-    {
-      "name": "",
-      "outfit": "",
-      "face": "",
-      "height": "",
-      "gender": "",
-      "expression": "",
-      "temperament": "",
-      "dress": "",
-      "ornament": "",
-      "shoe": "",
-      "weapon": ""
-    }
-  ],
-  "sentences": [{
-    "chinese": "",
-    "english": ""
-  }]
-}
+{"charactors": [{"name": "","outfit": "","face": "","height": "","gender": "","expression": "","temperament": "","dress": "","ornament": "","shoe": "","weapon": ""}]}
 
 注意，返回值一定要严格遵守下面列出的规则
 1、返回的格式是json字符串，不要添加任何其他文案！！！

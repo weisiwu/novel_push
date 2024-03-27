@@ -1,0 +1,11 @@
+请根据刚才输入的文章，帮我提取出文章中所有句子，放在指定json格式的sentences属性中，返回给我。
+
+指定的json格式为:
+{"sentences":[{"chinese":"","english":"","charactor":""}]}
+
+注意，返回值一定要严格遵守下面列出的规则
+1、返回的格式是json字符串，不要添加任何其他文案！！！
+2、json中chinese必须以中文形式提供，且值为句子原文！！！
+3、json中english是对chinese值转换为stable diffusion形式的提示词，为英语！！！
+4、json中charactor是句子中出现主要角色，为英文，代词等也需要转换为角色名！！！
+5、返回的json字符串，所有内容都在一行！！！

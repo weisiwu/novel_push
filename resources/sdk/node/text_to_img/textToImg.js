@@ -1,38 +1,56 @@
-import fs from 'fs'
+import fs, { readFileSync } from 'fs'
 import path from 'path'
 import { throttle } from 'lodash'
 import {
   sdBaseUrl,
   t2iApi,
+  i2iApi,
   positivePrompt,
   negativePrompt,
   outputPath
 } from '../../../BaoganAiConfig.json'
-import {
-  getPromptsFromSentence,
-  getCharactorsSentencesFromText
-} from '../get_prompts_by_kimi/getPrompts'
+import { getSentencesFromText, getCharactorsFromText } from '../get_prompts_by_kimi/getPrompts'
 import axios from 'axios'
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
   batch_size: 1,
-  steps: 25,
+  steps: 20,
   cfg_scale: 7,
-  width: 512,
-  height: 512,
+  width: 608,
+  height: 1080,
   sampler_index: 'DPM++ 3M SDE Exponential'
 }
 const MAX_RETRY_TIMES = 3
 const MAX_PER_MINUTE = 3
 const WAIT_TIME = (60 * 1000) / MAX_PER_MINUTE
 const fullT2iApi = `${sdBaseUrl.replace(/\/$/, '')}${t2iApi}`
+const fullI2iApi = `${sdBaseUrl.replace(/\/$/, '')}${i2iApi}`
 
-function drawSceneByPrompts(sentencePrompt = '', sIndex = 0, everyDraw = () => {}) {
-  console.log('wswTest: 最终绘图使用的prompt', sentencePrompt)
+// TODO:(wsw) 这个里面自己保证，一定会绘图成功，不成功就重绘
+function drawImageByPrompts({
+  prompt = '',
+  sIndex = 0,
+  relatedCharactor = [],
+  everyDraw = () => {}
+}) {
+  console.log('wswTest: 最终绘图使用的prompt', prompt)
+  const isI2i = relatedCharactor.length >= 1
+  const api = isI2i ? fullI2iApi : fullT2iApi
+  const drawConfig = isI2i
+    ? {
+        ...baseDrawConfig,
+        cfg_scale: 12,
+        denoising_strength: 0.5,
+        init_images: [readFileSync(relatedCharactor[0]?.image, { encoding: 'base64' })]
+      }
+    : { ...baseDrawConfig }
+
+  console.log('wswTest: 是否为i2i', isI2i)
+  console.log('wswTest: 关联图路径是', relatedCharactor[0]?.image)
   return axios
-    .post(fullT2iApi, {
-      ...baseDrawConfig,
-      prompt: `${sentencePrompt},${positivePrompt}`
+    .post(api, {
+      ...drawConfig,
+      prompt: `${prompt},${positivePrompt}`
     })
     .then((res) => {
       const imgBase64 = res?.data?.images?.[0] || ''
@@ -42,7 +60,7 @@ function drawSceneByPrompts(sentencePrompt = '', sIndex = 0, everyDraw = () => {
         everyDraw({
           img: _path,
           index: sIndex,
-          tags: sentencePrompt?.split(',').filter((txt) => txt) || []
+          tags: prompt?.split(',').filter((txt) => txt) || []
         })
         return { data: _path, code: 1 }
       }
@@ -50,7 +68,6 @@ function drawSceneByPrompts(sentencePrompt = '', sIndex = 0, everyDraw = () => {
       return { error: '未能成功生图', code: 0 }
     })
     .catch((e) => {
-      // TODO:(wsw) 这里添加重试机制
       console.log('wswTest: 单词请求什么错误e', e)
       return { error: e?.message, code: 0 }
     })
@@ -60,10 +77,13 @@ function drawSceneByPrompts(sentencePrompt = '', sIndex = 0, everyDraw = () => {
  * 对返回的prompt进行加工
  */
 function formatPrompt(rawStr = '') {
-  return String(rawStr || '')
-    .replace(' and ', ',')
-    .replace(' And ', ',')
-    .replace(' AND ', ',')
+  return (rawStr || '').toString()
+  // .replace('a ', '')
+  // .replace(' a ', '')
+  // .replace(' with ', ',')
+  // .replace(' and ', ',')
+  // .replace(' And ', ',')
+  // .replace(' AND ', ',')
 }
 
 /**
@@ -76,41 +96,63 @@ function formatPrompt(rawStr = '') {
  * 所以如果一共20个句子，每分钟最多3次请求，同时并发只有一个请求
  */
 async function processTextToImgs(text, parseTextFinish, everyDraw) {
-  const { charactors: rawCharactors = [], sentences: rawSentences = [] } =
-    (await getCharactorsSentencesFromText(text)) || []
+  const { charactors: rawCharactors = [] } = (await getCharactorsFromText(text)) || []
   if (!rawCharactors.length) {
     console.log('[processTextToImgs]解析角色错误，未解析出角色')
   }
+  const charactors = {}
   // 处理角色提示词
-  const charactors = []
-  for (let charactor in charactors) {
-    const _obj = {}
-    let prompt = ''
-    for (let property in charactor) {
-      _obj[property] = formatPrompt(charactor[property])
-      property !== 'name' && (prompt += _obj[property])
+  rawCharactors.forEach(async (charactor) => {
+    const _name = charactor.name?.replace?.(/\s/g, '')?.toLowerCase?.()
+    delete charactor.name
+    const charactorPrompt = formatPrompt(
+      Object.values(charactor)
+        .map((p) => formatPrompt(p))
+        .join(',')
+    )
+    console.log(`wswTest: 角色${_name}的prompt`, charactorPrompt)
+    const { data } = await drawImageByPrompts({ prompt: charactorPrompt, sIndex: _name })
+    charactors[_name] = {
+      image: data,
+      prompt: charactorPrompt
     }
-    _obj.prompt = prompt
-    charactors.push(_obj)
-  }
+  })
+
+  console.log('wswTest: ', '角色初始图生成完毕')
+  const { sentences: rawSentences = [] } = (await getSentencesFromText(text)) || []
+
+  console.log('wswTest:获取文章中句子相关信息', rawSentences)
+  console.log('wswTest: ', '获取分局完毕')
   // 依次对句子进行处理，获取绘图任务。同时请求控制
   return rawSentences
     .reduce(async (sum, rawSentence, sIndex) => {
       return sum.then(async () => {
-        const rawSentencePrompt = (await getPromptsFromSentence(rawSentence)) || ''
-        console.log('wswTest: 获取句子的提示词', sIndex, rawSentence, rawSentencePrompt)
         let retryTimes = 0
-        let scenePromptsStr = formatPrompt(rawSentencePrompt)
-        // 替换两次角色name，第一次，将角色的prompt注入，第二次，删除所有name
-        for (let charactor in charactors) {
-          scenePromptsStr = scenePromptsStr
-            .replace(charactor.name, charactor.prompt)
-            .replace(new RegExp(name, 'g'), charactor.prompt)
+        const { chinese, english: rawEnglish, charactor: rawCharactor } = rawSentence || {}
+        const charactor = rawCharactor.replace?.(/\s/g, '')?.toLowerCase?.()
+        const english = rawEnglish instanceof Array ? rawEnglish.join(',') : rawEnglish || ''
+        const sentencePrompt = formatPrompt([positivePrompt, english].join(','))
+        const relatedCharactor = []
+        if (charactors[charactor]) {
+          relatedCharactor.push(charactors[charactor])
         }
-        let drawResult = await drawSceneByPrompts(scenePromptsStr, sIndex, everyDraw)
+        console.log('wswTest: 句子原文', rawSentence, '句子的提示词: ', sentencePrompt)
+        console.log('wswTest: 和句子相关的角色', charactors[0])
+
+        let drawResult = await drawImageByPrompts({
+          prompt: sentencePrompt,
+          relatedCharactor,
+          sIndex,
+          everyDraw
+        })
         // 失败重试3次
         while (drawResult?.code === 0 && retryTimes < MAX_RETRY_TIMES) {
-          drawResult = await drawSceneByPrompts(formatPrompt(rawSentencePrompt), sIndex, everyDraw)
+          drawResult = await drawImageByPrompts({
+            prompt: sentencePrompt,
+            relatedCharactor,
+            sIndex,
+            everyDraw
+          })
           retryTimes++
         }
         console.log('wswTest: 获取句子的绘图结果', sIndex, drawResult?.code)

@@ -9,6 +9,9 @@
 
 2、支持生成音频
   使用微软的
+  https://portal.azure.com/#home
+  https://zhuanlan.zhihu.com/p/627165015
+  https://github.com/Azure-Samples/Cognitive-Speech-TTS
 
 
 3、视频产出
