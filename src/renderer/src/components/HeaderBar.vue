@@ -46,7 +46,7 @@ const fetchModelList = () => {
     return
   }
   return axios
-    .get(`${_sdBaseUrl}${samplersApi}`)
+    .get(`${_sdBaseUrl}${samplersApi}`, { timeout: 4000 })
     .then((result) => {
       if (result.status === 200) {
         message.success('stable diffusion可用')
@@ -55,8 +55,12 @@ const fetchModelList = () => {
       }
       props.updateGlobalLoading(false)
     })
-    .catch(() => {
-      message.error('stable diffusion地址不可用')
+    .catch((e) => {
+      if (e?.message?.includes('timeout')) {
+        message.error('请求stable diffusion状态失败，请重试')
+      } else {
+        message.error('stable diffusion地址不可用')
+      }
       props.updateGlobalLoading(false)
     })
 }

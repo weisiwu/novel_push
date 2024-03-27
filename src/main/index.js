@@ -6,7 +6,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
-import drawScene from '../../resources/sdk/node/text_to_img/textToImg.js'
+import { processTextToImgs } from '../../resources/sdk/node/text_to_img/textToImg.js'
 
 let startWindow = null
 let mainWindow = null
@@ -90,13 +90,29 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.on('start-process-texttovideo', async (event, text) => {
+  /**
+   * 文生图
+   */
+  ipcMain.on('texttovideo-process-start', async (event, text) => {
     if (!mainWindow) {
       return
     }
-    drawScene(text, event).then((result) => {
-      console.log('wswTest: 在主线程接受大了', result)
-      event.sender.send('finish-process-texttovideo', result)
+    const parseTextFinish = () => {
+      if (!event?.sender?.send) {
+        return
+      }
+      event.sender.send?.('texttovideo-parsetext-process-finish')
+    }
+    const everyDraw = (args) => {
+      if (!event?.sender?.send) {
+        return
+      }
+      console.log('wswTest: 单个更新图片-everyDraw', args)
+      event.sender.send('texttovideo-process-update', args)
+    }
+    processTextToImgs(text, parseTextFinish, everyDraw).then((result) => {
+      console.log('wswTest: 在绘图结束后收到的结果，在结束事件发出前', result)
+      event.sender.send('texttovideo-process-finish', result)
     })
   })
 
