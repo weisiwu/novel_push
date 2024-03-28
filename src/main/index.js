@@ -6,7 +6,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
-import { processTextToImgs } from '../../resources/sdk/node/text_to_img/textToImg.js'
+import {
+  processTextToImgs,
+  drawImageByPrompts
+} from '../../resources/sdk/node/text_to_img/textToImg.js'
+import { converTextToSpeech } from '../../resources/sdk/node/ms_azure_tts/getWavFromText.js'
 
 let startWindow = null
 let mainWindow = null
@@ -91,7 +95,7 @@ app.whenReady().then(() => {
   })
 
   /**
-   * 文生图
+   * 开始分析文章内容
    */
   ipcMain.on('texttovideo-process-start', async (event, text) => {
     if (!mainWindow) {
@@ -103,28 +107,60 @@ app.whenReady().then(() => {
       }
       event.sender.send?.('texttovideo-parsetext-process-finish')
     }
-    const everyDraw = (args) => {
+    const everyUpdate = (args) => {
       if (!event?.sender?.send) {
         return
       }
       event.sender.send('texttovideo-process-update', args)
     }
-    processTextToImgs(text, parseTextFinish, everyDraw).then((result) => {
-      console.log('wswTest: 在绘图结束后收到的结果，在结束事件发出前', result)
+    processTextToImgs(text, parseTextFinish, everyUpdate).then((result) => {
       event.sender.send('texttovideo-process-finish', result)
     })
   })
 
-  ipcMain.on('concat-video', async (event) => {
+  ipcMain.on('start-draw', async (event, params) => {
     if (!mainWindow) {
       return
     }
+    const everyUpdate = (args) => {
+      if (!event?.sender?.send) {
+        return
+      }
+      console.log('wswTest: 这里是否触发了？？', args)
+      event.sender.send('texttovideo-process-update', args)
+    }
+    // TODO:(wsw) 这里可以加个批量处理，如果我先不批量处理呢？
+    drawImageByPrompts({
+      type: params?.type,
+      prompt: params?.prompt,
+      sIndex: params?.sIndex,
+      relatedCharactor: params?.relatedCharactor,
+      everyUpdate
+    })
   })
 
-  ipcMain.on('start-redraw', async (event, params) => {
+  ipcMain.on('concat-video', async (event, dataStr) => {
     if (!mainWindow) {
       return
     }
+    let data = []
+    try {
+      data = JSON.parse(dataStr)
+    } catch (e) {
+      data = []
+    }
+    console.log('wswTest: 合成视频收到的数据', data)
+    const voiceText = data?.map?.((item) => item?.text || '')?.join?.(' ')
+    let isVoiceComplete = false
+    // 转语音
+    converTextToSpeech(voiceText, () => {
+      isVoiceComplete = true
+    })
+    // 将图片组合成视频
+    // 合并视频和语音
+    // while (!isVoiceComplete) {
+    //   await new Promise((resolve) => setTimeout(resolve, 1000))
+    // }
   })
 
   // 监听打开文件夹

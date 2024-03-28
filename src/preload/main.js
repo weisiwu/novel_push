@@ -11,8 +11,8 @@ const mainWindowChannels = [
   'texttovideo-parsetext-process-finish',
   'concat-video',
   'finish-concat',
-  'start-redraw',
-  'finish-redraw',
+  'start-draw',
+  'finish-draw',
   'fetch-config',
   'read-config',
   'save-config'
