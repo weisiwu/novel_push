@@ -1,2 +1,2 @@
 mac 测试
-python concat_video.py --image_path /Users/siwu/Desktop/baogao_ai_novel_push_output/images --background_music_path /Users/siwu/Desktop/github/novel_push/output.wav --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json
+python concat_video.py --image_path /Users/siwu/Desktop/baogao_ai_novel_push_output/images --background_music_path /Users/siwu/Desktop/github/novel_push/output.wav --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json --durations=1,2,3,0.3,1,0.5

@@ -22,8 +22,7 @@ const actionbarStatus = {
 const actionbarCurrentStatus = ref(actionbarStatus.PARSE)
 const charactorsTableData = ref([])
 const setencesTableData = ref([])
-const getsetencesTableData = () => {
-  console.log('wswTest: 获取表格数据', setencesTableData.value)
+const getSetencesTableData = () => {
   return Array.from(setencesTableData.value)
 }
 
@@ -35,43 +34,54 @@ if (window.ipcRenderer) {
    * 文生图，有新数据返回
    */
   window.ipcRenderer.receive('texttovideo-process-update', (info) => {
-    console.log('wswTest: 接收到新的信息', info)
     startLoading.value = false
     showTable.value = true
     actionbarCurrentStatus.value = actionbarStatus.READY_TO_GENERATE
-    const { type, sIndex = 1, text = '', tags = [], image = '', name = '' } = info || {}
-    const isIn = setencesTableData.value.findIndex((info) => info.id === sIndex)
-    console.log('wswTest: 接受到的更新信息是', isIn, info)
+    const { type, sIndex = 0, text = '', tags = [], image = '', name = '' } = info || {}
+    const isCharactor = type === 'charactor'
+    const isIn = isCharactor
+      ? charactorsTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
+      : setencesTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
+    // isCharactor && console.log('wswTest: 接收到角色信息', info)
+    // isCharactor && console.log('wswTest: 角色数据是否已有', isIn >= 0)
+    // isCharactor && console.log('wswTest: 角色表格图像', image)
     // 对表中已经存在的数据进行更新
     if (isIn >= 0) {
-      if (type === 'charactor') {
-        charactorsTableData.value.splice(isIn, 0, {
-          ...charactorsTableData.value[isIn],
-          name,
-          tags,
-          image
-        })
+      if (isCharactor) {
+        const newTableData = [...charactorsTableData.value]
+        newTableData[isIn] = {
+          name: charactorsTableData.value[isIn].name || '',
+          tags: charactorsTableData.value[isIn].tags || [],
+          id: sIndex,
+          sIndex,
+          image: `${image}?t=${new Date().getTime()}`,
+          redrawing: false
+        }
+        charactorsTableData.value = newTableData
       } else {
-        setencesTableData.value.splice(isIn, 0, {
+        const newTableData = [...setencesTableData.value]
+        newTableData[isIn] = {
           ...setencesTableData.value[isIn],
-          text: text,
-          tags: tags,
-          image: image,
-          duration: 1,
-          move: '向上'
-        })
+          id: sIndex,
+          sIndex,
+          image,
+          timestamp: new Date().getTime(),
+          redrawing: false
+        }
+        setencesTableData.value = newTableData
       }
       return
     }
     // 向表中添加新数据
-    if (type === 'charactor') {
-      charactorsTableData.value.push({ id: sIndex, name, tags, image })
+    if (isCharactor) {
+      charactorsTableData.value.push({ id: sIndex, sIndex, name, tags, image })
     } else {
       setencesTableData.value.push({
         id: sIndex,
-        text: text,
-        tags: tags,
-        image: image,
+        sIndex,
+        text,
+        tags,
+        image,
         duration: 1,
         move: '向上'
       })
@@ -80,14 +90,15 @@ if (window.ipcRenderer) {
   /**
    * 所有图片均生成完毕
    */
+  // TODO:(wsw) 暂时不用
   window.ipcRenderer.receive('texttovideo-process-finish', (res) => {
     startLoading.value = false
-    console.log('wswTest: 图片生成结果', res)
-    if (res?.code === 1) {
-      message.error('图片生成失败')
-    } else {
-      message.error('图片生成成功')
-    }
+    // console.log('wswTest: 图片生成结果', res)
+    // if (res?.code === 1) {
+    //   message.error('图片生成失败')
+    // } else {
+    //   message.error('图片生成成功')
+    // }
   })
   /**
    * 文案解析完成，已全部解析绘图提示词
@@ -104,6 +115,10 @@ const removeCharactorRow = async (row) => {
     const type = await VXETable.modal.confirm('您确定要删除该角色?')
     if (type === 'confirm') {
       $table.remove(row)
+      charactorsTableData.value = [
+        ...charactorsTableData.value.filter((_row) => _row.sIndex === row.sIndex)
+      ]
+      // console.log('wswTest: 删除后的只是是', charactorsTableData)
     }
   }
 }
@@ -113,21 +128,26 @@ const removeSentenceRow = async (row) => {
     const type = await VXETable.modal.confirm('您确定要删除该镜头?')
     if (type === 'confirm') {
       $table.remove(row)
+      setencesTableData.value = [
+        ...setencesTableData.value.filter((_row) => _row.sIndex === row.sIndex)
+      ]
     }
   }
 }
 // 重绘行相关
 const redrawCharactorRow = async (row) => {
+  row.redrawing = true
+  row.redrawing = true
   window.ipcRenderer.send('start-draw', {
     prompt: row.tags.join(','),
-    sIndex: row.id,
+    sIndex: row.sIndex,
     type: 'charactor'
   })
 }
 const redrawSentenceRow = async (row) => {
   window.ipcRenderer.send('start-draw', {
     prompt: row.tags.join(','),
-    sIndex: row.id,
+    sIndex: row.sIndex,
     relatedCharactor: row?.relatedCharactor || ''
   })
 }
@@ -141,19 +161,14 @@ const startProcess = () => {
 // 开始批量生图
 const startGenerate = () => {
   // TODO:(wsw) 临时，只走流程
-  const _tmp = setencesTableData.value[0]
-  window.ipcRenderer.send('start-draw', {
-    prompt: _tmp.tags.join(','),
-    sIndex: _tmp.id
-    // relatedCharactor:
-  })
-  // TODO:(wsw) 最后导出图
-  // TODO:(wsw) 逻辑上是不对的，但是就是要手动生成两个图，然后拼接视频
-  actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
+  // const _tmp = setencesTableData.value[0]
+  // window.ipcRenderer.send('start-draw', {})
+  // // TODO:(wsw) 最后导出图
+  // // TODO:(wsw) 逻辑上是不对的，但是就是要手动生成两个图，然后拼接视频
+  // actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
 }
 const exportVideo = () => {
-  const setencesTableData = getsetencesTableData()
-  window.ipcRenderer.send('concat-video', JSON.stringify(setencesTableData))
+  window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
 }
 </script>
 
@@ -196,7 +211,7 @@ const exportVideo = () => {
       :style="{ margin: '20px' }"
       :data="charactorsTableData"
     >
-      <vxe-column type="name" title="角色名" align="center" width="200"></vxe-column>
+      <vxe-column field="name" title="角色名" align="center" width="100"></vxe-column>
       <vxe-column field="tags" title="绘图提示词" align="center">
         <template #default="{ row }">
           <n-dynamic-tags
@@ -208,16 +223,16 @@ const exportVideo = () => {
       </vxe-column>
       <vxe-column field="image" width="200" title="效果图" align="center">
         <template #default="{ row }">
-          <!-- // TODO:(wsw) 临时注释掉画图 -->
-          <!-- <n-spin :show="!row.image" :style="{ 'text-align': 'center' }"> -->
-          <n-image
-            :src="row.image ? `${row.image}?t=${new Date().getTime()}` : icon"
-            height="150"
-            :fallback-src="icon"
-            show-toolbar="false"
-            lazy
-          />
-          <!-- </n-spin> -->
+          <n-spin :show="!row.image || row.redrawing" :style="{ 'text-align': 'center' }">
+            <!-- // TODO:(wsw) 角色图生成的时候，换更合适的展位图 -->
+            <n-image
+              height="150"
+              :fallback-src="icon"
+              :src="row.image || icon"
+              :show-toolbar="false"
+              lazy
+            />
+          </n-spin>
         </template>
       </vxe-column>
       <vxe-column field="action" vxe-column width="120" title="操作" align="center">
@@ -228,7 +243,9 @@ const exportVideo = () => {
             @click="removeCharactorRow(row)"
             >删除角色</n-button
           >
-          <n-button type="primary" @click="redrawCharactorRow(row)">重新生成</n-button>
+          <n-button type="primary" :loading="row.redrawing" @click="redrawCharactorRow(row)"
+            >重新生成</n-button
+          >
         </template>
       </vxe-column>
     </vxe-table>
@@ -242,7 +259,7 @@ const exportVideo = () => {
       :data="setencesTableData"
     >
       <vxe-column type="seq" title="镜头序号" align="center" width="100"></vxe-column>
-      <vxe-column field="text" title="文本">
+      <vxe-column field="text" title="字幕">
         <template #default="{ row }">
           <n-input
             v-model:value="row.text"
@@ -265,19 +282,25 @@ const exportVideo = () => {
       </vxe-column>
       <vxe-column field="image" width="200" title="镜头图" align="center">
         <template #default="{ row }">
-          <!-- // TODO:(wsw) 临时注释掉画图 -->
-          <!-- <n-spin :show="!row.image" :style="{ 'text-align': 'center' }"> -->
-          <n-image
-            :src="row.image ? `${row.image}?t=${new Date().getTime()}` : icon"
-            height="150"
-            :fallback-src="icon"
-            show-toolbar="false"
-            lazy
-          />
-          <!-- </n-spin> -->
+          <!-- // TODO:(wsw) 展位图也换成别的 -->
+          <n-spin :show="!row.image || row.redrawing" :style="{ 'text-align': 'center' }">
+            <n-image
+              height="150"
+              :fallback-src="icon"
+              :src="row.image || icon"
+              :show-toolbar="false"
+              lazy
+            />
+          </n-spin>
         </template>
       </vxe-column>
-      <vxe-column field="duration" width="90" title="持续时间" align="center">
+      <vxe-column
+        field="duration"
+        width="90"
+        title="持续时间"
+        placeholder="持续时间"
+        align="center"
+      >
         <template #default="{ row }">
           <n-input-number
             v-model:value="row.duration"
@@ -288,7 +311,7 @@ const exportVideo = () => {
           />
         </template>
       </vxe-column>
-      <vxe-column field="move" width="100" title="图片运动" align="center"></vxe-column>
+      <!-- <vxe-column field="move" width="100" title="图片运动" align="center"></vxe-column> -->
       <vxe-column field="action" width="120" title="操作" align="center">
         <template #default="{ row }">
           <n-button

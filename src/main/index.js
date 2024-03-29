@@ -126,7 +126,6 @@ app.whenReady().then(() => {
       if (!event?.sender?.send) {
         return
       }
-      console.log('wswTest: 这里是否触发了？？', args)
       event.sender.send('texttovideo-process-update', args)
     }
     // TODO:(wsw) 这里可以加个批量处理，如果我先不批量处理呢？

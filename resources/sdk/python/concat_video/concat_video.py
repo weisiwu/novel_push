@@ -4,17 +4,13 @@ import sys
 import json
 import glob
 import argparse
-import numpy as np
 from pathlib import *
 from PIL import Image
 import moviepy.editor as mp
-from moviepy.audio.AudioClip import AudioClip
-
 
 def custom_sort(frame_img):
     name = Path(frame_img).name
-    num = int(name.split("_")[0])
-    return num
+    return name
 
 
 # 创建一个类用于“吞噬”输出
@@ -38,17 +34,18 @@ class CacheConfig:
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image_path", type=str, default="")
+    parser.add_argument("--durations", type=str, default="")
     parser.add_argument("--background_music_path", type=str, default="")
     parser.add_argument("--config_file", type=str, default="")
     return parser.parse_args()
 
 
-def concat_imgs_to_video(image_path, background_music_path):
+def concat_imgs_to_video(image_path, background_music_path, durations):
     image_path = Path(image_path)
     images = os.listdir(image_path)
     imgs_num = len(images)
     img_size = None
-    transition_duration_rate = 0.15
+    durations = str(durations).split(",")
 
     if not imgs_num:
         print(json.dumps({"code": 0, "type": "concat_video", "message": "no picture"}))
@@ -56,12 +53,10 @@ def concat_imgs_to_video(image_path, background_music_path):
         return False
 
     for image in images:
-        print("都试试什么图片", image)
         if not img_size:
             img_size = Image.open(image_path / image).size
 
     # 获取图片尺寸
-    print("图片尺寸是什么", img_size)
     frame_rate = 30
     outputPath = Path(sd_config["outputPath"])
     tmpSavePath = outputPath / "tmp_save.mp4"
@@ -76,21 +71,20 @@ def concat_imgs_to_video(image_path, background_music_path):
     sort_imgs = sorted(filtered_files, key=custom_sort)
 
     for index, frame_img in enumerate(sort_imgs):
+        duration_time = float(durations[index])
         img = cv2.resize(cv2.imread(frame_img), img_size)
 
         if img is None:
             continue
 
-        total_num = int(frame_rate * 1)
+        total_num = int(frame_rate * duration_time)
         for cur_index in range(total_num):
             videowrite.write(img)
 
     videowrite.release()
-    video_file = mp.VideoFileClip(tmpSavePath.as_posix())
+    video_file = mp.VideoFileClip(tmpSavePath.as_posix()).without_audio()
+    audio_file = mp.AudioFileClip(str(background_music_path))
     v_duration = video_file.duration
-    silent_audio_clip = AudioClip(lambda t: [0, 0], duration=v_duration, fps=44100)
-    # 如果视频无音轨，则创建静音音轨
-    audio_file = mp.VideoFileClip(str(background_music_path)).audio or silent_audio_clip
     a_duration = audio_file.duration
     if v_duration > a_duration:
         video_file = video_file.subclip(0, a_duration)
@@ -101,12 +95,13 @@ def concat_imgs_to_video(image_path, background_music_path):
     # 将生成视频的输出重定向，防止输出
     sysout = sys.stdout
     sys.stdout = NullWriter()
-    video_with_audio.write_videofile(outputFile.as_posix(), codec="libx264")
+    video_with_audio.write_videofile(
+        outputFile.as_posix(), codec="libx264", audio_codec="aac"
+    )
     sys.stdout = sysout
 
     video_file.close()
     audio_file.close()
-    silent_audio_clip.close()
     video_with_audio.close()
     # 删除临时文件
     os.remove(tmpSavePath)
@@ -130,5 +125,7 @@ with open(args.config_file, "r") as f:
     sd_config["sdBaseUrl"] = sd_config["sdBaseUrl"].rstrip("/") or ""
 
 concat_imgs_to_video(
-    image_path=args.image_path, background_music_path=args.background_music_path
+    image_path=args.image_path,
+    background_music_path=args.background_music_path,
+    durations=args.durations,
 )
