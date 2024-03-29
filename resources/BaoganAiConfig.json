@@ -19,6 +19,8 @@
   "outputPath_win": "C:\\Users\\Administrator\\Desktop\\baogao_ai_novel_push_output",
   "outputPath_mac": "/Users/siwu/Desktop/baogao_ai_novel_push_output",
   "saveFileName": "output.mp4",
+  "imageOutputFolder": "image",
+  "audioOutputFolder": "audio",
   "audioOutput": "output.wav",
   "HDImageWidth": 608,
   "HDImageHeight": 1080,

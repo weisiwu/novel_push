@@ -7,16 +7,16 @@ import icon from '../../../../resources/imgs/icon.png?asset'
 const sceneTableRef = ref('')
 const charactorTableRef = ref('')
 const textValue = ref('')
-const message = useMessage()
 const showTable = ref(false)
 const startLoading = ref(false)
+const isReadyToExport = ref(false)
 // TODO:(wsw) 临时处理
 // const parseTextLoading = ref(true)
 const parseTextLoading = ref(false)
 // 操作按钮栏状态
 const actionbarStatus = {
   PARSE: 'PARSE',
-  READY_TO_GENERATE: 'READY_TO_GENERATE',
+  PREPARE_TO_GENERATE: 'PREPARE_TO_GENERATE',
   READY_TO_OUTPUT_VIDEO: 'READY_TO_OUTPUT_VIDEO'
 }
 const actionbarCurrentStatus = ref(actionbarStatus.PARSE)
@@ -36,15 +36,11 @@ if (window.ipcRenderer) {
   window.ipcRenderer.receive('texttovideo-process-update', (info) => {
     startLoading.value = false
     showTable.value = true
-    actionbarCurrentStatus.value = actionbarStatus.READY_TO_GENERATE
-    const { type, sIndex = 0, text = '', tags = [], image = '', name = '' } = info || {}
+    const { type, sIndex = 0, text = '', tags = [], image = '', name = '', wav = '' } = info || {}
     const isCharactor = type === 'charactor'
     const isIn = isCharactor
       ? charactorsTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
       : setencesTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
-    // isCharactor && console.log('wswTest: 接收到角色信息', info)
-    // isCharactor && console.log('wswTest: 角色数据是否已有', isIn >= 0)
-    // isCharactor && console.log('wswTest: 角色表格图像', image)
     // 对表中已经存在的数据进行更新
     if (isIn >= 0) {
       if (isCharactor) {
@@ -64,11 +60,19 @@ if (window.ipcRenderer) {
           ...setencesTableData.value[isIn],
           id: sIndex,
           sIndex,
+          wav,
           image,
           timestamp: new Date().getTime(),
           redrawing: false
         }
         setencesTableData.value = newTableData
+      }
+      console.log(
+        'wswTest: 查看是否有对应的配赢',
+        setencesTableData.value.every((row) => row?.image && row?.wav)
+      )
+      if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
+        actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
       }
       return
     }
@@ -79,12 +83,20 @@ if (window.ipcRenderer) {
       setencesTableData.value.push({
         id: sIndex,
         sIndex,
+        wav,
         text,
         tags,
         image,
         duration: 1,
         move: '向上'
       })
+    }
+    console.log(
+      'wswTest: 查看是否有对应的配赢2',
+      setencesTableData.value.every((row) => row?.image && row?.wav)
+    )
+    if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
+      actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
     }
   })
   /**
@@ -106,9 +118,11 @@ if (window.ipcRenderer) {
   window.ipcRenderer.receive('texttovideo-parsetext-process-finish', () => {
     parseTextLoading.value = false
     showTable.value = true
+    actionbarCurrentStatus.value = actionbarStatus.PREPARE_TO_GENERATE
   })
 }
-// 删除行相关
+
+// 删除行
 const removeCharactorRow = async (row) => {
   const $table = charactorTableRef.value
   if ($table) {
@@ -134,18 +148,19 @@ const removeSentenceRow = async (row) => {
     }
   }
 }
-// 重绘行相关
+
+// 重绘行
 const redrawCharactorRow = async (row) => {
   row.redrawing = true
   row.redrawing = true
-  window.ipcRenderer.send('start-draw', {
+  window.ipcRenderer.send('start-redraw', {
     prompt: row.tags.join(','),
     sIndex: row.sIndex,
     type: 'charactor'
   })
 }
 const redrawSentenceRow = async (row) => {
-  window.ipcRenderer.send('start-draw', {
+  window.ipcRenderer.send('start-redraw', {
     prompt: row.tags.join(','),
     sIndex: row.sIndex,
     relatedCharactor: row?.relatedCharactor || ''
@@ -160,12 +175,7 @@ const startProcess = () => {
 }
 // 开始批量生图
 const startGenerate = () => {
-  // TODO:(wsw) 临时，只走流程
-  // const _tmp = setencesTableData.value[0]
-  // window.ipcRenderer.send('start-draw', {})
-  // // TODO:(wsw) 最后导出图
-  // // TODO:(wsw) 逻辑上是不对的，但是就是要手动生成两个图，然后拼接视频
-  // actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
+  window.ipcRenderer.send('generate-image-audio-process-start')
 }
 const exportVideo = () => {
   window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
@@ -181,7 +191,7 @@ const exportVideo = () => {
       }}</n-button>
     </div>
     <!-- 调整完提示词，生图阶段操作按钮 -->
-    <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_GENERATE">
+    <div v-if="actionbarCurrentStatus === actionbarStatus.PREPARE_TO_GENERATE">
       <n-button type="primary" @click="startGenerate">开始绘图和配音</n-button>
     </div>
     <!-- 整体处理完，操作按钮 -->
@@ -320,7 +330,7 @@ const exportVideo = () => {
             @click="removeSentenceRow(row)"
             >删除</n-button
           >
-          <n-button type="primary" @click="redrawSentenceRow(row)">重绘</n-button>
+          <n-button type="primary" @click="redrawSentenceRow(row)">绘图</n-button>
         </template>
       </vxe-column>
     </vxe-table>

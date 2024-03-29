@@ -130,25 +130,25 @@ function getCharactorsSentencesFromText(text) {
         english:
           'On the summit of the ancient Kunlun Mountains, huge sea of clouds surges, like an ocean.',
         charactor: '灵瑶'
+      },
+      {
+        chinese: '仙气缭绕山峰，彩凤飞翔，霞光万道，瑞气千条。',
+        english:
+          'Immortal energy lingers around the peaks, colorful phoenixes fly, with myriad rays of rosy light and auspicious air.',
+        charactor: ''
+      },
+      {
+        chinese: '在这神秘莫测的地方，有一座玉石筑就的宫殿，名为“天穹仙宫”。',
+        english:
+          "In this mysterious and unpredictable place, there is a palace made of jade, called 'Sky Dome Immortal Palace'.",
+        charactor: ''
+      },
+      {
+        chinese: '宫殿内，一位青袍仙子正盘膝而坐，仙子名为灵瑶，是天穹仙宫的传人。',
+        english:
+          'Inside the palace, a fairy in a green robe is sitting cross-legged, the fairy is named Lingyao, the successor of Sky Dome Immortal Palace.',
+        charactor: '灵瑶'
       }
-      // {
-      //   chinese: '仙气缭绕山峰，彩凤飞翔，霞光万道，瑞气千条。',
-      //   english:
-      //     'Immortal energy lingers around the peaks, colorful phoenixes fly, with myriad rays of rosy light and auspicious air.',
-      //   charactor: ''
-      // },
-      // {
-      //   chinese: '在这神秘莫测的地方，有一座玉石筑就的宫殿，名为“天穹仙宫”。',
-      //   english:
-      //     "In this mysterious and unpredictable place, there is a palace made of jade, called 'Sky Dome Immortal Palace'.",
-      //   charactor: ''
-      // },
-      // {
-      //   chinese: '宫殿内，一位青袍仙子正盘膝而坐，仙子名为灵瑶，是天穹仙宫的传人。',
-      //   english:
-      //     'Inside the palace, a fairy in a green robe is sitting cross-legged, the fairy is named Lingyao, the successor of Sky Dome Immortal Palace.',
-      //   charactor: '灵瑶'
-      // }
     ]
   }
 

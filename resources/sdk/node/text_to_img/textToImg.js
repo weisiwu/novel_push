@@ -1,22 +1,28 @@
 import fs, { readFileSync } from 'fs'
-import path from 'path'
+import rimraf from 'rimraf'
+import { join, resolve } from 'path'
 import {
   sdBaseUrl,
   t2iApi,
   i2iApi,
   positivePrompt,
   negativePrompt,
-  outputPath
+  outputPath,
+  imageOutputFolder
 } from '../../../BaoganAiConfig.json'
 import { getCharactorsSentencesFromText } from '../get_prompts_by_kimi/getPrompts'
+import { converTextToSpeech } from '../ms_azure_tts/getWavFromText'
 import axios from 'axios'
+// TODO:(wsw) 绘图参数设置收敛
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
   batch_size: 1,
   steps: 20,
   cfg_scale: 7,
-  width: 608,
-  height: 1080,
+  // width: 608,
+  // height: 1080,
+  width: 500,
+  height: 500,
   sampler_index: 'DPM++ 3M SDE Exponential'
 }
 const MAX_RETRY_TIMES = 3
@@ -24,7 +30,13 @@ const fullT2iApi = `${sdBaseUrl.replace(/\/$/, '')}${t2iApi}`
 const fullI2iApi = `${sdBaseUrl.replace(/\/$/, '')}${i2iApi}`
 
 let charactors = {}
+let charactorsTask = []
+let sentencesTask = []
+let ttsTask = []
 
+/**
+ * 根据提示词绘制图片
+ */
 function drawImageByPrompts({
   type = 'sentence',
   prompt = '',
@@ -35,7 +47,6 @@ function drawImageByPrompts({
   let retryTimes = 0
   const relatedCharactorObj = charactors[relatedCharactor] || null
   const isI2i = Boolean(relatedCharactorObj)
-  console.log('wswTest: 接收到的绘图入参是什么', prompt)
   prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
   const api = isI2i ? fullI2iApi : fullT2iApi
   const drawConfig = isI2i
@@ -47,22 +58,7 @@ function drawImageByPrompts({
       }
     : { ...baseDrawConfig }
 
-  // console.log('wswTest: 最终绘图使用的prompt', prompt)
-  // console.log('wswTest: 关联的角色是', relatedCharactor)
-  // console.log('wswTest: 当前收集到的角色', charactors)
-  // console.log('wswTest: 是否图生图', isI2i)
-  // console.log('wswTest: 关联图路径是', relatedCharactorObj?.image)
-  // TODO:(wsw) 临时测试
-  // const _path = path.join(outputPath, `1.png`)
-  // everyUpdate({
-  //   type,
-  //   sIndex,
-  //   image: _path,
-  //   tags: prompt?.split(',').filter((txt) => txt) || []
-  // })
-  // console.log('wswTest: 画图成功', _path)
-  // return Promise.resolve({ data: _path, code: 1 })
-
+  // console.log('wswTest: 绘画任务参数', api, drawConfig)
   return axios
     .post(api, {
       ...drawConfig,
@@ -70,8 +66,15 @@ function drawImageByPrompts({
     })
     .then((res) => {
       const imgBase64 = res?.data?.images?.[0] || ''
+      // console.log('wswTest: 绘画任务结果', res)
       if (imgBase64) {
-        const _path = path.join(outputPath, `${sIndex}.png`)
+        const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
+        if (!fs.existsSync(imageSaveFolder)) {
+          fs.mkdirSync(imageSaveFolder, { recursive: true })
+        } else {
+          rimraf.sync(`${imageSaveFolder}/*`)
+        }
+        const _path = join(imageSaveFolder, `${sIndex}.png`)
         fs.writeFileSync(_path, Buffer.from(imgBase64, 'base64'))
         everyUpdate({
           type,
@@ -79,10 +82,8 @@ function drawImageByPrompts({
           image: _path,
           tags: prompt?.split(',').filter((txt) => txt) || []
         })
-        console.log('wswTest: 画图成功', _path)
         return { data: _path, code: 1 }
       }
-      console.log('wswTest未能成功生图: ', res)
       if (retryTimes < MAX_RETRY_TIMES) {
         retryTimes++
         return drawImageByPrompts({ type, prompt, sIndex, relatedCharactor, everyUpdate })
@@ -94,7 +95,7 @@ function drawImageByPrompts({
         retryTimes++
         return drawImageByPrompts({ type, prompt, sIndex, relatedCharactor, everyUpdate })
       }
-      console.log('wswTest: 绘图失败，错误信息=>', e)
+      console.log('[drawImageByPrompts] execption =>', e)
       return { error: e?.message, code: 0 }
     })
 }
@@ -107,17 +108,18 @@ function formatPrompt(rawStr = '') {
 }
 
 /**
- * 处理文本，获取绘图任务
+ * 处理文本，获取绘图、配音任务
  */
-async function processTextToImgs(text, parseTextFinish, everyUpdate) {
+async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
   const { charactors: rawCharactors = [], sentences: rawSentences = [] } =
     (await getCharactorsSentencesFromText(text)) || []
   if (!rawCharactors.length) {
-    console.log('[processTextToImgs]解析角色错误，未解析出角色')
+    console.log('[processTextToPrompts]解析角色错误，未解析出角色')
   }
   charactors = {}
-  const charactorsTask = []
-  const sentencesTask = []
+  charactorsTask = []
+  sentencesTask = []
+  ttsTask = []
   // step1: 将已经获取的角色和句子文案同步到表格中
   // 处理角色提示词
   rawCharactors.forEach((charactor, index) => {
@@ -145,7 +147,6 @@ async function processTextToImgs(text, parseTextFinish, everyUpdate) {
     const charactor = rawCharactor.replace?.(/\s/g, '')?.toLowerCase?.()
     const english = rawEnglish instanceof Array ? rawEnglish.join(',') : rawEnglish || ''
     const sentencePrompt = formatPrompt([positivePrompt, english].join(','))
-    console.log('wswTest: 添加句子任务', charactors, charactor)
     const relatedCharactor = charactor
     const sentenceInfo = {
       type: 'sentence',
@@ -157,33 +158,39 @@ async function processTextToImgs(text, parseTextFinish, everyUpdate) {
     }
     everyUpdate(sentenceInfo)
     sentencesTask.push({ ...sentenceInfo, everyUpdate }) // 加载句子任务
+    ttsTask.push({ ...sentenceInfo, everyUpdate }) // 加载配音任务
   })
+  finish()
+}
 
+/**
+ * 等待用户确认调整完毕后，开始执行绘图、配音任务
+ */
+function processPromptsToImgsAndAudio(everyUpdate) {
+  // console.log('wswTest: 开始执行所有任务')
   // step2: 依次处理人物队列和句子队列中的绘图任务
-  const taskCurrency = Promise.resolve()
   const allTask = [...charactorsTask, ...sentencesTask]
   allTask.reduce((task, taskInfo) => {
     return task.then(() => {
-      console.log('wswTest: 开始任务', taskInfo.type, taskInfo.tags.join(','))
+      // console.log('wswTest: 绘画任务开始')
       if (taskInfo.type === 'charactor') {
         return drawImageByPrompts(taskInfo).then(({ data: imgPath }) => {
-          // console.log('wswTest: 开始添加角色', taskInfo)
           charactors[taskInfo.name] = { image: imgPath, prompt: taskInfo.prompt }
-          // console.log('wswTest: 添加完毕', charactors)
         })
       }
       return drawImageByPrompts(taskInfo)
     })
-  }, taskCurrency)
-
-  // taskCurrency
-  //   .then(() => {
-  //     console.log('wswTest: ', '任务都结束了？？？？？？？？？？？')
-  //   })
-  //   .then(() => parseTextFinish())
-  //   .catch((e) => {
-  //     console.log('[processTextToImgs]error', e?.message || '')
-  //   })
+  }, Promise.resolve())
+  // step3: 为句子进行配音
+  ttsTask.reduce((task, taskInfo) => {
+    return task.then(() => {
+      return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
+        console.log('wswTest: taskInfo是什么', taskInfo)
+        delete taskInfo.everyUpdate
+        everyUpdate({ ...taskInfo, wav })
+      })
+    })
+  }, Promise.resolve())
 }
 
-export { processTextToImgs, drawImageByPrompts }
+export { processTextToPrompts, processPromptsToImgsAndAudio, drawImageByPrompts }

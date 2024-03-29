@@ -7,7 +7,8 @@ import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 import {
-  processTextToImgs,
+  processTextToPrompts,
+  processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
 import { converTextToSpeech } from '../../resources/sdk/node/ms_azure_tts/getWavFromText.js'
@@ -95,30 +96,31 @@ app.whenReady().then(() => {
   })
 
   /**
-   * 开始分析文章内容
+   * 对输入的文章开始智能分析，生成绘图任务和音频任务
    */
   ipcMain.on('texttovideo-process-start', async (event, text) => {
     if (!mainWindow) {
       return
     }
-    const parseTextFinish = () => {
-      if (!event?.sender?.send) {
-        return
-      }
-      event.sender.send?.('texttovideo-parsetext-process-finish')
-    }
     const everyUpdate = (args) => {
       if (!event?.sender?.send) {
         return
       }
       event.sender.send('texttovideo-process-update', args)
     }
-    processTextToImgs(text, parseTextFinish, everyUpdate).then((result) => {
-      event.sender.send('texttovideo-process-finish', result)
-    })
+    const finish = () => {
+      if (!event?.sender?.send) {
+        return
+      }
+      event.sender.send?.('texttovideo-parsetext-process-finish')
+    }
+    processTextToPrompts(text, everyUpdate, finish)
   })
 
-  ipcMain.on('start-draw', async (event, params) => {
+  /**
+   * 开始执行音频、绘图任务
+   */
+  ipcMain.on('generate-image-audio-process-start', (event) => {
     if (!mainWindow) {
       return
     }
@@ -128,7 +130,22 @@ app.whenReady().then(() => {
       }
       event.sender.send('texttovideo-process-update', args)
     }
-    // TODO:(wsw) 这里可以加个批量处理，如果我先不批量处理呢？
+    processPromptsToImgsAndAudio(everyUpdate)
+  })
+
+  /**
+   * 单图重绘
+   */
+  ipcMain.on('start-redraw', async (event, params) => {
+    if (!mainWindow) {
+      return
+    }
+    const everyUpdate = (args) => {
+      if (!event?.sender?.send) {
+        return
+      }
+      event.sender.send('texttovideo-process-update', args)
+    }
     drawImageByPrompts({
       type: params?.type,
       prompt: params?.prompt,
@@ -138,6 +155,9 @@ app.whenReady().then(() => {
     })
   })
 
+  /**
+   * 将已生成的图片、音频合并为视频
+   */
   ipcMain.on('concat-video', async (event, dataStr) => {
     if (!mainWindow) {
       return
@@ -149,12 +169,12 @@ app.whenReady().then(() => {
       data = []
     }
     console.log('wswTest: 合成视频收到的数据', data)
-    const voiceText = data?.map?.((item) => item?.text || '')?.join?.(' ')
-    let isVoiceComplete = false
+    // const voiceText = data?.map?.((item) => item?.text || '')?.join?.(' ')
+    // let isVoiceComplete = false
     // 转语音
-    converTextToSpeech(voiceText, () => {
-      isVoiceComplete = true
-    })
+    // converTextToSpeech(voiceText, () => {
+    //   isVoiceComplete = true
+    // })
     // 将图片组合成视频
     // 合并视频和语音
     // while (!isVoiceComplete) {
