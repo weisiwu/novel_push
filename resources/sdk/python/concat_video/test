@@ -1,2 +1,10 @@
 mac 测试
-python concat_video.py --image_path /Users/siwu/Desktop/baogao_ai_novel_push_output/images --background_music_path /Users/siwu/Desktop/github/novel_push/output.wav --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json --durations=1,2,3,0.3,1,0.5
+python concat_video.py --config_file /Users/siwu/Desktop/github/novel_push/resources/BaoganAiConfig.json --durations=1,1,1,1
+
+windows 测试
+python concat_video.py --font_base C:\Users\Administrator\Desktop\github\novel_push\resources\ttf --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --durations=5,5,5,5
+
+window exe 测试
+.\dist\concat_video\concat_video.exe --font_base C:\Users\Administrator\Desktop\github\novel_push\resources\ttf --config_file C:\Users\Administrator\Desktop\github\novel_push\resources\BaoganAiConfig.json --durations=5,5,5,5
+
+pyinstaller --onedir concat_video.py

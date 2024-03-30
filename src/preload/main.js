@@ -37,7 +37,7 @@ if (process.contextIsolated) {
       receive: (channel, func) => {
         if (mainWindowChannels.includes(channel)) {
           ipcRenderer.on(channel, (event, ...args) => {
-            console.log('wswTest: channel', channel, args)
+            // console.log('wswTest: channel', channel, args)
             func(...args)
           })
         }

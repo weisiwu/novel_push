@@ -1,6 +1,9 @@
+import os from 'os'
+import fs from 'fs'
 import asar from 'asar'
+import { join, resolve } from 'path'
+import { spawn } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
@@ -11,7 +14,7 @@ import {
   processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
-import { converTextToSpeech } from '../../resources/sdk/node/ms_azure_tts/getWavFromText.js'
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -20,6 +23,27 @@ const asarPath = join(process.resourcesPath, 'app.asar')
 
 // 打包资源文件到 app.asar
 asar.createPackage(resourcesPath, asarPath)
+
+// 初始化改写设置
+if (fs.existsSync(configPath)) {
+  const initConfigBuffer = readFileSync(configPath)
+  const initConfigString = initConfigBuffer.toString()
+  try {
+    const initConfig = JSON.parse(initConfigString) || {}
+    const { outputPath, outputFolder } = initConfig || {}
+    const isWin = os.platform() === 'win32'
+    const isMacOS = os.platform() === 'darwin'
+
+    // 1、windows下，非盘符开头的路径
+    // 2、Mac下，非绝对路径
+    if ((isWin && !/^[A-Z]:\\/.test(outputPath)) || (isMacOS && !outputPath.startsWith('/'))) {
+      initConfig.outputPath = resolve(join(os.homedir(), 'Desktop', outputFolder))
+      writeFileSync(configPath, JSON.stringify(initConfig))
+    }
+  } catch (e) {
+    console.error('fail to localisize config json', e?.message || '')
+  }
+}
 
 function createWindow() {
   startWindow = new BrowserWindow({
@@ -162,24 +186,45 @@ app.whenReady().then(() => {
     if (!mainWindow) {
       return
     }
-    let data = []
+    let sentencesList = []
+    let durations = ''
+    let data = null
     try {
-      data = JSON.parse(dataStr)
+      sentencesList = JSON.parse(dataStr)
     } catch (e) {
-      data = []
+      sentencesList = []
     }
-    console.log('wswTest: 合成视频收到的数据', data)
-    // const voiceText = data?.map?.((item) => item?.text || '')?.join?.(' ')
-    // let isVoiceComplete = false
-    // 转语音
-    // converTextToSpeech(voiceText, () => {
-    //   isVoiceComplete = true
-    // })
-    // 将图片组合成视频
-    // 合并视频和语音
-    // while (!isVoiceComplete) {
-    //   await new Promise((resolve) => setTimeout(resolve, 1000))
-    // }
+    sentencesList?.forEach?.((sentence, index) => {
+      durations += `${sentence?.duration}${index === sentencesList.length - 1 ? '' : ','}`
+    })
+
+    console.log('wswTest: 地址事实吗 ', resolve(join(configPath, '..', 'tts')))
+    const childProcess = spawn(concatVideoBin, [
+      '--durations',
+      durations,
+      '--font_base',
+      resolve(join(configPath, '..', 'tts')),
+      '--config_file',
+      configPath
+    ])
+
+    childProcess.stdout.on('data', (dataStr) => {
+      try {
+        data = JSON.parse(dataStr)
+      } catch (e) {
+        data = {}
+      }
+      console.log('wswTest:  接受到数据是个什么情况', data)
+    })
+
+    // 监听子进程的退出事件
+    childProcess.on('close', (exitCode) => {
+      console.log('wswTest:  整体进程退出', data)
+      const { code, outputFile } = data
+      if (Number(code) === 1 && outputFile) {
+        shell.openExternal(outputFile)
+      }
+    })
   })
 
   // 监听打开文件夹
@@ -212,7 +257,9 @@ app.whenReady().then(() => {
         steps: userConfig.steps || 25,
         cfg: userConfig.cfg || 10,
         denoising_strength: userConfig.denoising_strength || 0.8,
-        models: userConfig.models || true,
+        models: userConfig.models || config.models || true,
+        ttf: userConfig.subfont || config.ttf || '',
+        azureTTSVoice: userConfig.voicer || config.outputPath || '',
         retry_times: userConfig.retryTimes || 5,
         isOriginalSize: userConfig.isOriginalSize,
         outputPath: userConfig.outputPath || config.outputPath || '',

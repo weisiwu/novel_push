@@ -42,16 +42,6 @@
               <n-button type="primary" @click="selectFolder">重新选择</n-button>
             </n-space>
           </n-form-item>
-          <n-form-item label="图片原创度" path="cfg">
-            <n-radio-group v-model:value="formModel.cfg" name="原图相关度">
-              <n-radio-button
-                v-for="cfg in CFG_SETS"
-                :key="cfg.value"
-                :value="cfg.value"
-                :label="cfg.label"
-              />
-            </n-radio-group>
-          </n-form-item>
           <n-form-item label="绘图模型" path="models">
             <n-select
               v-model:value="formModel.models"
@@ -59,13 +49,28 @@
               placeholder="请选择绘画模型"
               :loading="modelLoading"
               :options="modelsOptions"
+              :on-update:show="startModelsLoading"
+            />
+          </n-form-item>
+          <n-form-item label="配音角色" path="voicer">
+            <n-select
+              v-model:value="formModel.voicer"
+              placeholder="请选择配音角色"
+              :options="voicerOptions"
+            />
+          </n-form-item>
+          <n-form-item label="字幕字体" path="subfont">
+            <n-select
+              v-model:value="formModel.subfont"
+              placeholder="请选择字幕字体"
+              :options="fontsOptions"
             />
           </n-form-item>
           <n-form-item label="画面宽(500~2000)" path="HDImageWidth">
             <n-input-number
               v-model:value="formModel.HDImageWidth"
               max="2000"
-              min="500"
+              min="1"
               :show-button="false"
               placeholder="画面宽"
             >
@@ -75,18 +80,9 @@
             <n-input-number
               v-model:value="formModel.HDImageHeight"
               max="2000"
-              min="500"
+              min="1"
               :show-button="false"
               placeholder="画面高"
-            >
-            </n-input-number>
-          </n-form-item>
-          <n-form-item label="请求失败重试次数" path="retryTimes">
-            <n-input-number
-              v-model:value="formModel.retryTimes"
-              placeholder="请输入重试次数"
-              max="10"
-              min="1"
             >
             </n-input-number>
           </n-form-item>
@@ -100,30 +96,24 @@
 import { ref, defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import axios from 'axios'
-import {
-  sdBaseUrl,
-  modelListApi,
-  cfgHigh,
-  cfgLow,
-  cfgMiddle
-} from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
+import { sdBaseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
+import { voicers } from '../../../../resources/sdk/node/ms_azure_tts/chn_voice_list.json?asset&asarUnpack'
+import { fonts } from '../../../../resources/sdk/node/ms_azure_tts/sub_font_list.json?asset&asarUnpack'
 
 const props = defineProps({ toggleShow: Function, updateGlobalLoading: Function })
-const CFG_SETS = [
-  { value: cfgLow, label: '高原创度' },
-  { value: cfgMiddle, label: '中原创度' },
-  { value: cfgHigh, label: '低原创度' }
-]
+const retryTimes = 5
 const active = ref(true)
 const message = useMessage()
 const modelsOptions = ref([])
-const modelLoading = ref(true)
+const voicerOptions = ref(voicers)
+const fontsOptions = ref(fonts)
+const modelLoading = ref(false)
 const formRef = ref(null)
 const formModel = ref({
-  cfg: cfgMiddle,
   models: '',
+  voicer: '',
+  subfont: '',
   sdBaseUrl: '',
-  retryTimes: 5,
   outputPath: '',
   HDImageWidth: 512,
   HDImageHeight: 512
@@ -148,16 +138,8 @@ const fetchModelList = () => {
     .then((result) => {
       props.updateGlobalLoading(false)
       const model_list = result?.data
-      console.log('wswTest: model_list', model_list)
       modelLoading.value = false
       if (model_list?.length) {
-        // demoValue
-        // "title": "mixProV4.Cqhm.safetensors [61e23e57ea]",
-        // "model_name": "mixProV4.Cqhm",
-        // "hash": "61e23e57ea",
-        // "sha256": "61e23e57ea13765152435b42d55e7062de188ca3234edb82d751cf52f7667d4f",
-        // "filename": "/stable-diffusion-webui/models/Stable-diffusion/mixProV4.Cqhm.safetensors",
-        // "config": null
         modelsOptions.value =
           model_list?.map?.((model, index) => {
             index === 0 && (formModel.value.models = model?.model_name || '')
@@ -172,7 +154,7 @@ const fetchModelList = () => {
       throw new Error('没有发现绘画模型')
     })
     .catch(() => {
-      if (_retryTimes < formModel.value.retryTimes) {
+      if (_retryTimes < retryTimes) {
         _retryTimes++
         return fetchModelList()
       }
@@ -181,9 +163,7 @@ const fetchModelList = () => {
     })
 }
 
-onMounted(() => {
-  fetchModelList()
-})
+onMounted(() => fetchModelList())
 
 if (window.ipcRenderer) {
   window.ipcRenderer.receive('select-folder', (params) => {
@@ -194,11 +174,13 @@ if (window.ipcRenderer) {
   window.ipcRenderer.send('fetch-config')
 
   window.ipcRenderer.receive('read-config', (params) => {
-    console.log('wswTest: 读取本地的配置', params, typeof params)
     try {
       const localConfig = JSON.parse(params)
       localConfig.sdBaseUrl = localConfig.sdBaseUrl.replace(/\/$/, '')
       formModel.value = localConfig
+      formModel.value.subfont = localConfig.ttf
+      formModel.value.voicer = localConfig.azureTTSVoice
+      formModel.value.models = localConfig.models
     } catch (e) {
       console.log('wswTest: 传入的本地配置异常', params, e)
     }
@@ -213,6 +195,10 @@ const saveConfig = () => {
   window.ipcRenderer.send('save-config', JSON.stringify(formModel.value))
   message.success('修改配置保存成功！将全局生效')
   toggle()
+}
+
+const startModelsLoading = (show) => {
+  modelLoading.value = show
 }
 </script>
 

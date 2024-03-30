@@ -4,6 +4,7 @@ import { VXETable } from 'vxe-table'
 import { useMessage } from 'naive-ui'
 import icon from '../../../../resources/imgs/icon.png?asset'
 
+const speed = 200 / 60 // 每分钟说多少字
 const sceneTableRef = ref('')
 const charactorTableRef = ref('')
 const textValue = ref('')
@@ -36,7 +37,16 @@ if (window.ipcRenderer) {
   window.ipcRenderer.receive('texttovideo-process-update', (info) => {
     startLoading.value = false
     showTable.value = true
-    const { type, sIndex = 0, text = '', tags = [], image = '', name = '', wav = '' } = info || {}
+    const {
+      type,
+      sIndex = 0,
+      text = '',
+      tags = [],
+      image = '',
+      name = '',
+      wav = '',
+      relatedCharactor = ''
+    } = info || {}
     const isCharactor = type === 'charactor'
     const isIn = isCharactor
       ? charactorsTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
@@ -50,7 +60,7 @@ if (window.ipcRenderer) {
           tags: charactorsTableData.value[isIn].tags || [],
           id: sIndex,
           sIndex,
-          image: `${image}?t=${new Date().getTime()}`,
+          image: image ? `${image}?t=${new Date().getTime()}` : '',
           redrawing: false
         }
         charactorsTableData.value = newTableData
@@ -60,17 +70,13 @@ if (window.ipcRenderer) {
           ...setencesTableData.value[isIn],
           id: sIndex,
           sIndex,
-          wav,
-          image,
-          timestamp: new Date().getTime(),
+          wav: setencesTableData.value[isIn]?.wav || wav,
+          image: image ? `${image}?t=${new Date().getTime()}` : '',
           redrawing: false
         }
         setencesTableData.value = newTableData
       }
-      console.log(
-        'wswTest: 查看是否有对应的配赢',
-        setencesTableData.value.every((row) => row?.image && row?.wav)
-      )
+
       if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
         actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
       }
@@ -87,14 +93,11 @@ if (window.ipcRenderer) {
         text,
         tags,
         image,
-        duration: 1,
+        relatedCharactor,
+        duration: Math.max(text.length / speed, 0.1),
         move: '向上'
       })
     }
-    console.log(
-      'wswTest: 查看是否有对应的配赢2',
-      setencesTableData.value.every((row) => row?.image && row?.wav)
-    )
     if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
       actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
     }
@@ -152,7 +155,6 @@ const removeSentenceRow = async (row) => {
 // 重绘行
 const redrawCharactorRow = async (row) => {
   row.redrawing = true
-  row.redrawing = true
   window.ipcRenderer.send('start-redraw', {
     prompt: row.tags.join(','),
     sIndex: row.sIndex,
@@ -160,6 +162,8 @@ const redrawCharactorRow = async (row) => {
   })
 }
 const redrawSentenceRow = async (row) => {
+  row.redrawing = true
+  console.log('wswTest: 重绘图片', row)
   window.ipcRenderer.send('start-redraw', {
     prompt: row.tags.join(','),
     sIndex: row.sIndex,
@@ -226,7 +230,12 @@ const exportVideo = () => {
         <template #default="{ row }">
           <n-dynamic-tags
             v-model:value="row.tags"
-            :tag-style="{ maxWidth: '120px', 'white-space': 'nowrap', 'text-overflow': 'ellipsis' }"
+            :tag-style="{
+              maxWidth: '120px',
+              'white-space': 'nowrap',
+              'text-overflow': 'ellipsis',
+              overflow: 'hidden'
+            }"
             :edit-config="{ trigger: 'click', mode: 'cell' }"
           />
         </template>
@@ -285,7 +294,12 @@ const exportVideo = () => {
         <template #default="{ row }">
           <n-dynamic-tags
             v-model:value="row.tags"
-            :tag-style="{ maxWidth: '120px', 'white-space': 'nowrap', 'text-overflow': 'ellipsis' }"
+            :tag-style="{
+              maxWidth: '120px',
+              'white-space': 'nowrap',
+              'text-overflow': 'ellipsis',
+              overflow: 'hidden'
+            }"
             :edit-config="{ trigger: 'click', mode: 'cell' }"
           />
         </template>
@@ -317,7 +331,7 @@ const exportVideo = () => {
             :step="0.1"
             :show-button="false"
             :min="0.1"
-            :max="5"
+            :max="1000"
           />
         </template>
       </vxe-column>
@@ -330,7 +344,9 @@ const exportVideo = () => {
             @click="removeSentenceRow(row)"
             >删除</n-button
           >
-          <n-button type="primary" @click="redrawSentenceRow(row)">绘图</n-button>
+          <n-button type="primary" :loading="row.redrawing" @click="redrawSentenceRow(row)"
+            >绘图</n-button
+          >
         </template>
       </vxe-column>
     </vxe-table>
@@ -357,5 +373,10 @@ const exportVideo = () => {
 .vxe-cell {
   display: flex;
   flex-wrap: wrap;
+}
+.n-tag__content {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 </style>

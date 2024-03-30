@@ -1,14 +1,25 @@
-import fs from 'fs'
-import rimraf from 'rimraf'
+import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import sdk from 'microsoft-cognitiveservices-speech-sdk'
 import {
   azureTTSSecret,
   azureTTSArea,
   outputPath,
-  audioOutputFolder,
-  azureTTSVoice
+  audioOutputFolder
 } from '../../../BaoganAiConfig.json'
+import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
+
+function readLocalConfig() {
+  const initConfigBuffer = readFileSync(configPath)
+  const initConfigString = initConfigBuffer.toString()
+  let initConfig = {}
+  try {
+    initConfig = JSON.parse(initConfigString) || {}
+  } catch (e) {
+    initConfig = {}
+  }
+  return initConfig
+}
 
 /**
  * azure文档
@@ -18,13 +29,8 @@ import {
  */
 
 function converTextToSpeech(text = '', saveName = '', cb = () => {}) {
-  // console.log('wswTest: 保存音频的路径', outputPath, audioOutputFolder, saveName)
+  const { azureTTSVoice } = readLocalConfig()
   const audioSaveFolder = resolve(join(outputPath, audioOutputFolder))
-  if (!fs.existsSync(audioSaveFolder)) {
-    fs.mkdirSync(audioSaveFolder, { recursive: true })
-  } else {
-    rimraf.sync(`${audioOutputFolder}/*`)
-  }
   const audioFile = resolve(join(audioSaveFolder, saveName))
   const speechConfig = sdk.SpeechConfig.fromSubscription(azureTTSSecret, azureTTSArea)
   const audioConfig = sdk.AudioConfig.fromAudioFileOutput(audioFile)
@@ -32,12 +38,8 @@ function converTextToSpeech(text = '', saveName = '', cb = () => {}) {
   let synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig)
 
   const handleSuccess = (result) => {
-    // console.log('wswTest: 配音任务结果', result)
     if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-      console.log('配音生成完毕.')
-      console.log('wswTest: audioFile', audioFile)
       cb(audioFile)
-      console.log('wswTest: audioFile', 'fisislsl')
     } else {
       console.error(
         'Speech synthesis canceled, ' +

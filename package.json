@@ -9,7 +9,7 @@
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "start": "electron-vite preview",
-    "dev": "electron-vite dev",
+    "dev": "chcp 65001 &&  electron-vite dev",
     "start:win": "chcp 65001 && electron-vite preview",
     "dev:win": "chcp 65001 && electron-vite dev",
     "build": "electron-vite build",
@@ -36,8 +36,10 @@
     "fluent-ffmpeg": "^2.1.2",
     "image-size": "^1.1.1",
     "microsoft-cognitiveservices-speech-sdk": "^1.36.0",
+    "moment": "^2.30.1",
     "rimraf": "^5.0.5",
-    "vxe-table": "^4.5.22-beta.3"
+    "vxe-table": "^4.5.22-beta.3",
+    "wav-file-info": "^0.0.10"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.1",

@@ -39,7 +39,7 @@ const expandIcon = () => {
 }
 const menuOptions = ref([
   {
-    label: renderLabel('一键追爆款'),
+    label: renderLabel('小说转视频'),
     key: pageNames.from_text,
     icon: renderIcon(RocketOutline),
     disabled: isProcessVideo.value

@@ -1,6 +1,10 @@
-import fs, { readFileSync } from 'fs'
-import rimraf from 'rimraf'
+import axios from 'axios'
+import moment from 'moment'
+// import iconv from 'iconv-lite'
+import { rimrafSync } from 'rimraf'
 import { join, resolve } from 'path'
+import fs, { readFileSync, writeFileSync } from 'fs'
+import wavFileInfo from 'wav-file-info'
 import {
   sdBaseUrl,
   t2iApi,
@@ -8,21 +12,25 @@ import {
   positivePrompt,
   negativePrompt,
   outputPath,
-  imageOutputFolder
+  imageOutputFolder,
+  audioOutputFolder,
+  cfg,
+  iti_cfg,
+  iti_denoising_strength,
+  HDImageWidth,
+  HDImageHeight
 } from '../../../BaoganAiConfig.json'
+import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 import { getCharactorsSentencesFromText } from '../get_prompts_by_kimi/getPrompts'
 import { converTextToSpeech } from '../ms_azure_tts/getWavFromText'
-import axios from 'axios'
 // TODO:(wsw) 绘图参数设置收敛
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
   batch_size: 1,
   steps: 20,
-  cfg_scale: 7,
-  // width: 608,
-  // height: 1080,
-  width: 500,
-  height: 500,
+  cfg_scale: cfg,
+  width: HDImageWidth,
+  height: HDImageHeight,
   sampler_index: 'DPM++ 3M SDE Exponential'
 }
 const MAX_RETRY_TIMES = 3
@@ -33,6 +41,18 @@ let charactors = {}
 let charactorsTask = []
 let sentencesTask = []
 let ttsTask = []
+
+function readLocalConfig() {
+  const initConfigBuffer = readFileSync(configPath)
+  const initConfigString = initConfigBuffer.toString()
+  let initConfig = {}
+  try {
+    initConfig = JSON.parse(initConfigString) || {}
+  } catch (e) {
+    initConfig = {}
+  }
+  return initConfig
+}
 
 /**
  * 根据提示词绘制图片
@@ -46,19 +66,22 @@ function drawImageByPrompts({
 }) {
   let retryTimes = 0
   const relatedCharactorObj = charactors[relatedCharactor] || null
+  const { HDImageWidth, HDImageHeight, models } = readLocalConfig()
   const isI2i = Boolean(relatedCharactorObj)
   prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
   const api = isI2i ? fullI2iApi : fullT2iApi
   const drawConfig = isI2i
     ? {
         ...baseDrawConfig,
-        cfg_scale: 12,
-        denoising_strength: 0.5,
+        styles: [models],
+        width: HDImageWidth,
+        height: HDImageHeight,
+        cfg_scale: iti_cfg,
+        denoising_strength: iti_denoising_strength,
         init_images: [readFileSync(relatedCharactorObj?.image, { encoding: 'base64' })]
       }
-    : { ...baseDrawConfig }
+    : { ...baseDrawConfig, styles: [models], width: HDImageWidth, height: HDImageHeight }
 
-  // console.log('wswTest: 绘画任务参数', api, drawConfig)
   return axios
     .post(api, {
       ...drawConfig,
@@ -66,14 +89,8 @@ function drawImageByPrompts({
     })
     .then((res) => {
       const imgBase64 = res?.data?.images?.[0] || ''
-      // console.log('wswTest: 绘画任务结果', res)
       if (imgBase64) {
         const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
-        if (!fs.existsSync(imageSaveFolder)) {
-          fs.mkdirSync(imageSaveFolder, { recursive: true })
-        } else {
-          rimraf.sync(`${imageSaveFolder}/*`)
-        }
         const _path = join(imageSaveFolder, `${sIndex}.png`)
         fs.writeFileSync(_path, Buffer.from(imgBase64, 'base64'))
         everyUpdate({
@@ -84,6 +101,7 @@ function drawImageByPrompts({
         })
         return { data: _path, code: 1 }
       }
+      console.log('wswTest: ', '图片生成失败了')
       if (retryTimes < MAX_RETRY_TIMES) {
         retryTimes++
         return drawImageByPrompts({ type, prompt, sIndex, relatedCharactor, everyUpdate })
@@ -116,10 +134,30 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
   if (!rawCharactors.length) {
     console.log('[processTextToPrompts]解析角色错误，未解析出角色')
   }
+  const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
+  const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
+  if (!fs.existsSync(imageSaveFolder)) {
+    fs.mkdirSync(imageSaveFolder, { recursive: true })
+  } else {
+    rimrafSync(`${imageSaveFolder}/*`, { glob: true })
+  }
+  const audioSaveFolder = resolve(join(outputPath, audioOutputFolder))
+  if (!fs.existsSync(audioSaveFolder)) {
+    fs.mkdirSync(audioSaveFolder, { recursive: true })
+  } else {
+    rimrafSync(`${audioSaveFolder}/*`, { glob: true })
+  }
+  const srtSaveFolder = resolve(join(outputPath, srtOutputFolder))
+  if (!fs.existsSync(srtSaveFolder)) {
+    fs.mkdirSync(srtSaveFolder, { recursive: true })
+  } else {
+    rimrafSync(`${srtSaveFolder}/*`, { glob: true })
+  }
   charactors = {}
   charactorsTask = []
   sentencesTask = []
   ttsTask = []
+
   // step1: 将已经获取的角色和句子文案同步到表格中
   // 处理角色提示词
   rawCharactors.forEach((charactor, index) => {
@@ -167,12 +205,12 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
  * 等待用户确认调整完毕后，开始执行绘图、配音任务
  */
 function processPromptsToImgsAndAudio(everyUpdate) {
-  // console.log('wswTest: 开始执行所有任务')
+  const texts = []
+
   // step2: 依次处理人物队列和句子队列中的绘图任务
   const allTask = [...charactorsTask, ...sentencesTask]
   allTask.reduce((task, taskInfo) => {
     return task.then(() => {
-      // console.log('wswTest: 绘画任务开始')
       if (taskInfo.type === 'charactor') {
         return drawImageByPrompts(taskInfo).then(({ data: imgPath }) => {
           charactors[taskInfo.name] = { image: imgPath, prompt: taskInfo.prompt }
@@ -182,15 +220,60 @@ function processPromptsToImgsAndAudio(everyUpdate) {
     })
   }, Promise.resolve())
   // step3: 为句子进行配音
-  ttsTask.reduce((task, taskInfo) => {
-    return task.then(() => {
-      return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
-        console.log('wswTest: taskInfo是什么', taskInfo)
-        delete taskInfo.everyUpdate
-        everyUpdate({ ...taskInfo, wav })
+  ttsTask
+    .reduce((task, taskInfo) => {
+      return task.then(() => {
+        return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
+          texts.push({ wav, text: taskInfo.text })
+          delete taskInfo.everyUpdate
+          everyUpdate({ ...taskInfo, wav })
+        })
       })
+    }, Promise.resolve())
+    .then(() => {
+      const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
+      // step4: 生成字幕文件
+      texts
+        .reduce((task, taskInfo, taskIndex) => {
+          return task.then(() => {
+            return new Promise((resolve, reject) => {
+              wavFileInfo.infoByFilename(taskInfo.wav, (err, info) => {
+                if (err) {
+                  reject(err)
+                }
+                if (texts[taskIndex]) {
+                  texts[taskIndex].wav_duration = info.duration
+                }
+                resolve()
+              })
+            })
+          })
+        }, Promise.resolve())
+        .then(() => {
+          let subtitleRawText = ''
+          let currentStart = 0
+          const srtInterval = 0.1 // 字幕每行之间间隔100ms
+          const parseTime = (time) => {
+            return moment
+              .utc(moment.duration(time, 'seconds').as('milliseconds'))
+              .format('HH:mm:ss,SSS')
+          }
+          texts.forEach((textInfo, index) => {
+            subtitleRawText += `${index + 1}
+${parseTime(Number(currentStart))} --> ${parseTime(Number(currentStart) + Number(textInfo.wav_duration))}
+${textInfo?.text || ''}
+
+`
+            currentStart = Number(currentStart) + srtInterval + Number(textInfo.wav_duration)
+          })
+          // 由于使用了moviepy做字幕合成，在写入字幕的时候必须要用gbk编码
+          writeFileSync(
+            resolve(join(outputPath, srtOutputFolder, srtOutput)),
+            subtitleRawText
+            // iconv.encode(subtitleRawText, 'gbk')
+          )
+        })
     })
-  }, Promise.resolve())
 }
 
 export { processTextToPrompts, processPromptsToImgsAndAudio, drawImageByPrompts }
