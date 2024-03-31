@@ -2,16 +2,17 @@ import fs from 'fs'
 import axios from 'axios'
 import { kimiBaseUrl, kimiChatApi, kimiToken } from '../../../BaoganAiConfig.json'
 import initPrompt from './init_prompt?asset&asarUnpack'
+import introToSdPrompt from './intro_to_sd_prompt?asset&asarUnpack'
 import getSentencesPrompt from './get_sentences_prompt?asset&asarUnpack'
 import getCharactorsPrompt from './get_charactors_prompt?asset&asarUnpack'
 import getCharactorsSentencesPrompt from './get_charactors_sentences_prompt?asset&asarUnpack'
 
 /**
- * TODO
  * getCharactorsFromText 函数请求完毕需要 13.5-17秒
  * getSentencesFromText 函数请求完毕需要 12-15秒
  */
 const init_prompt = fs.readFileSync(initPrompt, { encoding: 'utf8' })
+const intro_to_sd_prompt = fs.readFileSync(introToSdPrompt, { encoding: 'utf8' })
 const get_sentences_prompt = fs.readFileSync(getSentencesPrompt, { encoding: 'utf8' })
 const get_charactors_prompt = fs.readFileSync(getCharactorsPrompt, {
   encoding: 'utf8'
@@ -20,9 +21,13 @@ const get_charactors_sentences_prompt = fs.readFileSync(getCharactorsSentencesPr
   encoding: 'utf8'
 })
 
-const conversions = [{ role: 'user', content: init_prompt }]
+const conversions = [
+  { role: 'user', content: intro_to_sd_prompt },
+  { role: 'user', content: init_prompt }
+]
 
 /**
+ * [DEPRECATED]
  * 对传入的文章，分析角色
  */
 function getCharactorsFromText(text) {
@@ -64,6 +69,7 @@ function getCharactorsFromText(text) {
 }
 
 /**
+ * [DEPRECATED]
  * 对传入的文章，分出句子
  */
 function getSentencesFromText() {

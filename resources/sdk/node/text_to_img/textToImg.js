@@ -134,8 +134,11 @@ function formatPrompt(rawStr = '') {
 async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
   const { charactors: rawCharactors = [], sentences: rawSentences = [] } =
     (await getCharactorsSentencesFromText(text)) || []
+
   if (!rawCharactors.length) {
     console.log('[processTextToPrompts]解析角色错误，未解析出角色')
+    everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
+    return
   }
   const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
   const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
@@ -241,6 +244,7 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
   ttsTask
     .reduce((task, taskInfo) => {
       return task.then(() => {
+        console.log('wswTest: 开始配音', taskInfo.text)
         return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
           texts.push({ wav, text: taskInfo.text })
           delete taskInfo.everyUpdate
@@ -253,6 +257,7 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
       // step4: 生成字幕文件
       texts
         .reduce((task, taskInfo, taskIndex) => {
+          console.log('wswTest:开始字幕合成 ', taskInfo.text)
           return task.then(() => {
             return new Promise((resolve, reject) => {
               wavFileInfo.infoByFilename(taskInfo.wav, (err, info) => {
@@ -285,11 +290,7 @@ ${textInfo?.text || ''}
             currentStart = Number(currentStart) + srtInterval + Number(textInfo.wav_duration)
           })
           // 由于使用了moviepy做字幕合成，在写入字幕的时候必须要用gbk编码
-          writeFileSync(
-            resolve(join(outputPath, srtOutputFolder, srtOutput)),
-            subtitleRawText
-            // iconv.encode(subtitleRawText, 'gbk')
-          )
+          writeFileSync(resolve(join(outputPath, srtOutputFolder, srtOutput)), subtitleRawText)
         })
     })
 }

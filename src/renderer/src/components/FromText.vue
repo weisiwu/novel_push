@@ -1,5 +1,6 @@
 <script setup>
 import { ref, defineProps } from 'vue'
+import { useMessage } from 'naive-ui'
 import { VXETable } from 'vxe-table'
 import icon from '../../../../resources/imgs/icon.png?asset'
 
@@ -7,6 +8,7 @@ const props = defineProps({
   updateGlobalLoading: Function,
   updateIsProcessVideo: Function
 })
+const message = useMessage()
 const speed = 200 / 60 // 每分钟说多少字
 const sceneTableRef = ref('')
 const charactorTableRef = ref('')
@@ -42,6 +44,15 @@ if (window.ipcRenderer) {
    * 文生图，有新数据返回
    */
   window.ipcRenderer.receive('texttovideo-process-update', (info) => {
+    // 如果文章解析错误，直接返回到最开始，toast给用户，让用户自己出发重试
+    if (info?.type === 'parse_text_error') {
+      startLoading.value = false
+      showTable.value = false
+      parseTextLoading.value = false
+      props?.updateIsProcessVideo?.(false)
+      message.error('解析文本失败，请重试，如连续失败，请在群里反馈~')
+      return
+    }
     startLoading.value = false
     showTable.value = true
     const {
@@ -185,7 +196,7 @@ const updateProcess = () => {
 
   console.log('wswTest: 多个格式', finishedCharactors, finishedSentences, lens)
   const percentage = ((finishedCharactors + finishedSentences) / (lens || 1)) * 100
-  progressBarPercentage.value = percentage
+  progressBarPercentage.value = percentage.toFixed(2)
   progressBarText.value = `${percentage}%`
 }
 

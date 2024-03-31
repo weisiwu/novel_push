@@ -15,6 +15,11 @@ def custom_sort(frame_img):
     return name
 
 
+def custom_sort_wav(frame_img):
+    name = Path(frame_img).name
+    return name[:-4]
+
+
 # 创建一个类用于“吞噬”输出
 class NullWriter(object):
     def write(self, s):
@@ -170,8 +175,11 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
 
 def concat_audio(audio_path, save_name):
     audio_path = Path(audio_path)
-    audios = os.listdir(audio_path)
-    audio_num = len(audios)
+    filtered_files = glob.glob(f"{audio_path}/*.wav")
+    filtered_files = [file for file in filtered_files if file[:-4].isdigit()]
+    audio_num = len(filtered_files)
+    sort_audio = sorted(filtered_files, key=custom_sort_wav)
+    # print("sdaf", filtered_files)
 
     if not audio_num:
         print(
@@ -184,26 +192,27 @@ def concat_audio(audio_path, save_name):
 
     audios_clip = []
     # 将生成视频的输出重定向，防止输出
-    sysout = sys.stdout
-    sys.stdout = NullWriter()
+    # sysout = sys.stdout
+    # sys.stdout = NullWriter()
 
-    for audio in audios:
+    for index, audio in enumerate(sort_audio):
+        print("audio是什么事1", audio)
         audios_clip.append(AudioFileClip(str(audio_path / audio)))
 
     final_audio = concatenate_audioclips(audios_clip)
     final_audio.write_audiofile(str(audio_path / save_name))
     final_audio.close()
-    sys.stdout = sysout
-    print(
-        json.dumps(
-            {
-                "code": 1,
-                "type": "concat_audio",
-                "message": "concat audio success",
-            }
-        )
-    )
-    sys.stdout.flush()
+    # sys.stdout = sysout
+    # print(
+    #     json.dumps(
+    #         {
+    #             "code": 1,
+    #             "type": "concat_audio",
+    #             "message": "concat audio success",
+    #         }
+    #     )
+    # )
+    # sys.stdout.flush()
 
 
 class RealizeAddSubtitles:

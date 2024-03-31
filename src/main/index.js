@@ -129,6 +129,7 @@ app.whenReady().then(() => {
       return
     }
     const everyUpdate = (args) => {
+      // console.log('wswTest: 接收到的是实例是', args, event?.sender?.send)
       if (!event?.sender?.send) {
         return
       }
