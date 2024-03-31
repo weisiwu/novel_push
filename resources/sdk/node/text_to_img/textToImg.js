@@ -1,6 +1,5 @@
 import axios from 'axios'
 import moment from 'moment'
-// import iconv from 'iconv-lite'
 import { rimrafSync } from 'rimraf'
 import { join, resolve } from 'path'
 import fs, { readFileSync, writeFileSync } from 'fs'
@@ -66,21 +65,25 @@ function drawImageByPrompts({
 }) {
   let retryTimes = 0
   const relatedCharactorObj = charactors[relatedCharactor] || null
-  const { HDImageWidth, HDImageHeight, models } = readLocalConfig()
+  const { HDImageWidth, HDImageHeight } = readLocalConfig()
   const isI2i = Boolean(relatedCharactorObj)
+  prompt = prompt
+    .split(',')
+    .filter((item) => item)
+    .map((item) => `((${item}))`)
+    .join(',')
   prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
   const api = isI2i ? fullI2iApi : fullT2iApi
   const drawConfig = isI2i
     ? {
         ...baseDrawConfig,
-        styles: [models],
         width: HDImageWidth,
         height: HDImageHeight,
         cfg_scale: iti_cfg,
         denoising_strength: iti_denoising_strength,
         init_images: [readFileSync(relatedCharactorObj?.image, { encoding: 'base64' })]
       }
-    : { ...baseDrawConfig, styles: [models], width: HDImageWidth, height: HDImageHeight }
+    : { ...baseDrawConfig, width: HDImageWidth, height: HDImageHeight }
 
   return axios
     .post(api, {

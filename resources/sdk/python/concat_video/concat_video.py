@@ -265,7 +265,7 @@ class RealizeAddSubtitles:
                 txt = (
                     TextClip(
                         sentences,
-                        fontsize=56,
+                        fontsize=select_font_size,
                         font=select_font,
                         stroke_color="black",
                         stroke_width=1,
@@ -296,6 +296,7 @@ with open(args.config_file, "r") as f:
     sd_config["sdBaseUrl"] = sd_config["sdBaseUrl"].rstrip("/") or ""
 
 select_font_name = sd_config["ttf"]
+select_font_size = sd_config["fontsize"] or 56
 select_font = Path(args.font_base) / f"{select_font_name}.ttf"
 
 # 合并音频

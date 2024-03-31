@@ -119,17 +119,17 @@ if (window.ipcRenderer) {
    * 导出视频进度
    */
   window.ipcRenderer.receive('export-process-update', (res) => {
-    console.log('wswTest:导出进度更新 ', res)
     if (Number(res) === 1) {
       progressBarPercentage.value = 33.3
-      progressBarText.value = '已将图片转化为视频'
+      progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
     } else if (Number(res) === 2) {
       progressBarPercentage.value = 66.6
-      progressBarText.value = '音频视频合成完毕'
+      progressBarText.value = '音频视频合成完毕，正在生成字幕和添加字幕'
     } else if (Number(res) === 3) {
       progressBarPercentage.value = 100
       progressBarText.value = '添加字幕完成，马上为您打开视频'
       exportLoading.value = false
+      clear()
       props?.updateIsProcessVideo?.(false)
     }
   })
@@ -141,6 +141,30 @@ if (window.ipcRenderer) {
     showTable.value = true
     actionbarCurrentStatus.value = actionbarStatus.PREPARE_TO_GENERATE
   })
+}
+
+// 在编辑字幕后，更新字幕和对应的语音
+const updateScentence = (text, row) => {
+  // row.refreshing = true
+  // window.ipcRenderer.send('refresh-voice', {})
+  // window.ipcRenderer.receive('refresh-voice-finish', () => {
+  //   row.refreshing = false
+  // })
+}
+
+const clear = () => {
+  textValue.value = ''
+  showTable.value = false
+  startLoading.value = false
+  isDrawAndPeiyin.value = false
+  showProgressBar.value = false
+  exportLoading.value = false
+  progressBarPercentage.value = 0
+  progressBarText.value = ''
+  parseTextLoading.value = false
+  actionbarCurrentStatus.value = actionbarStatus.PARSE
+  charactorsTableData.value = []
+  setencesTableData.value = []
 }
 
 // 更新进度
@@ -175,7 +199,6 @@ const removeCharactorRow = async (row) => {
       charactorsTableData.value = [
         ...charactorsTableData.value.filter((_row) => _row.sIndex === row.sIndex)
       ]
-      // console.log('wswTest: 删除后的只是是', charactorsTableData)
     }
   }
 }
@@ -230,6 +253,7 @@ const startGenerate = () => {
 const exportVideo = () => {
   exportLoading.value = true
   showProgressBar.value = true
+  progressBarText.value = '正将图片合并转化为视频'
   window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
 }
 </script>
@@ -362,6 +386,7 @@ const exportVideo = () => {
             maxlength="100"
             placeholder="字幕文案"
             :disabled="showProgressBar"
+            :on-update:value="(text) => updateScentence(text, row)"
             :autosize="{ minRows: 1, maxRows: 2 }"
           >
           </n-input>

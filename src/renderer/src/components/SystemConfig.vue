@@ -66,6 +66,14 @@
               :options="fontsOptions"
             />
           </n-form-item>
+          <n-form-item label="字幕大小" path="subfontsize">
+            <n-input-number
+              v-model:value="formModel.subfontsize"
+              placeholder="字体大小"
+              :min="20"
+              :max="70"
+            />
+          </n-form-item>
           <n-form-item label="画面宽(500~2000)" path="HDImageWidth">
             <n-input-number
               v-model:value="formModel.HDImageWidth"
@@ -113,6 +121,7 @@ const formModel = ref({
   models: '',
   voicer: '',
   subfont: '',
+  subfontsize: 56,
   sdBaseUrl: '',
   outputPath: '',
   HDImageWidth: 512,
@@ -179,6 +188,7 @@ if (window.ipcRenderer) {
       localConfig.sdBaseUrl = localConfig.sdBaseUrl.replace(/\/$/, '')
       formModel.value = localConfig
       formModel.value.subfont = localConfig.ttf
+      formModel.value.subfontsize = localConfig.fontsize
       formModel.value.voicer = localConfig.azureTTSVoice
       formModel.value.models = localConfig.models
     } catch (e) {

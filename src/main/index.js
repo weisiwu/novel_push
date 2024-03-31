@@ -263,6 +263,7 @@ app.whenReady().then(() => {
         denoising_strength: userConfig.denoising_strength || 0.8,
         models: userConfig.models || config.models || '',
         ttf: userConfig.subfont || config.ttf || '',
+        fontsize: userConfig.subfontsize || config.fontsize || 56,
         azureTTSVoice: userConfig.voicer || config.outputPath || '',
         retry_times: userConfig.retryTimes || 5,
         isOriginalSize: userConfig.isOriginalSize,
