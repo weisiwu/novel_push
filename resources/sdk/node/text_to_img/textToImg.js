@@ -202,10 +202,25 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
 }
 
 /**
+ * 更新配音任务的文本
+ */
+function updatePeiyinTask(newTexts = []) {
+  ttsTask = ttsTask.map((task, index) => {
+    return {
+      ...task,
+      text: newTexts[index] || task?.text || ''
+    }
+  })
+}
+
+/**
  * 等待用户确认调整完毕后，开始执行绘图、配音任务
  */
-function processPromptsToImgsAndAudio(everyUpdate) {
+function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
   const texts = []
+
+  // 更新配音字幕
+  updatePeiyinTask(newTexts)
 
   // step2: 依次处理人物队列和句子队列中的绘图任务
   const allTask = [...charactorsTask, ...sentencesTask]

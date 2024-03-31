@@ -7,7 +7,7 @@ const mainWindowChannels = [
   'select-folder',
   'texttovideo-process-start',
   'texttovideo-process-update',
-  'texttovideo-process-finish',
+  'export-process-update',
   'generate-image-audio-process-start',
   'texttovideo-parsetext-process-finish',
   'concat-video',

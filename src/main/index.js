@@ -1,6 +1,7 @@
 import os from 'os'
 import fs from 'fs'
 import asar from 'asar'
+import axios from 'axios'
 import { join, resolve } from 'path'
 import { spawn } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
@@ -14,6 +15,7 @@ import {
   processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
+import { sdBaseUrl, updateConfigApi } from '../../resources/BaoganAiConfig.json'
 import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 
 let startWindow = null
@@ -144,17 +146,18 @@ app.whenReady().then(() => {
   /**
    * 开始执行音频、绘图任务
    */
-  ipcMain.on('generate-image-audio-process-start', (event) => {
+  ipcMain.on('generate-image-audio-process-start', (event, newTexts) => {
     if (!mainWindow) {
       return
     }
+    // console.log('wswTest: 主进程接收到的文字', newTexts)
     const everyUpdate = (args) => {
       if (!event?.sender?.send) {
         return
       }
       event.sender.send('texttovideo-process-update', args)
     }
-    processPromptsToImgsAndAudio(everyUpdate)
+    processPromptsToImgsAndAudio(everyUpdate, newTexts)
   })
 
   /**
@@ -198,12 +201,11 @@ app.whenReady().then(() => {
       durations += `${sentence?.duration}${index === sentencesList.length - 1 ? '' : ','}`
     })
 
-    console.log('wswTest: 地址事实吗 ', resolve(join(configPath, '..', 'tts')))
     const childProcess = spawn(concatVideoBin, [
       '--durations',
       durations,
       '--font_base',
-      resolve(join(configPath, '..', 'tts')),
+      resolve(join(configPath, '..', 'ttf')),
       '--config_file',
       configPath
     ])
@@ -214,7 +216,9 @@ app.whenReady().then(() => {
       } catch (e) {
         data = {}
       }
-      console.log('wswTest:  接受到数据是个什么情况', data)
+      if (data?.type === 'concat_imgs_to_video') {
+        event.sender.send('export-process-update', data?.step)
+      }
     })
 
     // 监听子进程的退出事件
@@ -257,7 +261,7 @@ app.whenReady().then(() => {
         steps: userConfig.steps || 25,
         cfg: userConfig.cfg || 10,
         denoising_strength: userConfig.denoising_strength || 0.8,
-        models: userConfig.models || config.models || true,
+        models: userConfig.models || config.models || '',
         ttf: userConfig.subfont || config.ttf || '',
         azureTTSVoice: userConfig.voicer || config.outputPath || '',
         retry_times: userConfig.retryTimes || 5,
@@ -268,7 +272,22 @@ app.whenReady().then(() => {
         sdBaseUrl: userConfig.sdBaseUrl || config.sdBaseUrl || ''
       })
       writeFileSync(configPath, localConfig)
-      console.log('wswTest:写入配置文件', config)
+      // 模型发生改变时，尝试更新默认模型
+      console.log('wswTest: 开始更新模型', userConfig.models, config.models)
+      if (userConfig.models && userConfig.models !== config.models) {
+        axios
+          .post(`${sdBaseUrl}${updateConfigApi}`, {
+            sd_model_checkpoint: userConfig.models
+          })
+          .then((res) => {
+            if (res.status == 200) {
+              console.log('wswTest: 切换成功')
+            } else {
+              console.log('wswTest: 所选模型无法使用')
+            }
+          })
+      }
+      // console.log('wswTest:写入配置文件', config)
     } catch (e) {
       console.log('wswTest: 本地写入配置失败', e)
     }

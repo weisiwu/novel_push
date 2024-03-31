@@ -119,6 +119,22 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
             videowrite.write(img)
 
     videowrite.release()
+
+    # 同步UI进度 - 图片组装视频已完成
+    sys.stdout = sysout
+    print(
+        json.dumps(
+            {
+                "code": 1,
+                "type": "concat_imgs_to_video",
+                "step": 1,
+            }
+        )
+    )
+    sys.stdout.flush()
+    sysout = sys.stdout
+    sys.stdout = NullWriter()
+
     video_file = mp.VideoFileClip(tmpSavePath.as_posix()).without_audio()
     audio_file = mp.AudioFileClip(str(background_music_path))
     v_duration = video_file.duration
@@ -129,13 +145,20 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
         audio_file = audio_file.subclip(0, v_duration)
     # 添加字幕,同音轨。视频一起合并
     RealizeAddSubtitles(
-        outputFile.as_posix(), srt_path.as_posix(), video_file, audio_file, tmpSavePath
+        outputFile.as_posix(),
+        srt_path.as_posix(),
+        video_file,
+        audio_file,
+        tmpSavePath,
+        sysout,
     )
+    # 同步UI进度 - 添加字幕完成 - 整体完成
     sys.stdout = sysout
     print(
         json.dumps(
             {
                 "code": 1,
+                "step": 3,
                 "type": "concat_imgs_to_video",
                 "outputFile": outputFile.as_posix(),
             }
@@ -189,12 +212,28 @@ class RealizeAddSubtitles:
     https://blog.csdn.net/qq_40584593/article/details/110353923
     """
 
-    def __init__(self, videoFile, txtFile, video_clip, audio_clip, tmpSavePath):
+    def __init__(self, videoFile, txtFile, video_clip, audio_clip, tmpSavePath, sysout):
         self.src_video = videoFile
         self.sentences = txtFile
         # 传入音轨和视频轨道
         video_with_audio = video_clip.set_audio(audio_clip)
         video_with_audio.write_videofile(videoFile, codec="libx264", audio_codec="aac")
+
+        # 同步UI进度 - 音频视频合成完毕
+        sys.stdout = sysout
+        print(
+            json.dumps(
+                {
+                    "code": 1,
+                    "type": "concat_imgs_to_video",
+                    "step": 2,
+                }
+            )
+        )
+        sys.stdout.flush()
+        sysout = sys.stdout
+        sys.stdout = NullWriter()
+
         if not (
             isfile(self.src_video)
             and self.src_video.endswith((".avi", ".mp4"))

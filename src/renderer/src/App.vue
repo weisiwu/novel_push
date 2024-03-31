@@ -10,7 +10,6 @@ import AppLogo from '../public/logos/logo_16.svg?asset'
 import { updateYuqueLink } from '../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 
 const collapsed = ref(false)
-const isProcessVideo = ref(false)
 const showSystemConfig = ref(false)
 const selectMenu = ref('from_text')
 const loadingStyle = { loading: { height: '12px' } }
@@ -19,6 +18,10 @@ const globalLoading = ref(false)
 // const globalLoading = ref(true)
 const updateGlobalLoading = (value) => {
   globalLoading.value = value
+}
+const isProcessVideo = ref(false)
+const updateIsProcessVideo = (value) => {
+  isProcessVideo.value = value
 }
 const pageNames = {
   from_text: 'from_text',
@@ -110,6 +113,7 @@ const toggleConfig = (event) => {
                 <FromText
                   v-if="selectMenu === pageNames.from_text"
                   :update-global-loading="updateGlobalLoading"
+                  :update-is-process-video="updateIsProcessVideo"
                 />
                 <Feedback
                   v-if="selectMenu === pageNames.feedback"

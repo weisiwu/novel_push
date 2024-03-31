@@ -1,16 +1,23 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, defineProps } from 'vue'
 import { VXETable } from 'vxe-table'
-import { useMessage } from 'naive-ui'
 import icon from '../../../../resources/imgs/icon.png?asset'
 
+const props = defineProps({
+  updateGlobalLoading: Function,
+  updateIsProcessVideo: Function
+})
 const speed = 200 / 60 // 每分钟说多少字
 const sceneTableRef = ref('')
 const charactorTableRef = ref('')
 const textValue = ref('')
 const showTable = ref(false)
 const startLoading = ref(false)
-const isReadyToExport = ref(false)
+const isDrawAndPeiyin = ref(false)
+const showProgressBar = ref(false)
+const exportLoading = ref(false)
+const progressBarPercentage = ref(0)
+const progressBarText = ref('')
 // TODO:(wsw) 临时处理
 // const parseTextLoading = ref(true)
 const parseTextLoading = ref(false)
@@ -79,7 +86,10 @@ if (window.ipcRenderer) {
 
       if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
         actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
+        showProgressBar.value = false
+        progressBarPercentage.value = 0
       }
+      updateProcess()
       return
     }
     // 向表中添加新数据
@@ -99,21 +109,29 @@ if (window.ipcRenderer) {
       })
     }
     if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
+      isDrawAndPeiyin.value = false
+      showProgressBar.value = false
       actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
     }
+    updateProcess()
   })
   /**
-   * 所有图片均生成完毕
+   * 导出视频进度
    */
-  // TODO:(wsw) 暂时不用
-  window.ipcRenderer.receive('texttovideo-process-finish', (res) => {
-    startLoading.value = false
-    // console.log('wswTest: 图片生成结果', res)
-    // if (res?.code === 1) {
-    //   message.error('图片生成失败')
-    // } else {
-    //   message.error('图片生成成功')
-    // }
+  window.ipcRenderer.receive('export-process-update', (res) => {
+    console.log('wswTest:导出进度更新 ', res)
+    if (Number(res) === 1) {
+      progressBarPercentage.value = 33.3
+      progressBarText.value = '已将图片转化为视频'
+    } else if (Number(res) === 2) {
+      progressBarPercentage.value = 66.6
+      progressBarText.value = '音频视频合成完毕'
+    } else if (Number(res) === 3) {
+      progressBarPercentage.value = 100
+      progressBarText.value = '添加字幕完成，马上为您打开视频'
+      exportLoading.value = false
+      props?.updateIsProcessVideo?.(false)
+    }
   })
   /**
    * 文案解析完成，已全部解析绘图提示词
@@ -123,6 +141,28 @@ if (window.ipcRenderer) {
     showTable.value = true
     actionbarCurrentStatus.value = actionbarStatus.PREPARE_TO_GENERATE
   })
+}
+
+// 更新进度
+const updateProcess = () => {
+  const allData = [...charactorsTableData.value, ...setencesTableData.value]
+  console.log('wswTest: allData', allData)
+  const lens = allData.length
+  const finishedCharactors =
+    charactorsTableData.value?.filter?.((charactor) => {
+      console.log('wswTest:charactor ', charactor)
+      return charactor?.image
+    })?.length || 0
+  const finishedSentences =
+    setencesTableData.value?.filter?.((sentence) => {
+      console.log('wswTest: sentence', sentence)
+      return sentence?.image && sentence?.wav
+    })?.length || 0
+
+  console.log('wswTest: 多个格式', finishedCharactors, finishedSentences, lens)
+  const percentage = ((finishedCharactors + finishedSentences) / (lens || 1)) * 100
+  progressBarPercentage.value = percentage
+  progressBarText.value = `${percentage}%`
 }
 
 // 删除行
@@ -175,18 +215,38 @@ const redrawSentenceRow = async (row) => {
 const startProcess = () => {
   startLoading.value = true
   parseTextLoading.value = true
+  props?.updateIsProcessVideo?.(true)
   window.ipcRenderer.send('texttovideo-process-start', textValue.value)
 }
 // 开始批量生图
 const startGenerate = () => {
-  window.ipcRenderer.send('generate-image-audio-process-start')
+  isDrawAndPeiyin.value = true
+  showProgressBar.value = true
+  window.ipcRenderer.send(
+    'generate-image-audio-process-start',
+    setencesTableData?.value?.map?.((row) => row?.text || '')
+  )
 }
 const exportVideo = () => {
+  exportLoading.value = true
+  showProgressBar.value = true
   window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
 }
 </script>
 
 <template>
+  <div v-if="progressBarPercentage">
+    <n-progress
+      type="line"
+      :height="32"
+      :percentage="progressBarPercentage"
+      :indicator-placement="'inside'"
+      :border-radius="4"
+      processing
+    >
+      {{ progressBarText }}
+    </n-progress>
+  </div>
   <n-space :style="{ margin: '20px' }">
     <!-- 文案解析前，操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.PARSE">
@@ -196,11 +256,17 @@ const exportVideo = () => {
     </div>
     <!-- 调整完提示词，生图阶段操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.PREPARE_TO_GENERATE">
-      <n-button type="primary" @click="startGenerate">开始绘图和配音</n-button>
+      <n-button
+        type="primary"
+        :loading="isDrawAndPeiyin"
+        :disabled="isDrawAndPeiyin"
+        @click="startGenerate"
+        >开始绘图和配音</n-button
+      >
     </div>
     <!-- 整体处理完，操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO">
-      <n-button type="primary" @click="exportVideo">导出视频</n-button>
+      <n-button type="primary" :loading="exportLoading" @click="exportVideo">导出视频</n-button>
     </div>
   </n-space>
   <n-space v-if="!showTable" vertical :style="{ margin: '20px 20px 0px' }">
@@ -221,6 +287,7 @@ const exportVideo = () => {
       ref="charactorTableRef"
       header-align="center"
       show-overflow
+      align="center"
       :row-config="{ height: 200 }"
       :style="{ margin: '20px' }"
       :data="charactorsTableData"
@@ -236,6 +303,7 @@ const exportVideo = () => {
               'text-overflow': 'ellipsis',
               overflow: 'hidden'
             }"
+            :disabled="showProgressBar"
             :edit-config="{ trigger: 'click', mode: 'cell' }"
           />
         </template>
@@ -245,12 +313,14 @@ const exportVideo = () => {
           <n-spin :show="!row.image || row.redrawing" :style="{ 'text-align': 'center' }">
             <!-- // TODO:(wsw) 角色图生成的时候，换更合适的展位图 -->
             <n-image
+              v-if="row.image"
               height="150"
               :fallback-src="icon"
-              :src="row.image || icon"
+              :src="row.image"
               :show-toolbar="false"
               lazy
             />
+            <n-skeleton v-if="!row.image" :width="150" :height="100" size="medium" />
           </n-spin>
         </template>
       </vxe-column>
@@ -259,10 +329,15 @@ const exportVideo = () => {
           <n-button
             :style="{ 'margin-bottom': '8px' }"
             type="primary"
+            :disabled="showProgressBar"
             @click="removeCharactorRow(row)"
             >删除角色</n-button
           >
-          <n-button type="primary" :loading="row.redrawing" @click="redrawCharactorRow(row)"
+          <n-button
+            type="primary"
+            :disabled="showProgressBar"
+            :loading="row.redrawing"
+            @click="redrawCharactorRow(row)"
             >重新生成</n-button
           >
         </template>
@@ -273,6 +348,7 @@ const exportVideo = () => {
       ref="sceneTableRef"
       header-align="center"
       show-overflow
+      align="center"
       :row-config="{ height: 200 }"
       :style="{ margin: '20px' }"
       :data="setencesTableData"
@@ -284,7 +360,8 @@ const exportVideo = () => {
             v-model:value="row.text"
             type="textarea"
             maxlength="100"
-            placeholder="文案"
+            placeholder="字幕文案"
+            :disabled="showProgressBar"
             :autosize="{ minRows: 1, maxRows: 2 }"
           >
           </n-input>
@@ -300,6 +377,7 @@ const exportVideo = () => {
               'text-overflow': 'ellipsis',
               overflow: 'hidden'
             }"
+            :disabled="showProgressBar"
             :edit-config="{ trigger: 'click', mode: 'cell' }"
           />
         </template>
@@ -309,12 +387,14 @@ const exportVideo = () => {
           <!-- // TODO:(wsw) 展位图也换成别的 -->
           <n-spin :show="!row.image || row.redrawing" :style="{ 'text-align': 'center' }">
             <n-image
+              v-if="row.image"
               height="150"
               :fallback-src="icon"
-              :src="row.image || icon"
+              :src="row.image"
               :show-toolbar="false"
               lazy
             />
+            <n-skeleton v-if="!row.image" :width="150" :height="100" size="medium" />
           </n-spin>
         </template>
       </vxe-column>
@@ -332,6 +412,7 @@ const exportVideo = () => {
             :show-button="false"
             :min="0.1"
             :max="1000"
+            :disabled="showProgressBar"
           />
         </template>
       </vxe-column>
@@ -341,10 +422,15 @@ const exportVideo = () => {
           <n-button
             :style="{ 'margin-bottom': '8px' }"
             type="primary"
+            :disabled="showProgressBar"
             @click="removeSentenceRow(row)"
             >删除</n-button
           >
-          <n-button type="primary" :loading="row.redrawing" @click="redrawSentenceRow(row)"
+          <n-button
+            type="primary"
+            :disabled="showProgressBar"
+            :loading="row.redrawing"
+            @click="redrawSentenceRow(row)"
             >绘图</n-button
           >
         </template>
