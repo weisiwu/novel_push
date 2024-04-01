@@ -11,12 +11,14 @@ import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 import {
-  processTextToPrompts,
+  processTextToPromptsStream,
   processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
 import { sdBaseUrl, updateConfigApi } from '../../resources/BaoganAiConfig.json'
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+// @Notice: 注意，mac使用
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -141,7 +143,7 @@ app.whenReady().then(() => {
       }
       event.sender.send?.('texttovideo-parsetext-process-finish')
     }
-    processTextToPrompts(text, everyUpdate, finish)
+    processTextToPromptsStream(text, everyUpdate, finish)
   })
 
   /**

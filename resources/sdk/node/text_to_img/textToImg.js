@@ -20,7 +20,10 @@ import {
   HDImageHeight
 } from '../../../BaoganAiConfig.json'
 import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
-import { getCharactorsSentencesFromText } from '../get_prompts_by_kimi/getPrompts'
+import {
+  getCharactorsSentencesFromText,
+  getCharactorsSentencesFromTextStream
+} from '../get_prompts_by_kimi/getPrompts'
 import { converTextToSpeech } from '../ms_azure_tts/getWavFromText'
 // TODO:(wsw) 绘图参数设置收敛
 const baseDrawConfig = {
@@ -208,6 +211,27 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
 }
 
 /**
+ * 处理文本，获取绘图、配音任务
+ * 接受流式返回
+ */
+async function processTextToPromptsStream(text, everyUpdate, finish = () => {}) {
+  charactors = {}
+  charactorsTask = []
+  sentencesTask = []
+  ttsTask = []
+
+  getCharactorsSentencesFromTextStream(
+    text,
+    everyUpdate,
+    finish,
+    charactors,
+    charactorsTask,
+    sentencesTask,
+    ttsTask
+  )
+}
+
+/**
  * 更新配音任务的文本
  */
 function updatePeiyinTask(newTexts = []) {
@@ -295,4 +319,9 @@ ${textInfo?.text || ''}
     })
 }
 
-export { processTextToPrompts, processPromptsToImgsAndAudio, drawImageByPrompts }
+export {
+  processTextToPrompts,
+  processTextToPromptsStream,
+  processPromptsToImgsAndAudio,
+  drawImageByPrompts
+}
