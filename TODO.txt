@@ -1,21 +1,24 @@
 今天任务
-1、生成图片效果优化
-  图生图效果优化
-1、如果句子和人物都是空，就重新生成
+1、多图选择 - 加上
+1、多图生成视频、
 1、放大1.5倍没有成功，都是手动改写的
 1、调整画质关键词到前面实
+
+
+1、生成视频的时候，可能存在图片乱序
+  需要再生成的时候，删除无用图片
+
+
+1、连续点击生图，会出现问题
+  图片命名方式后续要调整
 1、看这里的C:\Users\Administrator\Desktop\github\prompts\sd_prompt_generate.prompt 效果
-
-masterpiece, best quality, very detailed, extremely detailed beautiful, super detailed, tousled hair, illustration, dynamic angles,1boy, <lora:GachaSpliash4:1>
-
+1、如果句子和人物都是空，就重新生成
 1、生成的句子不要太长
   现在常有 20多秒的句子
 1、生成的解说，不要调整原文
   调试
 1、删除后，并没有起到实际效果
   导出的视频中仍然
-1、解析文本的loading红色提示文字
-  颜色太浅薄了，看不清晰在看啥
 1、字幕太长，都超过一行了，明显需要拆分
   字幕位置和样式处理
 1、编辑字幕后，更新字幕和对应的语音以及长度

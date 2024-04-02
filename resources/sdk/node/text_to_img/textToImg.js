@@ -13,6 +13,7 @@ import {
   outputPath,
   imageOutputFolder,
   audioOutputFolder,
+  batchSize,
   cfg,
   iti_cfg,
   iti_denoising_strength,
@@ -28,7 +29,7 @@ import { converTextToSpeech } from '../ms_azure_tts/getWavFromText'
 // TODO:(wsw) 绘图参数设置收敛
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
-  batch_size: 1,
+  batch_size: batchSize,
   steps: 20,
   cfg_scale: cfg,
   width: HDImageWidth,
@@ -61,20 +62,26 @@ function readLocalConfig() {
  */
 function drawImageByPrompts({
   type = 'sentence',
+  name = '',
   prompt = '',
   sIndex = 0,
   relatedCharactor = '',
-  everyUpdate = () => {}
+  everyUpdate = () => {},
+  ...rest
 }) {
+  console.log('wswTest: restrestrestrestxxx', rest, name)
   let retryTimes = 0
+  console.log('wswTest: 目前所有的角色信息', charactors)
   const relatedCharactorObj = charactors[relatedCharactor] || null
   const { HDImageWidth, HDImageHeight } = readLocalConfig()
   const isI2i = Boolean(relatedCharactorObj)
   prompt = prompt
     .split(',')
     .filter((item) => item)
-    .map((item) => `${item}`)
+    // i2i时，需要对句子的提示词做增强，使得画面中能凸显对应元素
+    .map((item) => (isI2i ? `(${item}:1.7)` : `${item}`))
     .join(',')
+  console.log('wswTest: 关联角色是什么', relatedCharactorObj)
   prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
   const api = isI2i ? fullI2iApi : fullT2iApi
   const drawConfig = isI2i
@@ -88,43 +95,52 @@ function drawImageByPrompts({
       }
     : { ...baseDrawConfig, width: HDImageWidth, height: HDImageHeight }
 
-  console.log(
-    'wswTest:',
-    isI2i ? '图生图' : '文生图',
-    '提示词',
-    `${prompt},${positivePrompt},((<lora:GachaSpliash4:1>))`
-  )
+  const finalPrompt = `${positivePrompt},${prompt} <lora:GachaSpliash4:1.5>`
+  console.log('wswTest:', isI2i ? '图生图' : '文生图', '提示词', finalPrompt)
   return axios
     .post(api, {
       ...drawConfig,
-      // prompt: `${prompt},${positivePrompt} ((<lora:GachaSpliash4:1>))`
-      prompt: `${prompt},${positivePrompt} ((<lora:GachaSpliash4:1>))`
+      prompt: finalPrompt
     })
     .then((res) => {
-      const imgBase64 = res?.data?.images?.[0] || ''
-      if (imgBase64) {
-        const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
-        const _path = join(imageSaveFolder, `${sIndex}.png`)
-        fs.writeFileSync(_path, Buffer.from(imgBase64, 'base64'))
+      const images = res?.data?.images || []
+      const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
+      if (images.length) {
+        let _path = ''
+        const restImgs = []
+        if (images[0]) {
+          _path = join(imageSaveFolder, `${sIndex}.png`)
+          fs.writeFileSync(_path, Buffer.from(images[0], 'base64'))
+        }
+        images.slice(1, batchSize || 4).forEach((imgBase64) => {
+          const _path = join(imageSaveFolder, `${sIndex}_${new Date().getTime()}_rest.png`)
+          fs.writeFileSync(_path, Buffer.from(imgBase64, 'base64'))
+          restImgs.push(_path)
+        })
+        console.log('wswTest: restImgsrestImgs', restImgs)
         everyUpdate({
           type,
           sIndex,
           image: _path,
+          restImgs: restImgs,
           tags: prompt?.split(',').filter((txt) => txt) || []
         })
+        if (type === 'charactor') {
+          charactors[name] = { image: _path, prompt: prompt }
+        }
         return { data: _path, code: 1 }
       }
       console.log('wswTest: ', '图片生成失败了')
       if (retryTimes < MAX_RETRY_TIMES) {
         retryTimes++
-        return drawImageByPrompts({ type, prompt, sIndex, relatedCharactor, everyUpdate })
+        return drawImageByPrompts({ type, name, prompt, sIndex, relatedCharactor, everyUpdate })
       }
       return { error: '未能成功生图', code: 0 }
     })
     .catch((e) => {
       if (retryTimes < MAX_RETRY_TIMES) {
         retryTimes++
-        return drawImageByPrompts({ type, prompt, sIndex, relatedCharactor, everyUpdate })
+        return drawImageByPrompts({ type, name, prompt, sIndex, relatedCharactor, everyUpdate })
       }
       console.log('[drawImageByPrompts] execption =>', e)
       return { error: e?.message, code: 0 }
@@ -264,9 +280,7 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
   allTask.reduce((task, taskInfo) => {
     return task.then(() => {
       if (taskInfo.type === 'charactor') {
-        return drawImageByPrompts(taskInfo).then(({ data: imgPath }) => {
-          charactors[taskInfo.name] = { image: imgPath, prompt: taskInfo.prompt }
-        })
+        return drawImageByPrompts(taskInfo)
       }
       return drawImageByPrompts(taskInfo)
     })

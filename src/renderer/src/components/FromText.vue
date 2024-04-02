@@ -3,6 +3,8 @@ import { ref, defineProps } from 'vue'
 import { useMessage } from 'naive-ui'
 import { VXETable } from 'vxe-table'
 import icon from '../../../../resources/imgs/icon.png?asset'
+import waitforgeneratelogo from '../../public/logos/wait_for_generate.svg?asset'
+import generatefaillogo from '../../public/logos/generate_fail.svg?asset'
 
 const props = defineProps({
   updateGlobalLoading: Function,
@@ -21,8 +23,6 @@ const parseTextProcessing = ref(false)
 const exportLoading = ref(false)
 const progressBarPercentage = ref(0)
 const progressBarText = ref('')
-// TODO:(wsw) 临时处理
-// const parseTextLoading = ref(true)
 const parseTextLoading = ref(false)
 // 操作按钮栏状态
 const actionbarStatus = {
@@ -45,11 +45,12 @@ if (window.ipcRenderer) {
    * 文生图，有新数据返回
    */
   window.ipcRenderer.receive('texttovideo-process-update', (info) => {
+    // 有返回就停止loading
+    parseTextLoading.value = false
     // 如果文章解析错误，直接返回到最开始，toast给用户，让用户自己出发重试
     if (info?.type === 'parse_text_error') {
       startLoading.value = false
       showTable.value = false
-      parseTextLoading.value = false
       props?.updateIsProcessVideo?.(false)
       message.error('解析文本失败，请重试，如连续失败，请在群里反馈~')
       return
@@ -63,6 +64,7 @@ if (window.ipcRenderer) {
       tags = [],
       image = '',
       name = '',
+      restImgs = [],
       wav = '',
       relatedCharactor = ''
     } = info || {}
@@ -80,6 +82,7 @@ if (window.ipcRenderer) {
           id: sIndex,
           sIndex,
           image: image ? `${image}?t=${new Date().getTime()}` : '',
+          restImgs,
           redrawing: false
         }
         charactorsTableData.value = newTableData
@@ -91,6 +94,7 @@ if (window.ipcRenderer) {
           sIndex,
           wav: setencesTableData.value[isIn]?.wav || wav,
           image: image ? `${image}?t=${new Date().getTime()}` : '',
+          restImgs,
           redrawing: false
         }
         setencesTableData.value = newTableData
@@ -109,7 +113,7 @@ if (window.ipcRenderer) {
     }
     // 向表中添加新数据
     if (isCharactor) {
-      charactorsTableData.value.push({ id: sIndex, sIndex, name, tags, image })
+      charactorsTableData.value.push({ id: sIndex, sIndex, name, tags, image, redrawing: false })
     } else {
       setencesTableData.value.push({
         id: sIndex,
@@ -120,6 +124,7 @@ if (window.ipcRenderer) {
         image,
         relatedCharactor,
         duration: Math.max(text.length / speed, 0.1).toFixed(2),
+        redrawing: false,
         move: '向上'
       })
     }
@@ -237,7 +242,8 @@ const redrawCharactorRow = async (row) => {
   window.ipcRenderer.send('start-redraw', {
     prompt: row.tags.join(','),
     sIndex: row.sIndex,
-    type: 'charactor'
+    type: 'charactor',
+    name: row?.name || ''
   })
 }
 const redrawSentenceRow = async (row) => {
@@ -325,7 +331,7 @@ const exportVideo = () => {
     />
   </n-space>
   <n-spin v-if="parseTextLoading" class="parse-text-loading" :show="parseTextLoading">
-    <p v-if="parseTextLoading" class="parse-text-loading-info">正在解析文案中</p>
+    <p class="parse-text-loading-info">正在解析文案中</p>
   </n-spin>
   <div v-if="showTable">
     <!-- 角色表 -->
@@ -354,20 +360,35 @@ const exportVideo = () => {
           />
         </template>
       </vxe-column>
-      <vxe-column field="image" width="200" title="效果图" align="center">
+      <vxe-column field="image" width="300" title="角色效果" align="center">
         <template #default="{ row }">
-          <n-spin :show="!row.image || row.redrawing" :style="{ 'text-align': 'center' }">
-            <!-- // TODO:(wsw) 角色图生成的时候，换更合适的展位图 -->
+          <n-spin :show="row.redrawing" :style="{ 'text-align': 'center' }">
             <n-image
-              v-if="row.image"
-              height="150"
-              :fallback-src="icon"
-              :src="row.image"
+              width="300"
+              :object-fit="fill"
+              :fallback-src="generatefaillogo"
+              :preview-disabled="!row.image"
+              :src="row.image || waitforgeneratelogo"
               :show-toolbar="false"
               lazy
             />
-            <n-skeleton v-if="!row.image" :width="150" :height="100" size="medium" />
           </n-spin>
+        </template>
+      </vxe-column>
+      <vxe-column field="image" width="300" title="可选角色效果" align="center">
+        <template #default="{ row }">
+          <n-image
+            v-for="img in row.restImgs"
+            :key="img"
+            :object-fit="contain"
+            height="80"
+            :preview-disabled="!img"
+            :fallback-src="generatefaillogo"
+            :src="img || waitforgeneratelogo"
+            :show-toolbar="false"
+            lazy
+          />
+          <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
         </template>
       </vxe-column>
       <vxe-column field="action" vxe-column width="120" title="操作" align="center">
@@ -429,20 +450,34 @@ const exportVideo = () => {
           />
         </template>
       </vxe-column>
-      <vxe-column field="image" width="200" title="镜头图" align="center">
+      <vxe-column field="image" width="300" title="镜头图" align="center">
         <template #default="{ row }">
-          <!-- // TODO:(wsw) 展位图也换成别的 -->
-          <n-spin :show="!row.image || row.redrawing" :style="{ 'text-align': 'center' }">
+          <n-spin :show="row.redrawing" :style="{ 'text-align': 'center' }">
             <n-image
-              v-if="row.image"
-              height="150"
-              :fallback-src="icon"
-              :src="row.image"
+              width="300"
+              :fallback-src="generatefaillogo"
+              :preview-disabled="!row.image"
+              :src="row.image || waitforgeneratelogo"
               :show-toolbar="false"
               lazy
             />
-            <n-skeleton v-if="!row.image" :width="150" :height="100" size="medium" />
           </n-spin>
+        </template>
+      </vxe-column>
+      <vxe-column field="image" width="300" title="可选镜头图" align="center">
+        <template #default="{ row }">
+          <n-image
+            v-for="img in row.restImgs"
+            :key="img"
+            :object-fit="contain"
+            height="80"
+            :fallback-src="generatefaillogo"
+            :src="img || waitforgeneratelogo"
+            :preview-disabled="!img"
+            :show-toolbar="false"
+            lazy
+          />
+          <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
         </template>
       </vxe-column>
       <vxe-column
@@ -493,6 +528,7 @@ const exportVideo = () => {
   position: absolute;
   left: 0;
   top: 0;
+  background-color: #fff;
   display: flex;
   justify-content: center;
   align-items: center;

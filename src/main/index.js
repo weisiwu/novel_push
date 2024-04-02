@@ -16,9 +16,9 @@ import {
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
 import { sdBaseUrl, updateConfigApi } from '../../resources/BaoganAiConfig.json'
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 // @Notice: 注意，mac使用
-// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -178,6 +178,7 @@ app.whenReady().then(() => {
     }
     drawImageByPrompts({
       type: params?.type,
+      name: params?.name,
       prompt: params?.prompt,
       sIndex: params?.sIndex,
       relatedCharactor: params?.relatedCharactor,
@@ -263,7 +264,6 @@ app.whenReady().then(() => {
         skipRmWatermark: userConfig.skipRmWatermark || false,
         steps: userConfig.steps || 25,
         cfg: userConfig.cfg || 10,
-        denoising_strength: userConfig.denoising_strength || 0.8,
         models: userConfig.models || config.models || '',
         ttf: userConfig.subfont || config.ttf || '',
         fontsize: userConfig.subfontsize || config.fontsize || 56,

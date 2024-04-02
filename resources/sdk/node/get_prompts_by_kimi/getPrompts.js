@@ -282,7 +282,7 @@ function getCharactorsSentencesFromTextStream(
             }
           })
         // 处理每一个解析后的对象
-        console.log('wswTest:原始数据是 ', info)
+        // console.log('wswTest:原始数据是 ', info)
 
         const matcheSentence = info.match(sentenceReg)
         if (matcheSentence?.length > 1) {
@@ -319,7 +319,7 @@ function getCharactorsSentencesFromTextStream(
           const charactor = String(_charactor).toLowerCase()
           const prompt = _prompt.join(',')
           if (charactor) {
-            charactors[charactor] = prompt
+            charactors[charactor] = { prompt, image: '' }
             // step1: 将已经获取的角色和句子文案同步到表格中
             const charactorInfo = {
               type: 'charactor',
@@ -335,8 +335,8 @@ function getCharactorsSentencesFromTextStream(
           }
         }
 
-        console.log('wswTest: 角色有', charactors)
-        console.log('wswTest: 句子有', sentences)
+        // console.log('wswTest: 角色有', charactors)
+        // console.log('wswTest: 句子有', sentences)
       })
       // end是读取流的末尾，finish是写流的末尾
       data.on('end', (info) => {
@@ -348,12 +348,14 @@ function getCharactorsSentencesFromTextStream(
         }
         finish()
       })
-      data.on('error', () => {
+      data.on('error', (e) => {
+        console.log('wswTest: 数据stream错误 ', e)
         everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
         finish()
       })
     })
-    .catch(() => {
+    .catch((e) => {
+      console.log('wswTest: 数据异常', e)
       everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
       finish()
     })
