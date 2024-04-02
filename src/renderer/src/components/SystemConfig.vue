@@ -104,10 +104,15 @@
 import { ref, defineProps, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import axios from 'axios'
-import { sdBaseUrl, modelListApi } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
+import {
+  sdBaseUrl,
+  modelListApi,
+  updateConfigApi
+} from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 import { voicers } from '../../../../resources/sdk/node/ms_azure_tts/chn_voice_list.json?asset&asarUnpack'
 import { fonts } from '../../../../resources/sdk/node/ms_azure_tts/sub_font_list.json?asset&asarUnpack'
 
+let readConfigModels = ''
 const props = defineProps({ toggleShow: Function, updateGlobalLoading: Function })
 const retryTimes = 5
 const active = ref(true)
@@ -150,8 +155,7 @@ const fetchModelList = () => {
       modelLoading.value = false
       if (model_list?.length) {
         modelsOptions.value =
-          model_list?.map?.((model, index) => {
-            index === 0 && (formModel.value.models = model?.title || '')
+          model_list?.map?.((model) => {
             console.log('wswTest: 获取的模型 列表', model)
             return {
               ...model,
@@ -192,6 +196,7 @@ if (window.ipcRenderer) {
       formModel.value.subfontsize = localConfig.fontsize
       formModel.value.voicer = localConfig.azureTTSVoice
       formModel.value.models = localConfig.models
+      readConfigModels = localConfig.models
     } catch (e) {
       console.log('wswTest: 传入的本地配置异常', params, e)
     }
@@ -202,6 +207,25 @@ const saveConfig = () => {
   // 请求api地址去除末尾/，防止接口请求不通
   if (formModel.value?.sdBaseUrl) {
     formModel.value.sdBaseUrl = formModel.value.sdBaseUrl.replace(/\/$/, '')
+  }
+  // 模型发生改变时，尝试更新默认模型
+  if (formModel.value.models && readConfigModels !== formModel.value.models) {
+    axios
+      .post(`${sdBaseUrl}${updateConfigApi}`, {
+        sd_model_checkpoint: formModel.value.models
+      })
+      .then((res) => {
+        console.log('wswTest: 切换模型结果是是什么', res)
+        if (res.status == 200) {
+          message.success(`模型成功切换为: ${formModel.value.models}`)
+        } else {
+          message.error('所选模型无法使用')
+        }
+      })
+      .catch((e) => {
+        console.log('wswTest: 切换模型发生错误', e)
+        message.error('所选模型切换失败')
+      })
   }
   window.ipcRenderer.send('save-config', JSON.stringify(formModel.value))
   message.success('修改配置保存成功！将全局生效')

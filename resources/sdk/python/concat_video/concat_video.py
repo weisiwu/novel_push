@@ -40,6 +40,9 @@ class CacheConfig:
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--wavs", type=str, default="")
+    parser.add_argument("--texts", type=str, default="")
+    parser.add_argument("--imgs", type=str, default="")
     parser.add_argument("--durations", type=str, default="")
     parser.add_argument("--font_base", type=str, default="")
     parser.add_argument("--config_file", type=str, default="")
@@ -132,7 +135,7 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
             {
                 "code": 1,
                 "type": "concat_imgs_to_video",
-                "step": 1,
+                "step": 2,
             }
         )
     )
@@ -163,7 +166,7 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
         json.dumps(
             {
                 "code": 1,
-                "step": 3,
+                "step": 4,
                 "type": "concat_imgs_to_video",
                 "outputFile": outputFile.as_posix(),
             }
@@ -234,7 +237,7 @@ class RealizeAddSubtitles:
                 {
                     "code": 1,
                     "type": "concat_imgs_to_video",
-                    "step": 2,
+                    "step": 3,
                 }
             )
         )

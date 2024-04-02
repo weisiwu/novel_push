@@ -104,6 +104,7 @@ function drawImageByPrompts({
     })
     .then((res) => {
       const images = res?.data?.images || []
+      console.log('wswTest: 绘图生成的图列表是什么', images.length)
       const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
       if (images.length) {
         let _path = ''
@@ -111,11 +112,13 @@ function drawImageByPrompts({
         if (images[0]) {
           _path = join(imageSaveFolder, `${sIndex}.png`)
           fs.writeFileSync(_path, Buffer.from(images[0], 'base64'))
+          console.log('wswTest: 展示图片名', _path)
         }
-        images.slice(1, batchSize || 4).forEach((imgBase64) => {
-          const _path = join(imageSaveFolder, `${sIndex}_${new Date().getTime()}_rest.png`)
-          fs.writeFileSync(_path, Buffer.from(imgBase64, 'base64'))
-          restImgs.push(_path)
+        images.slice(1, batchSize).forEach((imgBase64) => {
+          const rest_path = join(imageSaveFolder, `${sIndex}_${new Date().getTime()}_rest.png`)
+          console.log('wswTest: 备选图片名', rest_path)
+          fs.writeFileSync(rest_path, Buffer.from(imgBase64, 'base64'))
+          restImgs.push(rest_path)
         })
         console.log('wswTest: restImgsrestImgs', restImgs)
         everyUpdate({
@@ -267,6 +270,8 @@ function updatePeiyinTask(newTexts = []) {
 }
 
 /**
+ * 自动绘图配音
+ * Notice: 这里会自动按照顺序，依次给每个场景常规重新生成配音、字幕、图像
  * 等待用户确认调整完毕后，开始执行绘图、配音任务
  */
 function processPromptsToImgsAndAudio(everyUpdate, newTexts) {

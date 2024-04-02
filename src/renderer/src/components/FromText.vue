@@ -2,7 +2,6 @@
 import { ref, defineProps } from 'vue'
 import { useMessage } from 'naive-ui'
 import { VXETable } from 'vxe-table'
-import icon from '../../../../resources/imgs/icon.png?asset'
 import waitforgeneratelogo from '../../public/logos/wait_for_generate.svg?asset'
 import generatefaillogo from '../../public/logos/generate_fail.svg?asset'
 
@@ -36,6 +35,17 @@ const setencesTableData = ref([])
 const getSetencesTableData = () => {
   return Array.from(setencesTableData.value)
 }
+/**
+ * 选择备选图
+ */
+const selectImg = (img, row) => {
+  console.log('wswTest: 选择备选图', img, row)
+  const curImg = row.image
+  const curRestImgs = row.restImgs || []
+  row.image = img
+  row.restImgs = curRestImgs.map((_img) => (_img === img ? curImg : _img))
+  console.log('wswTest: 修改后的效果', row.restImgs)
+}
 
 /**
  * 监听传递给渲染线程的事件
@@ -55,7 +65,6 @@ if (window.ipcRenderer) {
       message.error('解析文本失败，请重试，如连续失败，请在群里反馈~')
       return
     }
-    startLoading.value = false
     showTable.value = true
     const {
       type,
@@ -128,7 +137,10 @@ if (window.ipcRenderer) {
         move: '向上'
       })
     }
-    if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
+    if (
+      setencesTableData.value.every((row) => row?.image && row?.wav) &&
+      setencesTableData.value.length > 0
+    ) {
       isDrawAndPeiyin.value = false
       showProgressBar.value = false
       actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
@@ -140,12 +152,15 @@ if (window.ipcRenderer) {
    */
   window.ipcRenderer.receive('export-process-update', (res) => {
     if (Number(res) === 1) {
-      progressBarPercentage.value = 33.3
+      progressBarPercentage.value = 25
       progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
     } else if (Number(res) === 2) {
-      progressBarPercentage.value = 66.6
-      progressBarText.value = '音频视频合成完毕，正在生成字幕和添加字幕'
+      progressBarPercentage.value = 50
+      progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
     } else if (Number(res) === 3) {
+      progressBarPercentage.value = 75
+      progressBarText.value = '音频视频合成完毕，正在生成字幕和添加字幕'
+    } else if (Number(res) === 4) {
       progressBarPercentage.value = 100
       progressBarText.value = '添加字幕完成，马上为您打开视频'
       exportLoading.value = false
@@ -157,6 +172,11 @@ if (window.ipcRenderer) {
    * 文案解析完成，已全部解析绘图提示词
    */
   window.ipcRenderer.receive('texttovideo-parsetext-process-finish', () => {
+    if (!charactorsTableData.value.length && !setencesTableData.value.length) {
+      clear()
+      message.error('未解析出场景或人物，请重试')
+      return
+    }
     parseTextLoading.value = false
     showTable.value = true
     parseTextProcessing.value = false
@@ -218,7 +238,7 @@ const removeCharactorRow = async (row) => {
     if (type === 'confirm') {
       $table.remove(row)
       charactorsTableData.value = [
-        ...charactorsTableData.value.filter((_row) => _row.sIndex === row.sIndex)
+        ...charactorsTableData.value.filter((_row) => _row.sIndex !== row.sIndex)
       ]
     }
   }
@@ -230,7 +250,7 @@ const removeSentenceRow = async (row) => {
     if (type === 'confirm') {
       $table.remove(row)
       setencesTableData.value = [
-        ...setencesTableData.value.filter((_row) => _row.sIndex === row.sIndex)
+        ...setencesTableData.value.filter((_row) => _row.sIndex !== row.sIndex)
       ]
     }
   }
@@ -264,12 +284,16 @@ const startProcess = () => {
   props?.updateIsProcessVideo?.(true)
   window.ipcRenderer.send('texttovideo-process-start', textValue.value)
 }
-// 开始批量生图
+/**
+ * 开始批量生图
+ * 自动完成表中没有完成绘图和配音
+ */
 const startGenerate = () => {
   isDrawAndPeiyin.value = true
   showProgressBar.value = true
   window.ipcRenderer.send(
     'generate-image-audio-process-start',
+    // TODO:(wsw) 这里已经生成过的都不再生成
     setencesTableData?.value?.map?.((row) => row?.text || '')
   )
 }
@@ -298,7 +322,7 @@ const exportVideo = () => {
     <!-- 文案解析前，操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.PARSE">
       <n-button type="primary" :loading="startLoading" @click="startProcess">{{
-        startLoading ? '转换中' : '开始转换'
+        startLoading ? '文章解析中' : '开始解析文章'
       }}</n-button>
     </div>
     <!-- 调整完提示词，生图阶段操作按钮 -->
@@ -308,16 +332,11 @@ const exportVideo = () => {
         :loading="isDrawAndPeiyin"
         :disabled="isDrawAndPeiyin"
         @click="startGenerate"
-        >开始绘图和配音</n-button
+        >自动绘图配音</n-button
       >
     </div>
     <!-- 整体处理完，操作按钮 -->
-    <div
-      v-if="
-        actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO &&
-        parseTextProcessing.value
-      "
-    >
+    <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO">
       <n-button type="primary" :loading="exportLoading" @click="exportVideo">导出视频</n-button>
     </div>
   </n-space>
@@ -326,7 +345,7 @@ const exportVideo = () => {
       v-model:value="textValue"
       type="textarea"
       maxlength="5000"
-      :autosize="{ minRows: 2, maxRows: 50 }"
+      :autosize="{ minRows: 5, maxRows: 50 }"
       placeholder="请输入待转换的文案"
     />
   </n-space>
@@ -382,11 +401,12 @@ const exportVideo = () => {
             :key="img"
             :object-fit="contain"
             height="80"
-            :preview-disabled="!img"
+            :preview-disabled="img"
             :fallback-src="generatefaillogo"
             :src="img || waitforgeneratelogo"
             :show-toolbar="false"
             lazy
+            @click="selectImg(img, row)"
           />
           <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
         </template>
@@ -430,7 +450,7 @@ const exportVideo = () => {
             placeholder="字幕文案"
             :disabled="showProgressBar"
             :on-update:value="(text) => updateScentence(text, row)"
-            :autosize="{ minRows: 1, maxRows: 2 }"
+            :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
         </template>
@@ -469,13 +489,14 @@ const exportVideo = () => {
           <n-image
             v-for="img in row.restImgs"
             :key="img"
-            :object-fit="contain"
             height="80"
+            :object-fit="contain"
             :fallback-src="generatefaillogo"
             :src="img || waitforgeneratelogo"
-            :preview-disabled="!img"
+            :preview-disabled="img"
             :show-toolbar="false"
             lazy
+            @click="selectImg(img, row)"
           />
           <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
         </template>
@@ -510,7 +531,7 @@ const exportVideo = () => {
           >
           <n-button
             type="primary"
-            :disabled="showProgressBar"
+            :disabled="startLoading || showProgressBar"
             :loading="row.redrawing"
             @click="redrawSentenceRow(row)"
             >绘图</n-button

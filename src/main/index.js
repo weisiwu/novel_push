@@ -1,7 +1,6 @@
 import os from 'os'
 import fs from 'fs'
 import asar from 'asar'
-import axios from 'axios'
 import { join, resolve } from 'path'
 import { spawn } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
@@ -10,12 +9,12 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
+import update_srt_img_wav_from_table from '../../resources/sdk/node/update_srt_img_wav_from_table/update_srt_img_wav_from_table.js'
 import {
   processTextToPromptsStream,
   processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
-import { sdBaseUrl, updateConfigApi } from '../../resources/BaoganAiConfig.json'
 // import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 // @Notice: 注意，mac使用
 import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
@@ -153,7 +152,6 @@ app.whenReady().then(() => {
     if (!mainWindow) {
       return
     }
-    // console.log('wswTest: 主进程接收到的文字', newTexts)
     const everyUpdate = (args) => {
       if (!event?.sender?.send) {
         return
@@ -194,24 +192,39 @@ app.whenReady().then(() => {
       return
     }
     let sentencesList = []
-    let durations = ''
     let data = null
     try {
       sentencesList = JSON.parse(dataStr)
     } catch (e) {
       sentencesList = []
     }
-    sentencesList?.forEach?.((sentence, index) => {
-      durations += `${sentence?.duration}${index === sentencesList.length - 1 ? '' : ','}`
-    })
 
+    // 处理本地文件，包括用户修改选中的行、用户删除的行
+    // 组装数据，发送给导出进程，统一处理
+    const [selectedImgs, texts, wavs, durations] = update_srt_img_wav_from_table(sentencesList)
+    event.sender.send('export-process-update', 1)
+
+    // const childProcess = spawn(concatVideoBin, [
+    //   '--durations',
+    //   durations,
+    //   '--font_base',
+    //   resolve(join(configPath, '..', 'ttf')),
+    //   '--config_file',
+    //   configPath
+    // ])
     const childProcess = spawn(concatVideoBin, [
       '--durations',
       durations,
       '--font_base',
       resolve(join(configPath, '..', 'ttf')),
       '--config_file',
-      configPath
+      configPath,
+      '--wavs',
+      wavs,
+      '--texts',
+      texts,
+      '--imgs',
+      selectedImgs
     ])
 
     childProcess.stdout.on('data', (dataStr) => {
@@ -231,6 +244,8 @@ app.whenReady().then(() => {
       const { code, outputFile } = data
       if (Number(code) === 1 && outputFile) {
         shell.openExternal(outputFile)
+      } else {
+        // TODO:(wsw) 如果进程失败，这里需要怎么处理？
       }
     })
   })
@@ -276,24 +291,6 @@ app.whenReady().then(() => {
         sdBaseUrl: userConfig.sdBaseUrl || config.sdBaseUrl || ''
       })
       writeFileSync(configPath, localConfig)
-      // 模型发生改变时，尝试更新默认模型
-      console.log('wswTest: 开始更新模型', userConfig.models, config.models)
-      if (userConfig.models && userConfig.models !== config.models) {
-        axios
-          .post(`${sdBaseUrl}${updateConfigApi}`, {
-            sd_model_checkpoint: userConfig.models
-          })
-          .then((res) => {
-            if (res.status == 200) {
-              console.log('wswTest: 切换成功')
-            } else {
-              console.log('wswTest: 所选模型无法使用')
-            }
-          })
-          .catch((e) => {
-            console.log('wswTest: 切换模型发生错误', e)
-          })
-      }
       // console.log('wswTest:写入配置文件', config)
     } catch (e) {
       console.log('wswTest: 本地写入配置失败', e)
