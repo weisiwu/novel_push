@@ -97,6 +97,7 @@ function drawImageByPrompts({
   return axios
     .post(api, {
       ...drawConfig,
+      // prompt: `${prompt},${positivePrompt} ((<lora:GachaSpliash4:1>))`
       prompt: `${prompt},${positivePrompt} ((<lora:GachaSpliash4:1>))`
     })
     .then((res) => {
