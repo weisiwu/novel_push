@@ -6,6 +6,8 @@
 1、调整画质关键词到前面实
 1、看这里的C:\Users\Administrator\Desktop\github\prompts\sd_prompt_generate.prompt 效果
 
+masterpiece, best quality, very detailed, extremely detailed beautiful, super detailed, tousled hair, illustration, dynamic angles,1boy, <lora:GachaSpliash4:1>
+
 1、生成的句子不要太长
   现在常有 20多秒的句子
 1、生成的解说，不要调整原文
