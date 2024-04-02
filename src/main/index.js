@@ -16,9 +16,9 @@ import {
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
 import { sdBaseUrl, updateConfigApi } from '../../resources/BaoganAiConfig.json'
-// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 // @Notice: 注意，mac使用
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
+// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -289,6 +289,9 @@ app.whenReady().then(() => {
             } else {
               console.log('wswTest: 所选模型无法使用')
             }
+          })
+          .catch((e) => {
+            console.log('wswTest: 切换模型发生错误', e)
           })
       }
       // console.log('wswTest:写入配置文件', config)

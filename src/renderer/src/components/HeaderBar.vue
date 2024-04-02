@@ -57,7 +57,7 @@ const fetchModelList = () => {
     })
     .catch((e) => {
       if (e?.message?.includes('timeout')) {
-        message.error('请求stable diffusion状态失败，请重试')
+        message.error('请求stable diffusion状态超时，请重试')
       } else {
         message.error('stable diffusion地址不可用')
       }

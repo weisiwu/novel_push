@@ -246,7 +246,8 @@ function getCharactorsSentencesFromTextStream(
       {
         model: 'moonshot-v1-128k',
         messages: conversions,
-        max_tokens: 1024 * 50,
+        // max_tokens: 1024 * 50,
+        max_tokens: 1024 * 100,
         temperature: 0.1,
         stream: true
       },
@@ -262,10 +263,10 @@ function getCharactorsSentencesFromTextStream(
       const { data } = res || {}
       let info = ''
       const sentences = []
-      // TODO:(wsw) 1、出错处理
       data.on('data', (objBuffer) => {
         const objStr = objBuffer.toString().replace('\\n', '')
         if (objStr.includes('[DONE]')) {
+          console.log('wswTest: done?', objStr)
           return
         }
 
@@ -338,7 +339,8 @@ function getCharactorsSentencesFromTextStream(
         console.log('wswTest: 句子有', sentences)
       })
       // end是读取流的末尾，finish是写流的末尾
-      data.on('end', () => {
+      data.on('end', (info) => {
+        console.log('wswTest: 结束的信息是', info)
         if (!sentences.length) {
           everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
           finish()
@@ -350,6 +352,10 @@ function getCharactorsSentencesFromTextStream(
         everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
         finish()
       })
+    })
+    .catch(() => {
+      everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
+      finish()
     })
 
   // 创建文件和请求并行

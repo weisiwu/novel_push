@@ -73,7 +73,7 @@ function drawImageByPrompts({
   prompt = prompt
     .split(',')
     .filter((item) => item)
-    .map((item) => `((${item}))`)
+    .map((item) => `${item}`)
     .join(',')
   prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
   const api = isI2i ? fullI2iApi : fullT2iApi
@@ -88,10 +88,16 @@ function drawImageByPrompts({
       }
     : { ...baseDrawConfig, width: HDImageWidth, height: HDImageHeight }
 
+  console.log(
+    'wswTest:',
+    isI2i ? '图生图' : '文生图',
+    '提示词',
+    `${prompt},${positivePrompt},((<lora:GachaSpliash4:1>))`
+  )
   return axios
     .post(api, {
       ...drawConfig,
-      prompt: `${prompt},${positivePrompt}`
+      prompt: `${prompt},${positivePrompt} ((<lora:GachaSpliash4:1>))`
     })
     .then((res) => {
       const imgBase64 = res?.data?.images?.[0] || ''

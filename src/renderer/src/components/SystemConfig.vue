@@ -151,11 +151,12 @@ const fetchModelList = () => {
       if (model_list?.length) {
         modelsOptions.value =
           model_list?.map?.((model, index) => {
-            index === 0 && (formModel.value.models = model?.model_name || '')
+            index === 0 && (formModel.value.models = model?.title || '')
+            console.log('wswTest: 获取的模型 列表', model)
             return {
               ...model,
-              label: model.title,
-              value: model.model_name
+              label: model.model_name,
+              value: model.title
             }
           }) || []
         return

@@ -17,6 +17,7 @@ const showTable = ref(false)
 const startLoading = ref(false)
 const isDrawAndPeiyin = ref(false)
 const showProgressBar = ref(false)
+const parseTextProcessing = ref(false)
 const exportLoading = ref(false)
 const progressBarPercentage = ref(0)
 const progressBarText = ref('')
@@ -95,7 +96,10 @@ if (window.ipcRenderer) {
         setencesTableData.value = newTableData
       }
 
-      if (setencesTableData.value.every((row) => row?.image && row?.wav)) {
+      if (
+        setencesTableData.value.every((row) => row?.image && row?.wav) &&
+        setencesTableData.value.length > 0
+      ) {
         actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
         showProgressBar.value = false
         progressBarPercentage.value = 0
@@ -115,7 +119,7 @@ if (window.ipcRenderer) {
         tags,
         image,
         relatedCharactor,
-        duration: Math.max(text.length / speed, 0.1),
+        duration: Math.max(text.length / speed, 0.1).toFixed(2),
         move: '向上'
       })
     }
@@ -150,6 +154,7 @@ if (window.ipcRenderer) {
   window.ipcRenderer.receive('texttovideo-parsetext-process-finish', () => {
     parseTextLoading.value = false
     showTable.value = true
+    parseTextProcessing.value = false
     actionbarCurrentStatus.value = actionbarStatus.PREPARE_TO_GENERATE
   })
 }
@@ -197,7 +202,7 @@ const updateProcess = () => {
   console.log('wswTest: 多个格式', finishedCharactors, finishedSentences, lens)
   const percentage = ((finishedCharactors + finishedSentences) / (lens || 1)) * 100
   progressBarPercentage.value = percentage.toFixed(2)
-  progressBarText.value = `${percentage}%`
+  progressBarText.value = `${progressBarPercentage.value}%`
 }
 
 // 删除行
@@ -249,6 +254,7 @@ const redrawSentenceRow = async (row) => {
 const startProcess = () => {
   startLoading.value = true
   parseTextLoading.value = true
+  parseTextProcessing.value = true
   props?.updateIsProcessVideo?.(true)
   window.ipcRenderer.send('texttovideo-process-start', textValue.value)
 }
@@ -300,7 +306,12 @@ const exportVideo = () => {
       >
     </div>
     <!-- 整体处理完，操作按钮 -->
-    <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO">
+    <div
+      v-if="
+        actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO &&
+        parseTextProcessing.value
+      "
+    >
       <n-button type="primary" :loading="exportLoading" @click="exportVideo">导出视频</n-button>
     </div>
   </n-space>
