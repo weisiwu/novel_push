@@ -1,7 +1,7 @@
 import os from 'os'
 import fs from 'fs'
 import asar from 'asar'
-import { join, resolve } from 'path'
+import { dirname, join, resolve } from 'path'
 import { spawn } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
@@ -15,9 +15,9 @@ import {
   processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 // @Notice: 注意，mac使用
-// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -201,17 +201,17 @@ app.whenReady().then(() => {
 
     // 处理本地文件，包括用户修改选中的行、用户删除的行
     // 组装数据，发送给导出进程，统一处理
-    const [selectedImgs, wavs, durations] = update_srt_img_wav_from_table(sentencesList)
+    const [selectedImgs, wavs, durations] = await update_srt_img_wav_from_table(sentencesList)
     event.sender.send('export-process-update', 1)
 
-    // const childProcess = spawn(concatVideoBin, [
-    //   '--durations',
-    //   durations,
-    //   '--font_base',
-    //   resolve(join(configPath, '..', 'ttf')),
-    //   '--config_file',
-    //   configPath
-    // ])
+    console.log(
+      'wswTest: [重要调试使用]调用合成参数是',
+      durations,
+      resolve(join(configPath, '..', 'ttf')),
+      configPath,
+      wavs,
+      selectedImgs
+    )
     const childProcess = spawn(concatVideoBin, [
       '--durations',
       durations,
@@ -239,11 +239,16 @@ app.whenReady().then(() => {
     // 监听子进程的退出事件
     childProcess.on('close', (exitCode) => {
       console.log('wswTest:  整体进程退出', data)
-      const { code, outputFile } = data
+      const { code, outputFile } = data || {}
       if (Number(code) === 1 && outputFile) {
-        shell.openExternal(outputFile)
+        shell.openPath(outputFile).catch((e) => {
+          console.log('wswTest: 尝试自动打开导出视频报错', e)
+          shell.openPath(dirname(outputFile))
+        })
       } else {
         // TODO:(wsw) 如果进程失败，这里需要怎么处理？
+        // 导出进程失败。返回上一级
+        // event.sender.send('export-process-fail')
       }
     })
   })

@@ -116,7 +116,8 @@ function drawImageByPrompts({
           console.log('wswTest: 展示图片名', _path)
         }
         images.slice(1, batchSize).forEach((imgBase64) => {
-          const rest_path = join(imageSaveFolder, `${sIndex}_${new Date().getTime()}_rest.png`)
+          // 系统写1m的图片速度，远比预料中快，大约在700us左右。
+          const rest_path = join(imageSaveFolder, `${sIndex}_${process.hrtime.bigint()}_rest.png`)
           console.log('wswTest: 备选图片名', rest_path)
           fs.writeFileSync(rest_path, Buffer.from(imgBase64, 'base64'))
           restImgs.push(rest_path)
@@ -292,58 +293,28 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
     })
   }, Promise.resolve())
   // step3: 为句子进行配音
-  ttsTask
-    .reduce((task, taskInfo) => {
-      return task.then(() => {
-        console.log('wswTest: 开始配音', taskInfo.text)
-        return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
-          texts.push({ wav, text: taskInfo.text })
-          delete taskInfo.everyUpdate
-          everyUpdate({ ...taskInfo, wav })
-        })
+  ttsTask.reduce((task, taskInfo) => {
+    return task.then(() => {
+      console.log('wswTest: 开始配音', taskInfo.text)
+      return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
+        texts.push({ wav, text: taskInfo.text })
+        delete taskInfo.everyUpdate
+        everyUpdate({ ...taskInfo, wav })
       })
-    }, Promise.resolve())
-    .then(() => {
-      update_srt(texts)
-      //       const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
-      //       // step4: 生成字幕文件
-      //       texts
-      //         .reduce((task, taskInfo, taskIndex) => {
-      //           console.log('wswTest:开始字幕合成 ', taskInfo.text)
-      //           return task.then(() => {
-      //             return new Promise((resolve, reject) => {
-      //               wavFileInfo.infoByFilename(taskInfo.wav, (err, info) => {
-      //                 if (err) {
-      //                   reject(err)
-      //                 }
-      //                 if (texts[taskIndex]) {
-      //                   texts[taskIndex].wav_duration = info.duration
-      //                 }
-      //                 resolve()
-      //               })
-      //             })
-      //           })
-      //         }, Promise.resolve())
-      //         .then(() => {
-      //           let subtitleRawText = ''
-      //           let currentStart = 0
-      //           const srtInterval = 0.1 // 字幕每行之间间隔100ms
-      //           const parseTime = (time) => {
-      //             return moment
-      //               .utc(moment.duration(time, 'seconds').as('milliseconds'))
-      //               .format('HH:mm:ss,SSS')
-      //           }
-      //           texts.forEach((textInfo, index) => {
-      //             subtitleRawText += `${index + 1}
-      // ${parseTime(Number(currentStart))} --> ${parseTime(Number(currentStart) + Number(textInfo.wav_duration))}
-      // ${textInfo?.text || ''}
-      // `
-      //             currentStart = Number(currentStart) + srtInterval + Number(textInfo.wav_duration)
-      //           })
-      //           // 由于使用了moviepy做字幕合成，在写入字幕的时候必须要用gbk编码
-      //           writeFileSync(resolve(join(outputPath, srtOutputFolder, srtOutput)), subtitleRawText)
-      //         })
     })
+  }, Promise.resolve())
+  // .then(() => {
+  //   console.log(
+  //     'wswTest: 常规一键生成时候的参数是什么',
+  //     texts.map((item) => item.text),
+  //     texts.map((item) => item.wav)
+  //   )
+  //   // step4: 更新字幕文件
+  //   update_srt(
+  //     texts.map((item) => item.text),
+  //     texts.map((item) => item.wav)
+  //   )
+  // })
 }
 
 export {

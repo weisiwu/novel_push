@@ -132,7 +132,6 @@ if (window.ipcRenderer) {
         tags,
         image,
         relatedCharactor,
-        duration: Math.max(text.length / speed, 0.1).toFixed(2),
         redrawing: false,
         move: '向上'
       })
@@ -499,24 +498,6 @@ const exportVideo = () => {
             @click="selectImg(img, row)"
           />
           <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
-        </template>
-      </vxe-column>
-      <vxe-column
-        field="duration"
-        width="90"
-        title="持续时间"
-        placeholder="持续时间"
-        align="center"
-      >
-        <template #default="{ row }">
-          <n-input-number
-            v-model:value="row.duration"
-            :step="0.1"
-            :show-button="false"
-            :min="0.1"
-            :max="1000"
-            :disabled="showProgressBar"
-          />
         </template>
       </vxe-column>
       <!-- <vxe-column field="move" width="100" title="图片运动" align="center"></vxe-column> -->

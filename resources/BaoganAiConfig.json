@@ -17,7 +17,7 @@
   "azureTTSArea": "eastasia",
   "azureTTSVoice": "zh-CN-YunxiNeural",
   "outputFolder": "baogao_ai_novel_push_output",
-  "outputPath": "C:\\Users\\Administrator\\Desktop\\baogao_ai_novel_push_output",
+  "outputPath": "/Users/siwu/Desktop/baogao_ai_novel_push_output",
   "outputPath_win": "C:\\Users\\Administrator\\Desktop\\baogao_ai_novel_push_output",
   "outputPath_mac": "/Users/siwu/Desktop/baogao_ai_novel_push_output",
   "saveFileName": "output.mp4",
