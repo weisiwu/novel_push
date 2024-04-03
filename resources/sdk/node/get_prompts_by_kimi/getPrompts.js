@@ -297,7 +297,7 @@ function getCharactorsSentencesFromTextStream(
             })
             const sentenceInfo = {
               type: 'sentence',
-              tags: prompt.split(',') || [],
+              tags: prompt,
               prompt,
               sIndex: Math.max(sentences.length - 1, 0),
               text: raw,
@@ -325,7 +325,7 @@ function getCharactorsSentencesFromTextStream(
               type: 'charactor',
               name: charactor,
               sIndex: Math.max(Object.keys(charactors).length - 1, 0),
-              tags: prompt.split(',') || [],
+              tags: prompt,
               prompt
             }
             everyUpdate(charactorInfo)

@@ -15,9 +15,9 @@ import {
   processPromptsToImgsAndAudio,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
-// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 // @Notice: 注意，mac使用
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
+// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -201,7 +201,7 @@ app.whenReady().then(() => {
 
     // 处理本地文件，包括用户修改选中的行、用户删除的行
     // 组装数据，发送给导出进程，统一处理
-    const [selectedImgs, texts, wavs, durations] = update_srt_img_wav_from_table(sentencesList)
+    const [selectedImgs, wavs, durations] = update_srt_img_wav_from_table(sentencesList)
     event.sender.send('export-process-update', 1)
 
     // const childProcess = spawn(concatVideoBin, [
@@ -221,8 +221,6 @@ app.whenReady().then(() => {
       configPath,
       '--wavs',
       wavs,
-      '--texts',
-      texts,
       '--imgs',
       selectedImgs
     ])

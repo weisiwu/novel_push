@@ -26,6 +26,7 @@ import {
   getCharactorsSentencesFromTextStream
 } from '../get_prompts_by_kimi/getPrompts'
 import { converTextToSpeech } from '../ms_azure_tts/getWavFromText'
+import { update_srt } from '../update_srt_img_wav_from_table/update_srt_img_wav_from_table'
 // TODO:(wsw) 绘图参数设置收敛
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
@@ -126,7 +127,7 @@ function drawImageByPrompts({
           sIndex,
           image: _path,
           restImgs: restImgs,
-          tags: prompt?.split(',').filter((txt) => txt) || []
+          tags: prompt || ''
         })
         if (type === 'charactor') {
           charactors[name] = { image: _path, prompt: prompt }
@@ -169,7 +170,7 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
     everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
     return
   }
-  const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
+  const { outputPath, srtOutputFolder } = readLocalConfig()
   const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
   if (!fs.existsSync(imageSaveFolder)) {
     fs.mkdirSync(imageSaveFolder, { recursive: true })
@@ -208,7 +209,7 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
       type: 'charactor',
       name: _name,
       sIndex: index,
-      tags: charactorPrompt.split(',') || [],
+      tags: charactorPrompt || '',
       prompt: charactorPrompt
     }
     everyUpdate(charactorInfo)
@@ -223,7 +224,7 @@ async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
     const relatedCharactor = charactor
     const sentenceInfo = {
       type: 'sentence',
-      tags: sentencePrompt.split(',') || [],
+      tags: sentencePrompt || '',
       prompt: sentencePrompt,
       sIndex,
       text: chinese,
@@ -303,45 +304,45 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
       })
     }, Promise.resolve())
     .then(() => {
-      const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
-      // step4: 生成字幕文件
-      texts
-        .reduce((task, taskInfo, taskIndex) => {
-          console.log('wswTest:开始字幕合成 ', taskInfo.text)
-          return task.then(() => {
-            return new Promise((resolve, reject) => {
-              wavFileInfo.infoByFilename(taskInfo.wav, (err, info) => {
-                if (err) {
-                  reject(err)
-                }
-                if (texts[taskIndex]) {
-                  texts[taskIndex].wav_duration = info.duration
-                }
-                resolve()
-              })
-            })
-          })
-        }, Promise.resolve())
-        .then(() => {
-          let subtitleRawText = ''
-          let currentStart = 0
-          const srtInterval = 0.1 // 字幕每行之间间隔100ms
-          const parseTime = (time) => {
-            return moment
-              .utc(moment.duration(time, 'seconds').as('milliseconds'))
-              .format('HH:mm:ss,SSS')
-          }
-          texts.forEach((textInfo, index) => {
-            subtitleRawText += `${index + 1}
-${parseTime(Number(currentStart))} --> ${parseTime(Number(currentStart) + Number(textInfo.wav_duration))}
-${textInfo?.text || ''}
-
-`
-            currentStart = Number(currentStart) + srtInterval + Number(textInfo.wav_duration)
-          })
-          // 由于使用了moviepy做字幕合成，在写入字幕的时候必须要用gbk编码
-          writeFileSync(resolve(join(outputPath, srtOutputFolder, srtOutput)), subtitleRawText)
-        })
+      update_srt(texts)
+      //       const { outputPath, srtOutputFolder, srtOutput } = readLocalConfig()
+      //       // step4: 生成字幕文件
+      //       texts
+      //         .reduce((task, taskInfo, taskIndex) => {
+      //           console.log('wswTest:开始字幕合成 ', taskInfo.text)
+      //           return task.then(() => {
+      //             return new Promise((resolve, reject) => {
+      //               wavFileInfo.infoByFilename(taskInfo.wav, (err, info) => {
+      //                 if (err) {
+      //                   reject(err)
+      //                 }
+      //                 if (texts[taskIndex]) {
+      //                   texts[taskIndex].wav_duration = info.duration
+      //                 }
+      //                 resolve()
+      //               })
+      //             })
+      //           })
+      //         }, Promise.resolve())
+      //         .then(() => {
+      //           let subtitleRawText = ''
+      //           let currentStart = 0
+      //           const srtInterval = 0.1 // 字幕每行之间间隔100ms
+      //           const parseTime = (time) => {
+      //             return moment
+      //               .utc(moment.duration(time, 'seconds').as('milliseconds'))
+      //               .format('HH:mm:ss,SSS')
+      //           }
+      //           texts.forEach((textInfo, index) => {
+      //             subtitleRawText += `${index + 1}
+      // ${parseTime(Number(currentStart))} --> ${parseTime(Number(currentStart) + Number(textInfo.wav_duration))}
+      // ${textInfo?.text || ''}
+      // `
+      //             currentStart = Number(currentStart) + srtInterval + Number(textInfo.wav_duration)
+      //           })
+      //           // 由于使用了moviepy做字幕合成，在写入字幕的时候必须要用gbk编码
+      //           writeFileSync(resolve(join(outputPath, srtOutputFolder, srtOutput)), subtitleRawText)
+      //         })
     })
 }
 

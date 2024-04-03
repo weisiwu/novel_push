@@ -41,7 +41,6 @@ class CacheConfig:
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--wavs", type=str, default="")
-    parser.add_argument("--texts", type=str, default="")
     parser.add_argument("--imgs", type=str, default="")
     parser.add_argument("--durations", type=str, default="")
     parser.add_argument("--font_base", type=str, default="")
@@ -77,9 +76,19 @@ def strFloatTime(tempStr):
     return allTime
 
 
-def concat_imgs_to_video(image_path, background_music_path, srt_path, durations):
+def concat_imgs_to_video(
+    image_path, background_music_path, srt_path, durations, selected_imgs
+):
+    """
+    生成视频
+    image_path: 需要处理的图片所在路径
+    background_music_path: 需要添加的配音文件路径
+    srt_path: 需要添加的字幕路径
+    durations: 每张图片显示时长
+    selected_imgs: 需要拼接的图片
+    """
     image_path = Path(image_path)
-    images = os.listdir(image_path)
+    images = selected_imgs
     imgs_num = len(images)
     img_size = None
     durations = str(durations).split(",")
@@ -112,12 +121,10 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
         frame_rate,
         img_size,
     )
-    filtered_files = glob.glob(f"{image_path}/*")
-    sort_imgs = sorted(filtered_files, key=custom_sort)
 
-    for index, frame_img in enumerate(sort_imgs):
+    for index, frame_img in enumerate(images):
         duration_time = float(durations[index])
-        img = cv2.resize(cv2.imread(frame_img), img_size)
+        img = cv2.resize(cv2.imread(str(image_path / frame_img)), img_size)
 
         if img is None:
             continue
@@ -176,13 +183,15 @@ def concat_imgs_to_video(image_path, background_music_path, srt_path, durations)
     return True
 
 
-def concat_audio(audio_path, save_name):
+def concat_audio(audio_path, save_name, selected_wavs):
+    """
+    将音频片段合并成整体
+    audio_path: 音频片段所在文件夹
+    save_name: 输出的整体文件名
+    selected_wavs: 需要拼接的音频片段
+    """
     audio_path = Path(audio_path)
-    filtered_files = glob.glob(f"{audio_path}/*.wav")
-    filtered_files = [file for file in filtered_files if Path(file).name[:-4].isdigit()]
-
-    audio_num = len(filtered_files)
-    sort_audio = sorted(filtered_files, key=custom_sort_wav)
+    audio_num = len(selected_wavs)
 
     if not audio_num:
         print(
@@ -198,8 +207,10 @@ def concat_audio(audio_path, save_name):
     sysout = sys.stdout
     sys.stdout = NullWriter()
 
-    for index, audio in enumerate(sort_audio):
-        audios_clip.append(AudioFileClip(str(audio_path / audio)))
+    for index, audio in enumerate(selected_wavs):
+        if isfile(audio_path / audio):
+            print("合并音频", audio)
+            audios_clip.append(AudioFileClip(str(audio_path / audio)))
 
     final_audio = concatenate_audioclips(audios_clip)
     final_audio.write_audiofile(str(audio_path / save_name))
@@ -209,7 +220,8 @@ def concat_audio(audio_path, save_name):
         json.dumps(
             {
                 "code": 1,
-                "type": "concat_audio",
+                "type": "concat_imgs_to_video",
+                "step": 1,
                 "message": "concat audio success",
             }
         )
@@ -306,21 +318,23 @@ with open(args.config_file, "r") as f:
     sd_config = json.load(f)
     sd_config["sdBaseUrl"] = sd_config["sdBaseUrl"].rstrip("/") or ""
 
+# 字幕字体ttf文件路径
 select_font_name = sd_config["ttf"]
 select_font_size = sd_config["fontsize"] or 56
 select_font = Path(args.font_base) / f"{select_font_name}.ttf"
+
+# 过滤后的wavs、imgs列表
+selected_wavs = (args.wavs or "").split(",")
+selected_imgs = (args.imgs or "").split(",")
 
 # 合并音频
 concat_audio(
     Path(sd_config["outputPath"]) / sd_config["audioOutputFolder"],
     sd_config["audioOutput"],
+    selected_wavs,
 )
 
-"""
-合并视频
-注意，视频和音频均在此文件内拼接处理
-字幕在调用azure接口生成，这里直接合成字幕
-"""
+# 生成视频
 concat_imgs_to_video(
     image_path=Path(sd_config["outputPath"]) / sd_config["imageOutputFolder"],
     background_music_path=Path(sd_config["outputPath"])
@@ -330,4 +344,5 @@ concat_imgs_to_video(
     / sd_config["srtOutputFolder"]
     / sd_config["srtOutput"],
     durations=args.durations,
+    selected_imgs=selected_imgs,
 )

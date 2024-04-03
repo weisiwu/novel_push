@@ -70,7 +70,7 @@ if (window.ipcRenderer) {
       type,
       sIndex = 0,
       text = '',
-      tags = [],
+      tags = '',
       image = '',
       name = '',
       restImgs = [],
@@ -87,7 +87,7 @@ if (window.ipcRenderer) {
         const newTableData = [...charactorsTableData.value]
         newTableData[isIn] = {
           name: charactorsTableData.value[isIn].name || '',
-          tags: charactorsTableData.value[isIn].tags || [],
+          tags: charactorsTableData.value[isIn].tags || '',
           id: sIndex,
           sIndex,
           image: image ? `${image}?t=${new Date().getTime()}` : '',
@@ -177,6 +177,7 @@ if (window.ipcRenderer) {
       message.error('未解析出场景或人物，请重试')
       return
     }
+    startLoading.value = false
     parseTextLoading.value = false
     showTable.value = true
     parseTextProcessing.value = false
@@ -260,7 +261,7 @@ const removeSentenceRow = async (row) => {
 const redrawCharactorRow = async (row) => {
   row.redrawing = true
   window.ipcRenderer.send('start-redraw', {
-    prompt: row.tags.join(','),
+    prompt: row.tags,
     sIndex: row.sIndex,
     type: 'charactor',
     name: row?.name || ''
@@ -270,7 +271,7 @@ const redrawSentenceRow = async (row) => {
   row.redrawing = true
   console.log('wswTest: 重绘图片', row)
   window.ipcRenderer.send('start-redraw', {
-    prompt: row.tags.join(','),
+    prompt: row.tags,
     sIndex: row.sIndex,
     relatedCharactor: row?.relatedCharactor || ''
   })
@@ -301,6 +302,7 @@ const exportVideo = () => {
   exportLoading.value = true
   showProgressBar.value = true
   progressBarText.value = '正将图片合并转化为视频'
+  console.log('wswTest: 转换的数据是什么', getSetencesTableData())
   window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
 }
 </script>
@@ -362,21 +364,20 @@ const exportVideo = () => {
       :row-config="{ height: 200 }"
       :style="{ margin: '20px' }"
       :data="charactorsTableData"
+      :edit-config="{ trigger: 'click', mode: 'cell' }"
     >
       <vxe-column field="name" title="角色名" align="center" width="100"></vxe-column>
       <vxe-column field="tags" title="绘图提示词" align="center">
         <template #default="{ row }">
-          <n-dynamic-tags
+          <n-input
             v-model:value="row.tags"
-            :tag-style="{
-              maxWidth: '120px',
-              'white-space': 'nowrap',
-              'text-overflow': 'ellipsis',
-              overflow: 'hidden'
-            }"
+            type="textarea"
+            maxlength="100"
+            placeholder="绘图提示词"
             :disabled="showProgressBar"
-            :edit-config="{ trigger: 'click', mode: 'cell' }"
-          />
+            :autosize="{ minRows: 1, maxRows: 7 }"
+          >
+          </n-input>
         </template>
       </vxe-column>
       <vxe-column field="image" width="300" title="角色效果" align="center">
@@ -418,14 +419,14 @@ const exportVideo = () => {
             type="primary"
             :disabled="showProgressBar"
             @click="removeCharactorRow(row)"
-            >删除角色</n-button
+            >删除</n-button
           >
           <n-button
             type="primary"
             :disabled="showProgressBar"
             :loading="row.redrawing"
             @click="redrawCharactorRow(row)"
-            >重新生成</n-button
+            >绘图</n-button
           >
         </template>
       </vxe-column>
@@ -439,6 +440,7 @@ const exportVideo = () => {
       :row-config="{ height: 200 }"
       :style="{ margin: '20px' }"
       :data="setencesTableData"
+      :edit-config="{ trigger: 'click', mode: 'cell' }"
     >
       <vxe-column type="seq" title="镜头序号" align="center" width="100"></vxe-column>
       <vxe-column field="text" title="字幕">
@@ -457,17 +459,15 @@ const exportVideo = () => {
       </vxe-column>
       <vxe-column field="tags" title="绘图提示词" align="center">
         <template #default="{ row }">
-          <n-dynamic-tags
+          <n-input
             v-model:value="row.tags"
-            :tag-style="{
-              maxWidth: '120px',
-              'white-space': 'nowrap',
-              'text-overflow': 'ellipsis',
-              overflow: 'hidden'
-            }"
+            type="textarea"
+            maxlength="100"
+            placeholder="字幕文案"
             :disabled="showProgressBar"
-            :edit-config="{ trigger: 'click', mode: 'cell' }"
-          />
+            :autosize="{ minRows: 1, maxRows: 7 }"
+          >
+          </n-input>
         </template>
       </vxe-column>
       <vxe-column field="image" width="300" title="镜头图" align="center">
