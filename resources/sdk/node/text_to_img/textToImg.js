@@ -74,7 +74,7 @@ function drawImageByPrompts({
   // 高清重绘
   if (isHd) {
     const pureImage = image?.replace?.(/\?t=\d+$/, '')
-    console.log('wswTest: 要高清重绘图的是什么======>>>>', pureImage)
+    // console.log('wswTest: 要高清重绘图的是什么======>>>>', pureImage)
     // 如果是高清放大
     const drawConfig = {
       resize_mode: 0,
@@ -149,7 +149,7 @@ function drawImageByPrompts({
         if (images[0]) {
           _path = join(imageSaveFolder, `${sIndex}.png`)
           fs.writeFileSync(_path, Buffer.from(images[0], 'base64'))
-          console.log('wswTest: 展示图片名', _path)
+          // console.log('wswTest: 展示图片名', _path)
         }
         // 非高清放大，会批量生图
         images.slice?.(1, batchSize)?.forEach?.((imgBase64) => {
@@ -158,7 +158,7 @@ function drawImageByPrompts({
           fs.writeFileSync(rest_path, Buffer.from(imgBase64, 'base64'))
           restImgs.push(rest_path)
         })
-        console.log('wswTest: restImgsrestImgs', restImgs)
+        // console.log('wswTest: restImgsrestImgs', restImgs)
         const updateConfig = { type, sIndex, image: _path, restImgs: restImgs, tags: prompt || '' }
         everyUpdate(updateConfig)
         // 向全局变量中添加角色信息
@@ -268,7 +268,7 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
       return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
         texts.push({ wav, text: taskInfo.text })
         delete taskInfo.everyUpdate
-        console.log('wswTest: ', '生成配音', taskInfo)
+        // console.log('wswTest: ', '生成配音', taskInfo)
         everyUpdate({ ...taskInfo, type: 'generate_wav', wav })
       })
     })
@@ -282,7 +282,7 @@ function amplifySentencesImageToHD(everyUpdate, sentencesList) {
   const allTask = [...sentencesList]
   allTask.reduce((task, taskInfo) => {
     return task.then(() => {
-      console.log('wswTest: ', '开始高清重绘图片1212', taskInfo)
+      // console.log('wswTest: ', '开始高清重绘图片1212', taskInfo)
       const pureImage = taskInfo?.image?.replace?.(/\?t=\d+$/, '')
       return drawImageByPrompts({ ...taskInfo, image: pureImage, isHd: true, everyUpdate })
     })

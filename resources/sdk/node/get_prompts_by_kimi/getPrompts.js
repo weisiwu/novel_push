@@ -84,7 +84,7 @@ function getCharactorsSentencesFromTextStream(
       data.on('data', (objBuffer) => {
         const objStr = objBuffer.toString().replace('\\n', '')
         if (objStr.includes('[DONE]')) {
-          console.log('wswTest: done?', objStr)
+          // console.log('wswTest: done?', objStr)
           return
         }
 
@@ -119,7 +119,7 @@ function getCharactorsSentencesFromTextStream(
               text: raw,
               relatedCharactor: charactor
             }
-            console.log('wswTest: 发现新场景，尝试对外沟通', everyUpdate)
+            // console.log('wswTest: 发现新场景，尝试对外沟通', everyUpdate)
             everyUpdate(sentenceInfo)
             sentencesTask.push({ ...sentenceInfo, everyUpdate }) // 加载句子任务
             ttsTask.push({ ...sentenceInfo, everyUpdate }) // 加载配音任务
@@ -152,8 +152,8 @@ function getCharactorsSentencesFromTextStream(
           }
         }
 
-        console.log('wswTest: 角色有', charactors)
-        console.log('wswTest: 句子有', sentences)
+        // console.log('wswTest: 角色有', charactors)
+        // console.log('wswTest: 句子有', sentences)
       })
       // end是读取流的末尾，finish是写流的末尾
       data.on('end', (info) => {

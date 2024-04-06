@@ -134,7 +134,7 @@ app.whenReady().then(() => {
       if (!event?.sender?.send) {
         return
       }
-      console.log('wswTest: 文章解析收到的参数===>', args)
+      // console.log('wswTest: 文章解析收到的参数===>', args)
       event.sender.send('texttovideo-process-update', args)
     }
     const finish = () => {
