@@ -2,7 +2,6 @@ import axios from 'axios'
 import { join, resolve } from 'path'
 import fs, { readFileSync } from 'fs'
 import {
-  sdBaseUrl,
   t2iApi,
   i2iApi,
   amplifyApi,
@@ -30,9 +29,6 @@ const baseDrawConfig = {
   sampler_index: 'DPM++ 3M SDE Exponential'
 }
 const MAX_RETRY_TIMES = 3
-const fullT2iApi = `${sdBaseUrl.replace(/\/$/, '')}${t2iApi}`
-const fullI2iApi = `${sdBaseUrl.replace(/\/$/, '')}${i2iApi}`
-const fullAmplifyImgApi = `${sdBaseUrl.replace(/\/$/, '')}${amplifyApi}`
 
 let charactors = {}
 let charactorsTask = []
@@ -66,7 +62,10 @@ function drawImageByPrompts({
   retryTimes = 0
 }) {
   const relatedCharactorObj = charactors[relatedCharactor] || null
-  const { HDImageWidth, HDImageHeight, lora } = readLocalConfig()
+  const { HDImageWidth, HDImageHeight, lora, sdBaseUrl } = readLocalConfig()
+  const fullT2iApi = `${sdBaseUrl.replace(/\/$/, '')}${t2iApi}`
+  const fullI2iApi = `${sdBaseUrl.replace(/\/$/, '')}${i2iApi}`
+  const fullAmplifyImgApi = `${sdBaseUrl.replace(/\/$/, '')}${amplifyApi}`
   const isI2i = Boolean(relatedCharactorObj)
   let api = isI2i ? fullI2iApi : fullT2iApi
   api = isHd ? fullAmplifyImgApi : api
@@ -89,12 +88,8 @@ function drawImageByPrompts({
     return axios
       .post(api, drawConfig)
       .then((res) => {
-        const newImg = res?.data?.image || ''
-        // console.log('wswTest: 高清重绘的结果是什么', res)
-        console.log('wswTest: 高清重绘的新图是是这个', newImg?.substr?.(0, 10))
-        console.log('wswTest: 高清重绘2222', res?.config?.data?.image?.substr?.(0, 10))
+        const newImg = res?.data?.image || res?.config?.data?.image || ''
         const _path = join(imageSaveFolder, `${sIndex}.png`)
-        console.log('wswTest: 高清炒年糕会的phta', _path)
         fs.writeFileSync(_path, Buffer.from(newImg, 'base64'))
         everyUpdate({ type: 'amplify_to_hd', sIndex, HDImage: _path })
       })

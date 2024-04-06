@@ -17,7 +17,9 @@ const mainWindowChannels = [
   'finish-draw',
   'fetch-config',
   'read-config',
-  'save-config'
+  'save-config',
+  'cancel-process-start',
+  'cancel-process-finish'
 ]
 
 if (process.contextIsolated) {

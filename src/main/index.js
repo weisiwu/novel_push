@@ -237,6 +237,7 @@ app.whenReady().then(() => {
       wavs,
       selectedImgs
     )
+
     const childProcess = spawn(concatVideoBin, [
       '--durations',
       durations,
@@ -275,6 +276,12 @@ app.whenReady().then(() => {
         // 导出进程失败。返回上一级
         // event.sender.send('export-process-fail')
       }
+    })
+
+    // 监听处理过程中是否有取消当前进程请求
+    ipcMain.on('cancel-process-start', (event) => {
+      childProcess.kill('SIGTERM')
+      event.sender.send('cancel-process-finish', true)
     })
   })
 

@@ -3,7 +3,7 @@ import { ref, defineProps } from 'vue'
 import { useMessage } from 'naive-ui'
 import { VXETable } from 'vxe-table'
 import waitforgeneratelogo from '../../public/logos/wait_for_generate.svg?asset'
-import generatefaillogo from '../../public/logos/generate_fail.svg?asset'
+import generatefaillogo from '../../public/logos/generate_fail.png?asset'
 
 const props = defineProps({
   updateGlobalLoading: Function,
@@ -190,6 +190,12 @@ if (window.ipcRenderer) {
     showTable.value = true
     parseTextProcessing.value = false
     actionbarCurrentStatus.value = actionbarStatus.PREPARE_TO_GENERATE
+  })
+  /**
+   * 取消导出
+   */
+  window.ipcRenderer.receive('cancel-process-finish', (res) => {
+    exportLoading.value = false
   })
 }
 
@@ -379,9 +385,14 @@ const exportVideo = () => {
   window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
 }
 
-// 取消正在处理
+// 'cancel-process-start',
+// 'cancel-process-finish'
+// 取消正在处理的结果，返回最开始
 const cancelProcess = () => {
   cancelLoading.value = true
+  progressBarPercentage.value = 0
+  showProgressBar.value = false
+  window.ipcRenderer.send('cancel-process-start')
 }
 </script>
 
@@ -424,12 +435,7 @@ const cancelProcess = () => {
       <n-button type="primary" :loading="exportLoading" @click="exportVideo">导出视频</n-button>
     </div>
     <!-- 整体处理完，操作按钮 -->
-    <div
-      v-if="
-        actionbarCurrentStatus !== actionbarStatus.READY_TO_OUTPUT_VIDEO &&
-        actionbarCurrentStatus !== actionbarStatus.PARSE
-      "
-    >
+    <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO && exportLoading">
       <n-button type="primary" :loading="cancelLoading" @click="cancelProcess">取消</n-button>
     </div>
   </n-space>
@@ -449,16 +455,16 @@ const cancelProcess = () => {
     <!-- 角色表 -->
     <vxe-table
       ref="charactorTableRef"
-      header-align="center"
       show-overflow
       align="center"
-      :row-config="{ height: 200 }"
+      :column-config="{ resizable: true }"
+      :row-config="{ height: 200, isHover: true }"
       :style="{ margin: '20px' }"
       :data="charactorsTableData"
       :edit-config="{ trigger: 'click', mode: 'cell' }"
     >
-      <vxe-column field="name" title="角色名" align="center" width="100"></vxe-column>
-      <vxe-column field="tags" title="绘图提示词" align="center">
+      <vxe-column field="name" title="角色名" width="100"></vxe-column>
+      <vxe-column field="tags" title="绘图提示词">
         <template #default="{ row }">
           <n-input
             v-model:value="row.tags"
@@ -471,11 +477,17 @@ const cancelProcess = () => {
           </n-input>
         </template>
       </vxe-column>
-      <vxe-column field="image" width="300" title="角色效果" align="center">
+      <vxe-column field="image" width="300" title="角色效果">
         <template #default="{ row }">
           <n-spin :show="row.redrawing" :style="{ 'text-align': 'center' }">
             <n-image
-              width="300"
+              :width="
+                !row.image ||
+                row.image?.includes?.(waitforgeneratelogo) ||
+                row.image?.includes?.(generatefaillogo)
+                  ? 200
+                  : 300
+              "
               :object-fit="fill"
               :fallback-src="generatefaillogo"
               :preview-disabled="!row.image"
@@ -486,49 +498,53 @@ const cancelProcess = () => {
           </n-spin>
         </template>
       </vxe-column>
-      <vxe-column field="image" width="300" title="可选角色效果" align="center">
+      <vxe-column field="image" width="300" title="可选角色效果">
         <template #default="{ row }">
-          <n-image
-            v-for="img in row.restImgs"
-            :key="img"
-            :object-fit="contain"
-            height="80"
-            :preview-disabled="img"
-            :fallback-src="generatefaillogo"
-            :src="img || waitforgeneratelogo"
-            :show-toolbar="false"
-            lazy
-            @click="selectImg(img, row)"
-          />
-          <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
+          <div :style="{ display: 'flex', 'flex-wrap': 'wrap' }">
+            <n-image
+              v-for="img in row.restImgs"
+              :key="img"
+              :object-fit="contain"
+              height="80"
+              :preview-disabled="img"
+              :fallback-src="generatefaillogo"
+              :src="img || waitforgeneratelogo"
+              :show-toolbar="false"
+              lazy
+              @click="selectImg(img, row)"
+            />
+            <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
+          </div>
         </template>
       </vxe-column>
-      <vxe-column field="action" vxe-column width="120" title="操作" align="center">
+      <vxe-column field="action" vxe-column width="120" title="操作">
         <template #default="{ row }">
-          <n-button
-            :style="{ 'margin-bottom': '8px' }"
-            type="primary"
-            :disabled="showProgressBar"
-            @click="removeCharactorRow(row)"
-            >删除</n-button
-          >
-          <n-button
-            type="primary"
-            :disabled="showProgressBar"
-            :loading="row.redrawing"
-            @click="redrawCharactorRow(row)"
-            >绘图</n-button
-          >
+          <div :style="{ display: 'flex', 'flex-direction': 'column' }">
+            <n-button
+              :style="{ 'margin-bottom': '8px' }"
+              type="primary"
+              :disabled="showProgressBar"
+              @click="removeCharactorRow(row)"
+              >删除</n-button
+            >
+            <n-button
+              type="primary"
+              :disabled="showProgressBar"
+              :loading="row.redrawing"
+              @click="redrawCharactorRow(row)"
+              >绘图</n-button
+            >
+          </div>
         </template>
       </vxe-column>
     </vxe-table>
     <!-- 场景/句子表 -->
     <vxe-table
       ref="sceneTableRef"
-      header-align="center"
-      show-overflow
       align="center"
-      :row-config="{ height: 200 }"
+      show-overflow
+      :column-config="{ resizable: true }"
+      :row-config="{ height: 200, isHover: true }"
       :style="{ margin: '20px' }"
       :data="setencesTableData"
       :edit-config="{ trigger: 'click', mode: 'cell' }"
@@ -556,7 +572,6 @@ const cancelProcess = () => {
             actionbarStatus.AMPLIFY_TO_HD
           ].includes(actionbarCurrentStatus) && !amplifyHDLoading
         "
-        align="center"
         field="tags"
         title="绘图提示词"
       >
@@ -576,7 +591,13 @@ const cancelProcess = () => {
         <template #default="{ row }">
           <n-spin :show="row.redrawing" :style="{ 'text-align': 'center' }">
             <n-image
-              width="300"
+              :width="
+                !row.image ||
+                row.image?.includes?.(waitforgeneratelogo) ||
+                row.image?.includes?.(generatefaillogo)
+                  ? 200
+                  : 300
+              "
               :fallback-src="generatefaillogo"
               :preview-disabled="row.disabledPreview"
               :src="
@@ -603,47 +624,51 @@ const cancelProcess = () => {
         title="可选镜头图"
       >
         <template #default="{ row }">
-          <n-image
-            v-for="img in row.restImgs"
-            :key="img"
-            height="80"
-            :object-fit="contain"
-            :fallback-src="generatefaillogo"
-            :src="img || waitforgeneratelogo"
-            :preview-disabled="img"
-            :show-toolbar="false"
-            lazy
-            @click="selectImg(img, row)"
-          />
-          <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
+          <div :style="{ display: 'flex', 'flex-wrap': 'wrap' }">
+            <n-image
+              v-for="img in row.restImgs"
+              :key="img"
+              height="80"
+              :object-fit="contain"
+              :fallback-src="generatefaillogo"
+              :src="img || waitforgeneratelogo"
+              :preview-disabled="img"
+              :show-toolbar="false"
+              lazy
+              @click="selectImg(img, row)"
+            />
+            <n-skeleton v-if="!row.restImgs?.length" :width="150" :height="100" size="medium" />
+          </div>
         </template>
       </vxe-column>
       <!-- <vxe-column field="move" width="100" title="图片运动" align="center"></vxe-column> -->
-      <vxe-column field="action" width="120" title="操作">
+      <vxe-column field="action" width="120" title="操作" align="center" header-align="center">
         <template #default="{ row }">
-          <n-button
-            :style="{ 'margin-bottom': '8px' }"
-            type="primary"
-            :disabled="showProgressBar"
-            @click="removeSentenceRow(row)"
-            >删除</n-button
-          >
-          <n-button
-            v-show="!row.HDImage"
-            type="primary"
-            :disabled="startLoading || showProgressBar"
-            :loading="row.redrawing"
-            @click="redrawSentenceRow(row)"
-            >绘图</n-button
-          >
-          <n-button
-            v-show="row.HDImage"
-            type="primary"
-            :disabled="startLoading || showProgressBar"
-            :loading="row.redrawing"
-            @click="reAmplifySentenceRow(row)"
-            >重新放大</n-button
-          >
+          <div :style="{ display: 'flex', 'flex-direction': 'column' }">
+            <n-button
+              :style="{ 'margin-bottom': '8px' }"
+              type="primary"
+              :disabled="showProgressBar"
+              @click="removeSentenceRow(row)"
+              >删除</n-button
+            >
+            <n-button
+              v-show="!row.HDImage"
+              type="primary"
+              :disabled="startLoading || showProgressBar"
+              :loading="row.redrawing"
+              @click="redrawSentenceRow(row)"
+              >绘图</n-button
+            >
+            <n-button
+              v-show="row.HDImage"
+              type="primary"
+              :disabled="startLoading || showProgressBar"
+              :loading="row.redrawing"
+              @click="reAmplifySentenceRow(row)"
+              >重新放大</n-button
+            >
+          </div>
         </template>
       </vxe-column>
     </vxe-table>
@@ -667,10 +692,6 @@ const cancelProcess = () => {
   font-weight: bold;
   font-size: 20px;
   margin: 100px 0 0 0;
-}
-.vxe-cell {
-  display: flex;
-  flex-wrap: wrap;
 }
 .n-tag__content {
   white-space: nowrap;

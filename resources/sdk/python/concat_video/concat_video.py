@@ -2,10 +2,10 @@ import os
 import cv2
 import sys
 import json
-import glob
 import argparse
 from pathlib import *
 from PIL import Image
+import numpy as np
 import moviepy.editor as mp
 from moviepy.editor import *
 from os.path import isfile
@@ -121,6 +121,7 @@ def concat_imgs_to_video(
         frame_rate,
         img_size,
     )
+    imageNums = len(images)
 
     for index, frame_img in enumerate(images):
         duration_time = float(durations[index])
@@ -130,8 +131,21 @@ def concat_imgs_to_video(
             continue
 
         total_num = int(frame_rate * duration_time)
+        transition_time = float(sd_config["frame_transition_time"]) or 0
+        transition_nums = int(transition_time * frame_rate)
         for cur_index in range(total_num):
-            videowrite.write(img)
+            # 达到末尾什么位置开始渐变，按照百分比计算
+            if (total_num - cur_index) < transition_nums and (index + 1 < imageNums):
+                next_img = cv2.resize(
+                    cv2.imread(str(image_path / images[index + 1])), img_size
+                )
+                alpha = (total_num - cur_index) / transition_nums
+                img_with_transition = cv2.addWeighted(
+                    img, alpha, next_img, 1 - alpha, 0
+                )
+                videowrite.write(img_with_transition)
+            else:
+                videowrite.write(img)
 
     videowrite.release()
 
@@ -297,7 +311,7 @@ class RealizeAddSubtitles:
                         method="caption",
                         color="white",
                     )
-                    .set_position((20, h * 0.65))
+                    .set_position((20, h * 0.8))
                     .set_duration(span)
                     .set_start(start)
                 )
@@ -314,7 +328,7 @@ class RealizeAddSubtitles:
 
 
 args = parse_args()
-with open(args.config_file, "r") as f:
+with open(args.config_file, "r", encoding="utf-8") as f:
     sd_config = json.load(f)
     sd_config["sdBaseUrl"] = sd_config["sdBaseUrl"].rstrip("/") or ""
 
