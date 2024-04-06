@@ -9,6 +9,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
+import accountInfoPath from '../../resources/AccountInfo.json?commonjs-external&asset&asarUnpack'
 import update_srt_img_wav_from_table from '../../resources/sdk/node/update_srt_img_wav_from_table/update_srt_img_wav_from_table.js'
 import {
   processTextToPromptsStream,
@@ -121,6 +122,51 @@ app.whenReady().then(() => {
     if (startWindow) {
       openSpecialWindow()
     }
+  })
+
+  /**
+   * 检查是否登录成功
+   */
+  ipcMain.on('check-account-password-valid', (event, userInput) => {
+    // 读取本地账号密码
+    const accountInfo = JSON.parse(readFileSync(accountInfoPath).toString())
+    const { account, password } = accountInfo || {}
+    const { account: inputAccout, password: inputPassword } = userInput || {}
+    let result = { code: 0 }
+    if (account && password && account === inputAccout && password === inputPassword) {
+      result = { code: 1, msg: '登录成功' }
+    } else if (!inputAccout) {
+      result = { code: 0, msg: '未填写账号' }
+    } else if (!inputPassword) {
+      result = { code: 0, msg: '未填写密码' }
+    } else {
+      result = { code: 0, msg: '账号信息错误' }
+    }
+    event.sender.send('check-account-password-result', result)
+  })
+
+  /**
+   * 注册账号
+   */
+  ipcMain.on('register-account', (event, userInput) => {
+    // 读取本地账号密码
+    const accountInfo = JSON.parse(readFileSync(accountInfoPath).toString())
+    const { account, password } = accountInfo || {}
+    const { account: inputAccout, password: inputPassword } = userInput || {}
+
+    let result = {}
+    if (account && password) {
+      result = { code: false, msg: '已注册过' }
+      event.sender.send('register-account-result', result)
+      return
+    }
+
+    writeFileSync(
+      accountInfoPath,
+      JSON.stringify({ account: inputAccout, password: inputPassword })
+    )
+    result = { code: true, msg: '注册完成' }
+    event.sender.send('register-account-result', result)
   })
 
   /**

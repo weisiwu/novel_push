@@ -2,8 +2,8 @@
 
 <template>
   <div style="width: 100%"></div>
-  <p class="title">充值</p>
-  <p class="subtitle">AI生成短视频，记录美好生活</p>
+  <p class="title">联系我们</p>
+  <p class="subtitle">AI助力，提升效率</p>
   <n-flex direction="column" style="margin-top: 32px" justify="center">
     <n-qr-code
       padding="0"
@@ -11,7 +11,7 @@
       color="#409eff"
       background-color="#F5F5F5"
     />
-    <p style="display: block; width: 100%; color: #999; margin-top: 12px">请扫码上面二维码充值~</p>
+    <p style="display: block; width: 100%; color: #999; margin-top: 12px">扫描二维码加群~</p>
   </n-flex>
 </template>
 

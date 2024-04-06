@@ -2,23 +2,28 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {}
+const mainWindowChannels = [
+  'open-new-window',
+  'check-account-password-valid',
+  'check-account-password-result',
+  'register-account',
+  'register-account-result'
+]
 
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('electron', electronAPI)
     // 将ipcRenderer暴露出去
     // https://stackoverflow.com/questions/63615355/how-to-import-ipcrenderer-in-vue-js-dirname-is-not-defined
     contextBridge.exposeInMainWorld('ipcRenderer', {
       send: (channel, data) => {
-        let validChannels = ['open-new-window']
-        if (validChannels.includes(channel)) {
+        if (mainWindowChannels.includes(channel)) {
           ipcRenderer.send(channel, data)
         }
       },
       receive: (channel, func) => {
-        let validChannels = ['open-new-window']
-        if (validChannels.includes(channel)) {
+        if (mainWindowChannels.includes(channel)) {
           ipcRenderer.on(channel, (event, ...args) => func(...args))
         }
       }

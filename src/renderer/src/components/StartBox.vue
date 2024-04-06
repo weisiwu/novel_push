@@ -1,35 +1,54 @@
 <script setup>
+import { ref } from 'vue'
 import LoginBox from './LoginBox.vue'
 import RegisterBox from './RegisterBox.vue'
-import ChargeBox from './ChargeBox.vue'
+// import ChargeBox from './ChargeBox.vue'
+const tabs = ['login', 'register', 'charge']
+
+const valueRef = ref(tabs[0])
+const tabsRef = ref('')
+const switchToTab = (index = 0) => {
+  valueRef.value = tabs[index]
+  tabsRef.value.syncBarPosition?.(0)
+}
 </script>
 
 <template>
-  <div class="box">
-    <div class="overlay"></div>
-    <n-card class="half" size="medium" style="background-color: transparent">
-      <div class="left_img_bk"></div>
-    </n-card>
-    <n-card class="half" style="align-self: center; left: -30px" size="medium">
-      <n-tabs type="line" justify-content="center" placement="bottom" class="tab" animated>
-        <n-tab-pane class="tab_item" name="login" tab="登录">
-          <div class="pannel">
-            <LoginBox />
-          </div>
-        </n-tab-pane>
-        <n-tab-pane class="tab_item" name="register" tab="注册">
-          <div class="pannel">
-            <RegisterBox />
-          </div>
-        </n-tab-pane>
-        <n-tab-pane class="tab_item" name="charge" tab="充值">
-          <div class="pannel">
-            <ChargeBox />
-          </div>
-        </n-tab-pane>
-      </n-tabs>
-    </n-card>
-  </div>
+  <n-message-provider>
+    <div class="box">
+      <div class="overlay"></div>
+      <n-card class="half" size="medium" style="background-color: transparent">
+        <div class="left_img_bk"></div>
+      </n-card>
+      <n-card class="half" style="align-self: center; left: -30px" size="medium">
+        <n-tabs
+          ref="tabsRef"
+          v-model:value="valueRef"
+          type="line"
+          justify-content="center"
+          placement="bottom"
+          class="tab"
+          animated
+        >
+          <n-tab-pane class="tab_item" name="login" tab="登录">
+            <div class="pannel">
+              <LoginBox />
+            </div>
+          </n-tab-pane>
+          <n-tab-pane class="tab_item" name="register" tab="注册">
+            <div class="pannel">
+              <RegisterBox :switch-to-tab="switchToTab" />
+            </div>
+          </n-tab-pane>
+          <!-- <n-tab-pane class="tab_item" name="charge" tab="联系方式">
+            <div class="pannel">
+              <ChargeBox />
+            </div>
+          </n-tab-pane> -->
+        </n-tabs>
+      </n-card>
+    </div>
+  </n-message-provider>
 </template>
 
 <style scoped>
