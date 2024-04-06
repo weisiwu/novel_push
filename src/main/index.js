@@ -13,11 +13,12 @@ import update_srt_img_wav_from_table from '../../resources/sdk/node/update_srt_i
 import {
   processTextToPromptsStream,
   processPromptsToImgsAndAudio,
+  amplifySentencesImageToHD,
   drawImageByPrompts
 } from '../../resources/sdk/node/text_to_img/textToImg.js'
-// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
+import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
 // @Notice: 注意，mac使用
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
+// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -130,10 +131,10 @@ app.whenReady().then(() => {
       return
     }
     const everyUpdate = (args) => {
-      // console.log('wswTest: 接收到的是实例是', args, event?.sender?.send)
       if (!event?.sender?.send) {
         return
       }
+      console.log('wswTest: 文章解析收到的参数===>', args)
       event.sender.send('texttovideo-process-update', args)
     }
     const finish = () => {
@@ -162,6 +163,28 @@ app.whenReady().then(() => {
   })
 
   /**
+   * 高清放大
+   */
+  ipcMain.on('amplify-to-hd', (event, dataStr) => {
+    if (!mainWindow) {
+      return
+    }
+    let sentencesList = []
+    try {
+      sentencesList = JSON.parse(dataStr)
+    } catch (e) {
+      sentencesList = []
+    }
+    const everyUpdate = (args) => {
+      if (!event?.sender?.send) {
+        return
+      }
+      event.sender.send('texttovideo-process-update', args)
+    }
+    amplifySentencesImageToHD(everyUpdate, sentencesList)
+  })
+
+  /**
    * 单图重绘
    */
   ipcMain.on('start-redraw', async (event, params) => {
@@ -178,7 +201,9 @@ app.whenReady().then(() => {
       type: params?.type,
       name: params?.name,
       prompt: params?.prompt,
+      isHd: params?.isHd,
       sIndex: params?.sIndex,
+      image: params?.image,
       relatedCharactor: params?.relatedCharactor,
       everyUpdate
     })
@@ -238,8 +263,8 @@ app.whenReady().then(() => {
 
     // 监听子进程的退出事件
     childProcess.on('close', (exitCode) => {
-      console.log('wswTest:  整体进程退出', data)
       const { code, outputFile } = data || {}
+      console.log('wswTest:  整体进程退出', data)
       if (Number(code) === 1 && outputFile) {
         shell.openPath(outputFile).catch((e) => {
           console.log('wswTest: 尝试自动打开导出视频报错', e)
@@ -282,6 +307,7 @@ app.whenReady().then(() => {
         skipRmWatermark: userConfig.skipRmWatermark || false,
         steps: userConfig.steps || 25,
         cfg: userConfig.cfg || 10,
+        lora: userConfig.lora || config.lora || '',
         models: userConfig.models || config.models || '',
         ttf: userConfig.subfont || config.ttf || '',
         fontsize: userConfig.subfontsize || config.fontsize || 56,
@@ -294,7 +320,6 @@ app.whenReady().then(() => {
         sdBaseUrl: userConfig.sdBaseUrl || config.sdBaseUrl || ''
       })
       writeFileSync(configPath, localConfig)
-      // console.log('wswTest:写入配置文件', config)
     } catch (e) {
       console.log('wswTest: 本地写入配置失败', e)
     }

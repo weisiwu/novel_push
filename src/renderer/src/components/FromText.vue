@@ -10,7 +10,6 @@ const props = defineProps({
   updateIsProcessVideo: Function
 })
 const message = useMessage()
-const speed = 200 / 60 // 每分钟说多少字
 const sceneTableRef = ref('')
 const charactorTableRef = ref('')
 const textValue = ref('')
@@ -19,15 +18,18 @@ const startLoading = ref(false)
 const isDrawAndPeiyin = ref(false)
 const showProgressBar = ref(false)
 const parseTextProcessing = ref(false)
+const amplifyHDLoading = ref(false)
 const exportLoading = ref(false)
+const cancelLoading = ref(false)
 const progressBarPercentage = ref(0)
 const progressBarText = ref('')
 const parseTextLoading = ref(false)
 // 操作按钮栏状态
 const actionbarStatus = {
-  PARSE: 'PARSE',
-  PREPARE_TO_GENERATE: 'PREPARE_TO_GENERATE',
-  READY_TO_OUTPUT_VIDEO: 'READY_TO_OUTPUT_VIDEO'
+  PARSE: 'PARSE', // 智能解析文本
+  PREPARE_TO_GENERATE: 'PREPARE_TO_GENERATE', // 准备生成物料
+  AMPLIFY_TO_HD: 'AMPLIFY_TO_HD', // 高清放大图片
+  READY_TO_OUTPUT_VIDEO: 'READY_TO_OUTPUT_VIDEO' // 导出视频
 }
 const actionbarCurrentStatus = ref(actionbarStatus.PARSE)
 const charactorsTableData = ref([])
@@ -66,84 +68,91 @@ if (window.ipcRenderer) {
       return
     }
     showTable.value = true
+    // type: charactor/sentence 为绘制人物和绘制句子两种绘图人物
     const {
       type,
       sIndex = 0,
       text = '',
       tags = '',
-      image = '',
       name = '',
+      HDImage = '',
       restImgs = [],
       wav = '',
       relatedCharactor = ''
     } = info || {}
+    let image = info?.image || ''
     const isCharactor = type === 'charactor'
+    const isSentence = type === 'sentence'
+    const iswav = type === 'generate_wav'
+    const isAmplifyToHD = type === 'amplify_to_hd'
+    // 只要不是人物的任务，就都放到场景中
     const isIn = isCharactor
       ? charactorsTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
       : setencesTableData?.value?.findIndex?.((info) => info.sIndex === sIndex)
-    // 对表中已经存在的数据进行更新
-    if (isIn >= 0) {
-      if (isCharactor) {
-        const newTableData = [...charactorsTableData.value]
-        newTableData[isIn] = {
-          name: charactorsTableData.value[isIn].name || '',
-          tags: charactorsTableData.value[isIn].tags || '',
-          id: sIndex,
-          sIndex,
-          image: image ? `${image}?t=${new Date().getTime()}` : '',
-          restImgs,
-          redrawing: false
-        }
-        charactorsTableData.value = newTableData
-      } else {
-        const newTableData = [...setencesTableData.value]
-        newTableData[isIn] = {
-          ...setencesTableData.value[isIn],
-          id: sIndex,
-          sIndex,
-          wav: setencesTableData.value[isIn]?.wav || wav,
-          image: image ? `${image}?t=${new Date().getTime()}` : '',
-          restImgs,
-          redrawing: false
-        }
-        setencesTableData.value = newTableData
-      }
 
-      if (
-        setencesTableData.value.every((row) => row?.image && row?.wav) &&
-        setencesTableData.value.length > 0
-      ) {
-        actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
-        showProgressBar.value = false
-        progressBarPercentage.value = 0
-      }
-      updateProcess()
-      return
+    console.log('wswTest: 收到的信息是什么', isCharactor && '是角色', isSentence && '是场景', info)
+    let disabledPreview = false
+    if (isCharactor || isSentence) {
+      // 绘图的时候，返回的错误图地址统一处理
+      disabledPreview = image === 'error_img' || !image
+      image = image === 'error_img' ? generatefaillogo : image
     }
-    // 向表中添加新数据
+    // 人物角色绘图
     if (isCharactor) {
-      charactorsTableData.value.push({ id: sIndex, sIndex, name, tags, image, redrawing: false })
-    } else {
-      setencesTableData.value.push({
+      const updateIndex = isIn >= 0 ? isIn : charactorsTableData.value.length
+      const newTableData = [...charactorsTableData.value]
+      newTableData[updateIndex] = {
+        name: name || charactorsTableData.value?.[updateIndex]?.name || '',
+        tags: tags || charactorsTableData.value?.[updateIndex]?.tags || '',
         id: sIndex,
         sIndex,
-        wav,
-        text,
-        tags,
-        image,
-        relatedCharactor,
+        text: text || charactorsTableData.value?.[updateIndex]?.text,
+        image: isIn >= 0 ? (image ? `${image}?t=${new Date().getTime()}` : '') : image,
+        restImgs: restImgs || [],
         redrawing: false,
-        move: '向上'
-      })
+        disabledPreview
+      }
+      charactorsTableData.value = newTableData
+    } else if (isSentence) {
+      // 场景绘图
+      const updateIndex = isIn >= 0 ? isIn : setencesTableData.value.length
+      const newTableData = [...setencesTableData.value]
+      newTableData[updateIndex] = {
+        ...setencesTableData.value?.[updateIndex],
+        id: sIndex,
+        sIndex,
+        wav: wav || setencesTableData.value?.[updateIndex]?.wav,
+        tags: tags || charactorsTableData.value?.[updateIndex]?.tags || '',
+        image: isIn >= 0 ? (image ? `${image}?t=${new Date().getTime()}` : '') : image,
+        restImgs,
+        text: text || setencesTableData.value?.[updateIndex]?.text,
+        relatedCharactor:
+          relatedCharactor || setencesTableData.value?.[updateIndex]?.relatedCharactor,
+        redrawing: false,
+        disabledPreview
+      }
+      setencesTableData.value = newTableData
+    } else if (iswav) {
+      // 场景配音
+      const updateIndex = isIn >= 0 ? isIn : setencesTableData.value.length
+      const newTableData = [...setencesTableData.value]
+      newTableData[updateIndex] = {
+        ...setencesTableData.value?.[updateIndex],
+        wav: wav || setencesTableData.value?.[updateIndex]?.wav
+      }
+      setencesTableData.value = newTableData
+    } else if (isAmplifyToHD) {
+      // 高清放大
+      const updateIndex = isIn >= 0 ? isIn : setencesTableData.value.length
+      const newTableData = [...setencesTableData.value]
+      newTableData[updateIndex] = {
+        ...setencesTableData.value?.[updateIndex],
+        redrawing: false,
+        HDImage: HDImage || setencesTableData.value?.[updateIndex]?.HDImage || ''
+      }
+      setencesTableData.value = newTableData
     }
-    if (
-      setencesTableData.value.every((row) => row?.image && row?.wav) &&
-      setencesTableData.value.length > 0
-    ) {
-      isDrawAndPeiyin.value = false
-      showProgressBar.value = false
-      actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
-    }
+
     updateProcess()
   })
   /**
@@ -184,22 +193,15 @@ if (window.ipcRenderer) {
   })
 }
 
-// 在编辑字幕后，更新字幕和对应的语音
-const updateScentence = (text, row) => {
-  // row.refreshing = true
-  // window.ipcRenderer.send('refresh-voice', {})
-  // window.ipcRenderer.receive('refresh-voice-finish', () => {
-  //   row.refreshing = false
-  // })
-}
-
 const clear = () => {
   textValue.value = ''
   showTable.value = false
   startLoading.value = false
   isDrawAndPeiyin.value = false
   showProgressBar.value = false
+  amplifyHDLoading.value = false
   exportLoading.value = false
+  cancelLoading.value = false
   progressBarPercentage.value = 0
   progressBarText.value = ''
   parseTextLoading.value = false
@@ -211,23 +213,50 @@ const clear = () => {
 // 更新进度
 const updateProcess = () => {
   const allData = [...charactorsTableData.value, ...setencesTableData.value]
-  console.log('wswTest: allData', allData)
+  console.log('wswTest: 所有数据都有什么====>', allData)
+  // console.log('wswTest: allData', allData)
   const lens = allData.length
   const finishedCharactors =
     charactorsTableData.value?.filter?.((charactor) => {
-      console.log('wswTest:charactor ', charactor)
-      return charactor?.image
+      // console.log('wswTest:charactor ', charactor.image)
+      return charactor?.image && charactor?.image?.includes?.(generatefaillogo) >= 0
     })?.length || 0
   const finishedSentences =
     setencesTableData.value?.filter?.((sentence) => {
-      console.log('wswTest: sentence', sentence)
-      return sentence?.image && sentence?.wav
+      // console.log('wswTest: sentence', sentence.image)
+      return sentence?.image && sentence?.wav && sentence?.image?.includes?.(generatefaillogo) >= 0
     })?.length || 0
 
-  console.log('wswTest: 多个格式', finishedCharactors, finishedSentences, lens)
+  // console.log('wswTest: 多个格式', finishedCharactors, finishedSentences, lens)
   const percentage = ((finishedCharactors + finishedSentences) / (lens || 1)) * 100
   progressBarPercentage.value = percentage.toFixed(2)
   progressBarText.value = `${progressBarPercentage.value}%`
+
+  if (
+    setencesTableData.value.every((row) => row?.image && row?.wav) &&
+    setencesTableData.value.length > 0
+  ) {
+    isDrawAndPeiyin.value = false
+    showProgressBar.value = false
+    actionbarCurrentStatus.value = actionbarStatus.AMPLIFY_TO_HD
+    // 如果是高清放大进度，则要另外计算(中间出现了高清图，则开始计算进度)
+    if (setencesTableData.value.some((row) => row?.HDImage)) {
+      const finishedSentences =
+        setencesTableData.value?.filter?.((sentence) => sentence?.HDImage)?.length || 0
+      const sentencesLen = setencesTableData.value.length || 1
+      const percentage = (finishedSentences / sentencesLen) * 100
+      progressBarPercentage.value = percentage.toFixed(2)
+      progressBarText.value = `${progressBarPercentage.value}%`
+      // 高清放大结束
+      if (setencesTableData.value.every((row) => row?.HDImage)) {
+        amplifyHDLoading.value = false
+        progressBarPercentage.value = 0
+        actionbarCurrentStatus.value = actionbarStatus.READY_TO_OUTPUT_VIDEO
+      }
+    } else {
+      progressBarPercentage.value = 0
+    }
+  }
 }
 
 // 删除行
@@ -276,6 +305,17 @@ const redrawSentenceRow = async (row) => {
   })
 }
 
+const reAmplifySentenceRow = async (row) => {
+  row.redrawing = true
+  window.ipcRenderer.send('start-redraw', {
+    prompt: row.tags,
+    sIndex: row.sIndex,
+    isHd: true,
+    image: row?.image,
+    relatedCharactor: row?.relatedCharactor || ''
+  })
+}
+
 // 开始解析文本
 const startProcess = () => {
   startLoading.value = true
@@ -297,12 +337,51 @@ const startGenerate = () => {
     setencesTableData?.value?.map?.((row) => row?.text || '')
   )
 }
+const amplifyToHD = () => {
+  // 开始对图片进行放大
+  const allSentenceFinished = setencesTableData.value.every(
+    (row) =>
+      row?.wav &&
+      row?.image &&
+      !row?.image?.includes?.(waitforgeneratelogo) &&
+      !row?.image?.includes?.(generatefaillogo)
+  )
+  if (!allSentenceFinished) {
+    message.error('表格中有未生成的图，请重新生成后再高清放大')
+    return
+  }
+  amplifyHDLoading.value = true
+  showProgressBar.value = true
+  progressBarText.value = '正对所有场景图片进行高清放大'
+  setencesTableData.value = setencesTableData.value.map((row) => ({ ...row, redrawing: true }))
+  window.ipcRenderer.send('amplify-to-hd', JSON.stringify(getSetencesTableData()))
+}
+
 const exportVideo = () => {
+  // 在开始导出前，先判断图片和对应的音频是否成功生成
+  const allCharactorFinished = charactorsTableData.value.every((row) => row?.image)
+  const allSentenceFinished = setencesTableData.value.every(
+    (row) =>
+      row?.image &&
+      row?.wav &&
+      !row?.image?.includes?.(waitforgeneratelogo) &&
+      !row?.image?.includes?.(generatefaillogo)
+  )
+  if (!allCharactorFinished || !allSentenceFinished) {
+    message.error('表格中有未生成的图，请重新生成后再导出视频')
+    return
+  }
+  amplifyHDLoading.value = false
   exportLoading.value = true
   showProgressBar.value = true
   progressBarText.value = '正将图片合并转化为视频'
   console.log('wswTest: 转换的数据是什么', getSetencesTableData())
   window.ipcRenderer.send('concat-video', JSON.stringify(getSetencesTableData()))
+}
+
+// 取消正在处理
+const cancelProcess = () => {
+  cancelLoading.value = true
 }
 </script>
 
@@ -336,9 +415,22 @@ const exportVideo = () => {
         >自动绘图配音</n-button
       >
     </div>
+    <!-- 开始高清放大 -->
+    <div v-if="actionbarCurrentStatus === actionbarStatus.AMPLIFY_TO_HD">
+      <n-button type="primary" :loading="amplifyHDLoading" @click="amplifyToHD">高清放大</n-button>
+    </div>
     <!-- 整体处理完，操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO">
       <n-button type="primary" :loading="exportLoading" @click="exportVideo">导出视频</n-button>
+    </div>
+    <!-- 整体处理完，操作按钮 -->
+    <div
+      v-if="
+        actionbarCurrentStatus !== actionbarStatus.READY_TO_OUTPUT_VIDEO &&
+        actionbarCurrentStatus !== actionbarStatus.PARSE
+      "
+    >
+      <n-button type="primary" :loading="cancelLoading" @click="cancelProcess">取消</n-button>
     </div>
   </n-space>
   <n-space v-if="!showTable" vertical :style="{ margin: '20px 20px 0px' }">
@@ -441,7 +533,7 @@ const exportVideo = () => {
       :data="setencesTableData"
       :edit-config="{ trigger: 'click', mode: 'cell' }"
     >
-      <vxe-column type="seq" title="镜头序号" align="center" width="100"></vxe-column>
+      <vxe-column type="seq" title="镜头序号" width="100"></vxe-column>
       <vxe-column field="text" title="字幕">
         <template #default="{ row }">
           <n-input
@@ -456,34 +548,60 @@ const exportVideo = () => {
           </n-input>
         </template>
       </vxe-column>
-      <vxe-column field="tags" title="绘图提示词" align="center">
+      <vxe-column
+        v-if="
+          [
+            actionbarStatus.PARSE,
+            actionbarStatus.PREPARE_TO_GENERATE,
+            actionbarStatus.AMPLIFY_TO_HD
+          ].includes(actionbarCurrentStatus) && !amplifyHDLoading
+        "
+        align="center"
+        field="tags"
+        title="绘图提示词"
+      >
         <template #default="{ row }">
           <n-input
             v-model:value="row.tags"
             type="textarea"
             maxlength="100"
-            placeholder="字幕文案"
+            placeholder="绘图提示词"
             :disabled="showProgressBar"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
         </template>
       </vxe-column>
-      <vxe-column field="image" width="300" title="镜头图" align="center">
+      <vxe-column field="image" width="300" title="镜头图">
         <template #default="{ row }">
           <n-spin :show="row.redrawing" :style="{ 'text-align': 'center' }">
             <n-image
               width="300"
               :fallback-src="generatefaillogo"
-              :preview-disabled="!row.image"
-              :src="row.image || waitforgeneratelogo"
+              :preview-disabled="row.disabledPreview"
+              :src="
+                (row.HDImage ? `${row.HDImage}?t=${new Date().getTime()}` : '') ||
+                row.image ||
+                waitforgeneratelogo
+              "
               :show-toolbar="false"
               lazy
             />
           </n-spin>
         </template>
       </vxe-column>
-      <vxe-column field="image" width="300" title="可选镜头图" align="center">
+      <vxe-column
+        v-if="
+          [
+            actionbarStatus.PARSE,
+            actionbarStatus.PREPARE_TO_GENERATE,
+            actionbarStatus.AMPLIFY_TO_HD
+          ].includes(actionbarCurrentStatus) && !amplifyHDLoading
+        "
+        field="image"
+        width="300"
+        title="可选镜头图"
+      >
         <template #default="{ row }">
           <n-image
             v-for="img in row.restImgs"
@@ -501,7 +619,7 @@ const exportVideo = () => {
         </template>
       </vxe-column>
       <!-- <vxe-column field="move" width="100" title="图片运动" align="center"></vxe-column> -->
-      <vxe-column field="action" width="120" title="操作" align="center">
+      <vxe-column field="action" width="120" title="操作">
         <template #default="{ row }">
           <n-button
             :style="{ 'margin-bottom': '8px' }"
@@ -511,11 +629,20 @@ const exportVideo = () => {
             >删除</n-button
           >
           <n-button
+            v-show="!row.HDImage"
             type="primary"
             :disabled="startLoading || showProgressBar"
             :loading="row.redrawing"
             @click="redrawSentenceRow(row)"
             >绘图</n-button
+          >
+          <n-button
+            v-show="row.HDImage"
+            type="primary"
+            :disabled="startLoading || showProgressBar"
+            :loading="row.redrawing"
+            @click="reAmplifySentenceRow(row)"
+            >重新放大</n-button
           >
         </template>
       </vxe-column>

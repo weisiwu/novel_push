@@ -10,6 +10,7 @@ const mainWindowChannels = [
   'export-process-update',
   'generate-image-audio-process-start',
   'texttovideo-parsetext-process-finish',
+  'amplify-to-hd',
   'concat-video',
   'finish-concat',
   'start-redraw',

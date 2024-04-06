@@ -1,18 +1,15 @@
 import axios from 'axios'
-import moment from 'moment'
-import { rimrafSync } from 'rimraf'
 import { join, resolve } from 'path'
-import fs, { readFileSync, writeFileSync } from 'fs'
-import wavFileInfo from 'wav-file-info'
+import fs, { readFileSync } from 'fs'
 import {
   sdBaseUrl,
   t2iApi,
   i2iApi,
+  amplifyApi,
   positivePrompt,
   negativePrompt,
   outputPath,
   imageOutputFolder,
-  audioOutputFolder,
   batchSize,
   cfg,
   iti_cfg,
@@ -21,13 +18,8 @@ import {
   HDImageHeight
 } from '../../../BaoganAiConfig.json'
 import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
-import {
-  getCharactorsSentencesFromText,
-  getCharactorsSentencesFromTextStream
-} from '../get_prompts_by_kimi/getPrompts'
+import { getCharactorsSentencesFromTextStream } from '../get_prompts_by_kimi/getPrompts'
 import { converTextToSpeech } from '../ms_azure_tts/getWavFromText'
-import { update_srt } from '../update_srt_img_wav_from_table/update_srt_img_wav_from_table'
-// TODO:(wsw) 绘图参数设置收敛
 const baseDrawConfig = {
   negative_prompt: negativePrompt,
   batch_size: batchSize,
@@ -40,6 +32,7 @@ const baseDrawConfig = {
 const MAX_RETRY_TIMES = 3
 const fullT2iApi = `${sdBaseUrl.replace(/\/$/, '')}${t2iApi}`
 const fullI2iApi = `${sdBaseUrl.replace(/\/$/, '')}${i2iApi}`
+const fullAmplifyImgApi = `${sdBaseUrl.replace(/\/$/, '')}${amplifyApi}`
 
 let charactors = {}
 let charactorsTask = []
@@ -65,26 +58,71 @@ function drawImageByPrompts({
   type = 'sentence',
   name = '',
   prompt = '',
+  image = '',
   sIndex = 0,
+  isHd = false,
   relatedCharactor = '',
   everyUpdate = () => {},
-  ...rest
+  retryTimes = 0
 }) {
-  console.log('wswTest: restrestrestrestxxx', rest, name)
-  let retryTimes = 0
-  console.log('wswTest: 目前所有的角色信息', charactors)
   const relatedCharactorObj = charactors[relatedCharactor] || null
-  const { HDImageWidth, HDImageHeight } = readLocalConfig()
+  const { HDImageWidth, HDImageHeight, lora } = readLocalConfig()
   const isI2i = Boolean(relatedCharactorObj)
+  let api = isI2i ? fullI2iApi : fullT2iApi
+  api = isHd ? fullAmplifyImgApi : api
+  const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
+
+  // 高清重绘
+  if (isHd) {
+    const pureImage = image?.replace?.(/\?t=\d+$/, '')
+    console.log('wswTest: 要高清重绘图的是什么======>>>>', pureImage)
+    // 如果是高清放大
+    const drawConfig = {
+      resize_mode: 0,
+      upscaling_resize: 2.5,
+      upscaling_crop: true,
+      upscaler_1: 'R-ESRGAN 4x+',
+      upscaler_2: 'R-ESRGAN 4x+ Anime6B',
+      extras_upscaler_2_visibility: 0,
+      image: readFileSync(pureImage, { encoding: 'base64' })
+    }
+    return axios
+      .post(api, drawConfig)
+      .then((res) => {
+        const newImg = res?.data?.image || ''
+        // console.log('wswTest: 高清重绘的结果是什么', res)
+        console.log('wswTest: 高清重绘的新图是是这个', newImg?.substr?.(0, 10))
+        console.log('wswTest: 高清重绘2222', res?.config?.data?.image?.substr?.(0, 10))
+        const _path = join(imageSaveFolder, `${sIndex}.png`)
+        console.log('wswTest: 高清炒年糕会的phta', _path)
+        fs.writeFileSync(_path, Buffer.from(newImg, 'base64'))
+        everyUpdate({ type: 'amplify_to_hd', sIndex, HDImage: _path })
+      })
+      .catch((e) => {
+        console.log('[高清重绘] execption =>', e)
+        if (retryTimes < MAX_RETRY_TIMES) {
+          return drawImageByPrompts({
+            type,
+            image: pureImage,
+            isHd,
+            everyUpdate,
+            retryTimes: ++retryTimes
+          })
+        } else {
+          // 放大超出次数，报错
+          everyUpdate({ type: 'amplify_to_hd', sIndex, image: 'error_img' })
+        }
+        return { error: e?.message, code: 0 }
+      })
+  }
+
   prompt = prompt
     .split(',')
     .filter((item) => item)
     // i2i时，需要对句子的提示词做增强，使得画面中能凸显对应元素
     .map((item) => (isI2i ? `(${item}:1.7)` : `${item}`))
     .join(',')
-  console.log('wswTest: 关联角色是什么', relatedCharactorObj)
   prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
-  const api = isI2i ? fullI2iApi : fullT2iApi
   const drawConfig = isI2i
     ? {
         ...baseDrawConfig,
@@ -92,11 +130,15 @@ function drawImageByPrompts({
         height: HDImageHeight,
         cfg_scale: iti_cfg,
         denoising_strength: iti_denoising_strength,
-        init_images: [readFileSync(relatedCharactorObj?.image, { encoding: 'base64' })]
+        init_images: [
+          relatedCharactorObj?.image
+            ? readFileSync(relatedCharactorObj?.image, { encoding: 'base64' })
+            : ''
+        ]
       }
     : { ...baseDrawConfig, width: HDImageWidth, height: HDImageHeight }
 
-  const finalPrompt = `${positivePrompt},${prompt} <lora:GachaSpliash4:1.5>`
+  const finalPrompt = `${positivePrompt},${prompt} ${lora ? `<lora:${lora}:1.5>` : ''}`
   console.log('wswTest:', isI2i ? '图生图' : '文生图', '提示词', finalPrompt)
   return axios
     .post(api, {
@@ -105,7 +147,6 @@ function drawImageByPrompts({
     })
     .then((res) => {
       const images = res?.data?.images || []
-      console.log('wswTest: 绘图生成的图列表是什么', images.length)
       const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
       if (images.length) {
         let _path = ''
@@ -115,127 +156,60 @@ function drawImageByPrompts({
           fs.writeFileSync(_path, Buffer.from(images[0], 'base64'))
           console.log('wswTest: 展示图片名', _path)
         }
-        images.slice(1, batchSize).forEach((imgBase64) => {
+        // 非高清放大，会批量生图
+        images.slice?.(1, batchSize)?.forEach?.((imgBase64) => {
           // 系统写1m的图片速度，远比预料中快，大约在700us左右。
           const rest_path = join(imageSaveFolder, `${sIndex}_${process.hrtime.bigint()}_rest.png`)
-          console.log('wswTest: 备选图片名', rest_path)
           fs.writeFileSync(rest_path, Buffer.from(imgBase64, 'base64'))
           restImgs.push(rest_path)
         })
         console.log('wswTest: restImgsrestImgs', restImgs)
-        everyUpdate({
-          type,
-          sIndex,
-          image: _path,
-          restImgs: restImgs,
-          tags: prompt || ''
-        })
+        const updateConfig = { type, sIndex, image: _path, restImgs: restImgs, tags: prompt || '' }
+        everyUpdate(updateConfig)
+        // 向全局变量中添加角色信息
         if (type === 'charactor') {
           charactors[name] = { image: _path, prompt: prompt }
         }
+        retryTimes = 0
         return { data: _path, code: 1 }
       }
-      console.log('wswTest: ', '图片生成失败了')
       if (retryTimes < MAX_RETRY_TIMES) {
-        retryTimes++
-        return drawImageByPrompts({ type, name, prompt, sIndex, relatedCharactor, everyUpdate })
+        return drawImageByPrompts({
+          type,
+          name,
+          prompt,
+          sIndex,
+          relatedCharactor,
+          everyUpdate,
+          retryTimes: ++retryTimes
+        })
       }
       return { error: '未能成功生图', code: 0 }
     })
     .catch((e) => {
+      console.log('[drawImageByPrompts] execption =>', retryTimes)
       if (retryTimes < MAX_RETRY_TIMES) {
-        retryTimes++
-        return drawImageByPrompts({ type, name, prompt, sIndex, relatedCharactor, everyUpdate })
+        return drawImageByPrompts({
+          type,
+          name,
+          prompt,
+          sIndex,
+          relatedCharactor,
+          everyUpdate,
+          retryTimes: ++retryTimes
+        })
+      } else {
+        // 重绘超出次数，报错
+        everyUpdate({
+          type,
+          sIndex,
+          image: 'error_img',
+          restImgs: [],
+          tags: prompt || ''
+        })
       }
-      console.log('[drawImageByPrompts] execption =>', e)
       return { error: e?.message, code: 0 }
     })
-}
-
-/**
- * 对返回的prompt进行加工
- */
-function formatPrompt(rawStr = '') {
-  return (rawStr || '').toString()
-}
-
-/**
- * 处理文本，获取绘图、配音任务
- */
-async function processTextToPrompts(text, everyUpdate, finish = () => {}) {
-  const { charactors: rawCharactors = [], sentences: rawSentences = [] } =
-    (await getCharactorsSentencesFromText(text)) || []
-
-  if (!rawCharactors.length) {
-    console.log('[processTextToPrompts]解析角色错误，未解析出角色')
-    everyUpdate({ error: 0, type: 'parse_text_error', message: 'need retry' })
-    return
-  }
-  const { outputPath, srtOutputFolder } = readLocalConfig()
-  const imageSaveFolder = resolve(join(outputPath, imageOutputFolder))
-  if (!fs.existsSync(imageSaveFolder)) {
-    fs.mkdirSync(imageSaveFolder, { recursive: true })
-  } else {
-    rimrafSync(`${imageSaveFolder}/*`, { glob: true })
-  }
-  const audioSaveFolder = resolve(join(outputPath, audioOutputFolder))
-  if (!fs.existsSync(audioSaveFolder)) {
-    fs.mkdirSync(audioSaveFolder, { recursive: true })
-  } else {
-    rimrafSync(`${audioSaveFolder}/*`, { glob: true })
-  }
-  const srtSaveFolder = resolve(join(outputPath, srtOutputFolder))
-  if (!fs.existsSync(srtSaveFolder)) {
-    fs.mkdirSync(srtSaveFolder, { recursive: true })
-  } else {
-    rimrafSync(`${srtSaveFolder}/*`, { glob: true })
-  }
-  charactors = {}
-  charactorsTask = []
-  sentencesTask = []
-  ttsTask = []
-
-  // step1: 将已经获取的角色和句子文案同步到表格中
-  // 处理角色提示词
-  rawCharactors.forEach((charactor, index) => {
-    const _name = charactor.name?.replace?.(/\s/g, '')?.toLowerCase?.()
-    delete charactor.name
-    const charactorPrompt = formatPrompt(
-      Object.values(charactor)
-        .map((p) => formatPrompt(p))
-        .filter((p) => p)
-        .join(',')
-    )
-    const charactorInfo = {
-      type: 'charactor',
-      name: _name,
-      sIndex: index,
-      tags: charactorPrompt || '',
-      prompt: charactorPrompt
-    }
-    everyUpdate(charactorInfo)
-    charactorsTask.push({ ...charactorInfo, everyUpdate }) // 加载角色任务
-  })
-
-  rawSentences.forEach((rawSentence, sIndex) => {
-    const { chinese, english: rawEnglish, charactor: rawCharactor } = rawSentence || {}
-    const charactor = rawCharactor.replace?.(/\s/g, '')?.toLowerCase?.()
-    const english = rawEnglish instanceof Array ? rawEnglish.join(',') : rawEnglish || ''
-    const sentencePrompt = formatPrompt([positivePrompt, english].join(','))
-    const relatedCharactor = charactor
-    const sentenceInfo = {
-      type: 'sentence',
-      tags: sentencePrompt || '',
-      prompt: sentencePrompt,
-      sIndex,
-      text: chinese,
-      relatedCharactor
-    }
-    everyUpdate(sentenceInfo)
-    sentencesTask.push({ ...sentenceInfo, everyUpdate }) // 加载句子任务
-    ttsTask.push({ ...sentenceInfo, everyUpdate }) // 加载配音任务
-  })
-  finish()
 }
 
 /**
@@ -295,31 +269,34 @@ function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
   // step3: 为句子进行配音
   ttsTask.reduce((task, taskInfo) => {
     return task.then(() => {
-      console.log('wswTest: 开始配音', taskInfo.text)
+      // console.log('wswTest: 开始配音', taskInfo.text)
       return converTextToSpeech(taskInfo.text, `${taskInfo.sIndex}.wav`, (wav) => {
         texts.push({ wav, text: taskInfo.text })
         delete taskInfo.everyUpdate
-        everyUpdate({ ...taskInfo, wav })
+        console.log('wswTest: ', '生成配音', taskInfo)
+        everyUpdate({ ...taskInfo, type: 'generate_wav', wav })
       })
     })
   }, Promise.resolve())
-  // .then(() => {
-  //   console.log(
-  //     'wswTest: 常规一键生成时候的参数是什么',
-  //     texts.map((item) => item.text),
-  //     texts.map((item) => item.wav)
-  //   )
-  //   // step4: 更新字幕文件
-  //   update_srt(
-  //     texts.map((item) => item.text),
-  //     texts.map((item) => item.wav)
-  //   )
-  // })
+}
+
+/**
+ * 场景图片批量放大
+ */
+function amplifySentencesImageToHD(everyUpdate, sentencesList) {
+  const allTask = [...sentencesList]
+  allTask.reduce((task, taskInfo) => {
+    return task.then(() => {
+      console.log('wswTest: ', '开始高清重绘图片1212', taskInfo)
+      const pureImage = taskInfo?.image?.replace?.(/\?t=\d+$/, '')
+      return drawImageByPrompts({ ...taskInfo, image: pureImage, isHd: true, everyUpdate })
+    })
+  }, Promise.resolve())
 }
 
 export {
-  processTextToPrompts,
   processTextToPromptsStream,
   processPromptsToImgsAndAudio,
+  amplifySentencesImageToHD,
   drawImageByPrompts
 }

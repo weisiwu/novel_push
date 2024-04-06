@@ -52,6 +52,16 @@
               :on-update:show="startModelsLoading"
             />
           </n-form-item>
+          <n-form-item label="绘图lora" path="lora">
+            <n-select
+              v-model:value="formModel.lora"
+              remote
+              placeholder="请选择绘画lora"
+              :loading="loraLoading"
+              :options="loraOptions"
+              :on-update:show="startLoraLoading"
+            />
+          </n-form-item>
           <n-form-item label="配音角色" path="voicer">
             <n-select
               v-model:value="formModel.voicer"
@@ -106,7 +116,9 @@ import { useMessage } from 'naive-ui'
 import axios from 'axios'
 import {
   sdBaseUrl,
+  loraListApi,
   modelListApi,
+  getConfigApi,
   updateConfigApi
 } from '../../../../resources/BaoganAiConfig.json?asset&asarUnpack'
 import { voicers } from '../../../../resources/sdk/node/ms_azure_tts/chn_voice_list.json?asset&asarUnpack'
@@ -117,13 +129,16 @@ const props = defineProps({ toggleShow: Function, updateGlobalLoading: Function 
 const retryTimes = 5
 const active = ref(true)
 const message = useMessage()
+const loraOptions = ref([])
 const modelsOptions = ref([])
 const voicerOptions = ref(voicers)
 const fontsOptions = ref(fonts)
+const loraLoading = ref(false)
 const modelLoading = ref(false)
 const formRef = ref(null)
 const formModel = ref({
   models: '',
+  lora: '',
   voicer: '',
   subfont: '',
   subfontsize: 56,
@@ -139,8 +154,7 @@ const toggle = () => {
 const selectFolder = () => {
   window.ipcRenderer.send('open-dialog')
 }
-let _retryTimes = 0
-const fetchModelList = () => {
+const fetchModelList = (_retryTimes = 0) => {
   const _sdBaseUrl = sdBaseUrl.replace(/\/$/, '')
   if (!_sdBaseUrl) {
     props.updateGlobalLoading(false)
@@ -169,15 +183,82 @@ const fetchModelList = () => {
     })
     .catch(() => {
       if (_retryTimes < retryTimes) {
-        _retryTimes++
-        return fetchModelList()
+        return fetchModelList(_retryTimes + 1)
       }
       message.error('stable diffusion地址不可用')
       props.updateGlobalLoading(false)
     })
 }
 
-onMounted(() => fetchModelList())
+const fetchLoraList = (_retryTimes = 0) => {
+  const _sdBaseUrl = sdBaseUrl.replace(/\/$/, '')
+  if (!_sdBaseUrl) {
+    props.updateGlobalLoading(false)
+    message.error('未填写stable diffusion地址')
+    return
+  }
+  return axios
+    .get(`${_sdBaseUrl}${loraListApi}`)
+    .then((result) => {
+      console.log('wswTest: 这些都是lora', result)
+      props.updateGlobalLoading(false)
+      const lora_list = result?.data
+      loraLoading.value = false
+      if (lora_list?.length) {
+        loraOptions.value =
+          lora_list?.map?.((lora) => {
+            return {
+              label: lora.name,
+              value: lora.name
+            }
+          }) || []
+        return
+      }
+      throw new Error('没有发现lora模型')
+    })
+    .catch(() => {
+      if (_retryTimes < retryTimes) {
+        return fetchLoraList(_retryTimes + 1)
+      }
+      message.error('stable diffusion地址不可用')
+      props.updateGlobalLoading(false)
+    })
+}
+
+const fetchConfigInfo = (_retryTimes = 0) => {
+  const _sdBaseUrl = sdBaseUrl.replace(/\/$/, '')
+  if (!_sdBaseUrl) {
+    props.updateGlobalLoading(false)
+    message.error('未填写stable diffusion地址')
+    return
+  }
+  return axios
+    .get(`${_sdBaseUrl}${getConfigApi}`)
+    .then((result) => {
+      props.updateGlobalLoading(false)
+      const { sd_model_checkpoint } = result?.data || {}
+      console.log('wswTest: 获取配置sd_model_checkpoint', sd_model_checkpoint)
+      if (sd_model_checkpoint) {
+        formModel.value.models = sd_model_checkpoint
+      }
+      if (loraOptions.value?.[0]) {
+        formModel.value.lora = loraOptions.value[0]?.name
+      }
+    })
+    .catch(() => {
+      if (_retryTimes < retryTimes) {
+        return fetchConfigInfo(_retryTimes + 1)
+      }
+      message.error('stable diffusion地址不可用')
+      props.updateGlobalLoading(false)
+    })
+}
+
+onMounted(() => {
+  fetchModelList()
+  fetchLoraList()
+  fetchConfigInfo()
+})
 
 if (window.ipcRenderer) {
   window.ipcRenderer.receive('select-folder', (params) => {
@@ -195,6 +276,7 @@ if (window.ipcRenderer) {
       formModel.value.subfont = localConfig.ttf
       formModel.value.subfontsize = localConfig.fontsize
       formModel.value.voicer = localConfig.azureTTSVoice
+      formModel.value.lora = localConfig.lora
       formModel.value.models = localConfig.models
       readConfigModels = localConfig.models
     } catch (e) {
@@ -210,12 +292,14 @@ const saveConfig = () => {
   }
   // 模型发生改变时，尝试更新默认模型
   if (formModel.value.models && readConfigModels !== formModel.value.models) {
+    const switchMsg = message.info(`正在切换模型为: ${formModel.value.models}`, { duration: 0 })
     axios
       .post(`${sdBaseUrl}${updateConfigApi}`, {
         sd_model_checkpoint: formModel.value.models
       })
       .then((res) => {
         console.log('wswTest: 切换模型结果是是什么', res)
+        switchMsg.destroy()
         if (res.status == 200) {
           message.success(`模型成功切换为: ${formModel.value.models}`)
         } else {
@@ -224,6 +308,7 @@ const saveConfig = () => {
       })
       .catch((e) => {
         console.log('wswTest: 切换模型发生错误', e)
+        switchMsg.destroy()
         message.error('所选模型切换失败')
       })
   }
@@ -234,6 +319,9 @@ const saveConfig = () => {
 
 const startModelsLoading = (show) => {
   modelLoading.value = show
+}
+const startLoraLoading = (show) => {
+  loraLoading.value = show
 }
 </script>
 
