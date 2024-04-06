@@ -48,6 +48,21 @@ function readLocalConfig() {
 }
 
 /**
+ * 按照规则优化prompt
+ */
+const prettyPrompt = ({ prompt, relatedCharactorObj, lora, isI2i }) => {
+  prompt = prompt
+    .split(',')
+    .filter((item) => item)
+    // i2i时，需要对句子的提示词做增强，使得画面中能凸显对应元素
+    .map((item) => (isI2i ? `(${item}:1.7)` : `${item}`))
+    .join(',')
+  prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
+  const isCharactor = relatedCharactorObj?.prompt ? '(upper body:2),' : ''
+  return `${positivePrompt},${isCharactor}${prompt}, ${lora ? `<lora:${lora}:1.5>` : ''}`
+}
+
+/**
  * 根据提示词绘制图片
  */
 function drawImageByPrompts({
@@ -89,9 +104,15 @@ function drawImageByPrompts({
       .post(api, drawConfig)
       .then((res) => {
         const newImg = res?.data?.image || res?.config?.data?.image || ''
+        console.log('wswTest: 高清放大 请求id', res?.request?.res?.rawHeaders)
         const _path = join(imageSaveFolder, `${sIndex}.png`)
-        fs.writeFileSync(_path, Buffer.from(newImg, 'base64'))
-        everyUpdate({ type: 'amplify_to_hd', sIndex, HDImage: _path })
+        if (newImg) {
+          fs.writeFileSync(_path, Buffer.from(newImg, 'base64'))
+          everyUpdate({ type: 'amplify_to_hd', sIndex, HDImage: _path })
+        } else {
+          // 报错，继续重试
+          throw new Error('retry')
+        }
       })
       .catch((e) => {
         console.log('[高清重绘] execption =>', e)
@@ -111,13 +132,6 @@ function drawImageByPrompts({
       })
   }
 
-  prompt = prompt
-    .split(',')
-    .filter((item) => item)
-    // i2i时，需要对句子的提示词做增强，使得画面中能凸显对应元素
-    .map((item) => (isI2i ? `(${item}:1.7)` : `${item}`))
-    .join(',')
-  prompt = isI2i ? `${relatedCharactorObj?.prompt || ''},${prompt}` : prompt
   const drawConfig = isI2i
     ? {
         ...baseDrawConfig,
@@ -133,7 +147,7 @@ function drawImageByPrompts({
       }
     : { ...baseDrawConfig, width: HDImageWidth, height: HDImageHeight }
 
-  const finalPrompt = `${positivePrompt},${prompt} ${lora ? `<lora:${lora}:1.5>` : ''}`
+  const finalPrompt = prettyPrompt({ prompt, relatedCharactorObj, lora, isI2i })
   console.log('wswTest:', isI2i ? '图生图' : '文生图', '提示词', finalPrompt)
   return axios
     .post(api, {

@@ -64,7 +64,6 @@ function getCharactorsSentencesFromTextStream(
       {
         model: 'moonshot-v1-128k',
         messages: conversions,
-        // max_tokens: 1024 * 50,
         max_tokens: 1024 * 100,
         temperature: 0.1,
         stream: true
@@ -99,12 +98,14 @@ function getCharactorsSentencesFromTextStream(
               info += ''
             }
           })
+        console.log('wswTest文本处理的结果: info', info)
 
         const matcheSentence = info.match(sentenceReg)
         if (matcheSentence?.length > 1) {
           const matcheText = matcheSentence[1] || ''
-          const [raw, prompt, _charactor] = matcheText.split('|||') || []
+          const [raw, rawPrompt, _charactor] = matcheText.split('|||') || []
           const charactor = String(_charactor || '').toLowerCase()
+          const prompt = rawPrompt?.replace(charactor, '')
           if (raw) {
             sentences.push({
               chinese: raw,
@@ -152,8 +153,8 @@ function getCharactorsSentencesFromTextStream(
           }
         }
 
-        // console.log('wswTest: 角色有', charactors)
-        // console.log('wswTest: 句子有', sentences)
+        console.log('wswTest: 角色有', charactors)
+        console.log('wswTest: 句子有', sentences)
       })
       // end是读取流的末尾，finish是写流的末尾
       data.on('end', (info) => {

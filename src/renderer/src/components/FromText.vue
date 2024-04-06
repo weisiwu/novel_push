@@ -423,16 +423,20 @@ const cancelProcess = () => {
         :loading="isDrawAndPeiyin"
         :disabled="isDrawAndPeiyin"
         @click="startGenerate"
-        >自动绘图配音</n-button
+        >点我:自动绘制分镜和配音</n-button
       >
     </div>
     <!-- 开始高清放大 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.AMPLIFY_TO_HD">
-      <n-button type="primary" :loading="amplifyHDLoading" @click="amplifyToHD">高清放大</n-button>
+      <n-button type="primary" :loading="amplifyHDLoading" @click="amplifyToHD"
+        >点我:高清放大所有分镜</n-button
+      >
     </div>
     <!-- 整体处理完，操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO">
-      <n-button type="primary" :loading="exportLoading" @click="exportVideo">导出视频</n-button>
+      <n-button type="primary" :loading="exportLoading" @click="exportVideo"
+        >点我:导出视频</n-button
+      >
     </div>
     <!-- 整体处理完，操作按钮 -->
     <div v-if="actionbarCurrentStatus === actionbarStatus.READY_TO_OUTPUT_VIDEO && exportLoading">
@@ -454,6 +458,7 @@ const cancelProcess = () => {
   <div v-if="showTable">
     <!-- 角色表 -->
     <vxe-table
+      v-if="actionbarCurrentStatus === actionbarStatus.PREPARE_TO_GENERATE"
       ref="charactorTableRef"
       show-overflow
       align="center"
@@ -557,31 +562,25 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="字幕文案"
-            :disabled="showProgressBar"
+            :disabled="
+              showProgressBar || actionbarCurrentStatus !== actionbarStatus.PREPARE_TO_GENERATE
+            "
             :on-update:value="(text) => updateScentence(text, row)"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
         </template>
       </vxe-column>
-      <vxe-column
-        v-if="
-          [
-            actionbarStatus.PARSE,
-            actionbarStatus.PREPARE_TO_GENERATE,
-            actionbarStatus.AMPLIFY_TO_HD
-          ].includes(actionbarCurrentStatus) && !amplifyHDLoading
-        "
-        field="tags"
-        title="绘图提示词"
-      >
+      <vxe-column field="tags" title="绘图提示词">
         <template #default="{ row }">
           <n-input
             v-model:value="row.tags"
             type="textarea"
             maxlength="100"
             placeholder="绘图提示词"
-            :disabled="showProgressBar"
+            :disabled="
+              showProgressBar || actionbarCurrentStatus !== actionbarStatus.PREPARE_TO_GENERATE
+            "
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
@@ -654,16 +653,18 @@ const cancelProcess = () => {
             >
             <n-button
               v-show="!row.HDImage"
+              v-if="actionbarCurrentStatus === actionbarStatus.PREPARE_TO_GENERATE"
               type="primary"
+              :style="{ 'margin-bottom': '8px' }"
               :disabled="startLoading || showProgressBar"
               :loading="row.redrawing"
               @click="redrawSentenceRow(row)"
               >绘图</n-button
             >
             <n-button
-              v-show="row.HDImage"
+              v-if="actionbarCurrentStatus === actionbarStatus.AMPLIFY_TO_HD"
               type="primary"
-              :disabled="startLoading || showProgressBar"
+              :disabled="row.HDImage || startLoading || showProgressBar"
               :loading="row.redrawing"
               @click="reAmplifySentenceRow(row)"
               >重新放大</n-button
