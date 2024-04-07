@@ -39,7 +39,8 @@ const videoLoaded = () => {
       <p class="use_intro">使用说明</p>
       <p class="chapter_title top">1、下载</p>
       <p class="use_intro_desc">
-        点击链接下载压缩包到本地，解压压缩包。找到包中 baogan_ai_novel_push.exe 文件
+        点击<a target="_blank" href="https://www.123pan.com/s/ORVbjv-gJW4h.html">链接</a
+        >下载压缩包到本地，解压压缩包。找到包中 baogan_ai_novel_push.exe 文件
       </p>
       <n-image width="50%" :src="intro1"></n-image>
       <p class="chapter_title">2、注册账号</p>
