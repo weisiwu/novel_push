@@ -9,6 +9,8 @@ import {
 } from '../../../BaoganAiConfig.json'
 import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
+const MAX_RETRY_TIMES = 3
+
 function readLocalConfig() {
   const initConfigBuffer = readFileSync(configPath)
   const initConfigString = initConfigBuffer.toString()
@@ -28,7 +30,7 @@ function readLocalConfig() {
  * https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts#prebuilt-neural-voices
  */
 
-function converTextToSpeech(text = '', saveName = '', cb = () => {}) {
+function converTextToSpeech(text = '', saveName = '', cb = () => {}, times = 0) {
   const { azureTTSVoice } = readLocalConfig()
   const audioSaveFolder = resolve(join(outputPath, audioOutputFolder))
   const audioFile = resolve(join(audioSaveFolder, saveName))
@@ -55,6 +57,9 @@ function converTextToSpeech(text = '', saveName = '', cb = () => {}) {
     console.error('生成语音报错', err)
     synthesizer.close()
     synthesizer = null
+    if (times <= MAX_RETRY_TIMES) {
+      converTextToSpeech(text, saveName, cb, times + 1)
+    }
   }
 
   return new Promise((resolve, reject) => {

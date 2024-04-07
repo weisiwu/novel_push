@@ -458,7 +458,11 @@ const cancelProcess = () => {
   <div v-if="showTable">
     <!-- 角色表 -->
     <vxe-table
-      v-if="actionbarCurrentStatus === actionbarStatus.PREPARE_TO_GENERATE"
+      v-if="
+        [actionbarStatus.PREPARE_TO_GENERATE, actionbarStatus.AMPLIFY_TO_HD].includes(
+          actionbarCurrentStatus
+        ) && !amplifyHDLoading
+      "
       ref="charactorTableRef"
       show-overflow
       align="center"
@@ -653,7 +657,11 @@ const cancelProcess = () => {
             >
             <n-button
               v-show="!row.HDImage"
-              v-if="actionbarCurrentStatus === actionbarStatus.PREPARE_TO_GENERATE"
+              v-if="
+                [actionbarStatus.PREPARE_TO_GENERATE, actionbarStatus.AMPLIFY_TO_HD].includes(
+                  actionbarCurrentStatus
+                ) && !amplifyHDLoading
+              "
               type="primary"
               :style="{ 'margin-bottom': '8px' }"
               :disabled="startLoading || showProgressBar"

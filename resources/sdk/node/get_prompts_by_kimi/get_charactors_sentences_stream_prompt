@@ -1,27 +1,35 @@
-任务: 请对上面输入的文章进行分析，完成以下任务
-- 分析出文章中所有人物，获取人物的名字、外貌、性别、服饰、鞋子、武器信息，
-- 将上一步获取的信息转换为Stable Diffusion prompt格式。
-- 将文章以句子分隔符（如句号、感叹号、问号）为界，拆成多个句子，不要删减内容。
-- 对于上一步拆出的句子，判断其内容长度是否超过30个字
-- 如句子超过30个字的长度，继续以句内的标点符号为界，进行拆分，直到所有句子不超过30个字。
-- 分析每个句子，获取场景，包含句子原文、句子涉及人物和句子prompt
-- prompt是结合文章的剧情，对句子描述的场地、天气、光线、镜头、人物动作、环境等信息的细致描写，并将其转为Stable Diffusion prompt。
-
-下面举例说明人物和场景返回数据对应的格式和规则
+请以输入的文章为基础，将文章拆成短句，要求不遗漏内容，同时短句每局不超过30个字。
+拆分出来的短句，不能缺少原文的任何部分。
+同时找出所有人物，再按照要求对解析信息，将其转换为上文提到的Stable Diffusion prompt格式。
+下面说明名字和场景应以什么格式返回
 
 1. 人物
-格式: 按照名字、性别、外貌、服饰、鞋子、武器顺序排列值，值之间用|||分隔。
-规则
+包含的信息: 名字、外貌、性别、服饰、鞋子、武器
+信息需遵守以下规则
+  1) 名字一定是中文，其他信息必须是英文单词
+  2) 其它信息都是Stable Diffusion prompt格式
+  3) 其中名字、外貌、性别、服饰、鞋子不可缺少，如无法分析出来，请做联想推理
+  4) 性别为男，则为1boy，为女，则为1girl
+  5) 任一信息都应包含尽量细致的描述单词，单词之间用半角逗号分割
+  6) 其余无法获取的可不提供
+返回值格式: 按照名字、性别、外貌、服饰、鞋子、武器顺序排列值，值之间用|||分隔。
+返回值需遵守以下规则
   1) 返回的人物以[charactor]开头，以[/charactor]结尾
 
 下面是人物的完整示例，体现角色的所有属性
-输出: [charactor]ZhouGang|||beautiful,cool|||1girl|||white skirt|||white shoe|||sword[/charactor]
+[charactor]ZhouGang|||beautiful,cool|||1girl|||white skirt|||white shoe|||sword[/charactor]
 
 2. 场景
-格式: 按照原文、prompt、涉及角色顺序排列拼接，值之间用|||分隔。
-规则
+包含的信息: 原文、提示词、涉及角色
+信息需遵守以下规则
+  1) 文章有多少句子，就分析出多少场景。
+  2) 原文，指场景对应的句子原文，是中文
+  3) 提示词不可缺少，如无法分析出来，请做联想推理
+  4) 提示词是对原文外在画面的描述，应尽量细致的描述能被看到的画面
+  5) 涉及角色，只要一个，是中文
+返回值格式: 按照原文、提示词、涉及角色顺序排列拼接，值之间用|||分隔。
+返回值需遵守以下规则
   1) 返回的场景以[sentence]开头，以[/sentence]结束
-  2) 涉及角色只要一个
 
 下面是场景的完整示例，体现了场景的所有属性
-输出: [sentence]在绿意盎然的大山中，有条小溪沿着山腰蜿蜒而下。ZhouGang正骑着骏马沿着小溪一路向上。|||mountains,lush green mountains, stream, winding stream, down along hillsidem, 1girl,riding horse,splendid horse|||ZhouGang[/sentence]
+[sentence]在绿意盎然的大山中，有条小溪沿着山腰蜿蜒而下。ZhouGang正骑着骏马沿着小溪一路向上。|||mountains,lush green mountains, stream, winding stream, down along hillsidem, 1girl,riding horse,splendid horse|||ZhouGang[/sentence]

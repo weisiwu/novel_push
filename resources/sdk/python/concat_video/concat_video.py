@@ -8,6 +8,7 @@ from PIL import Image
 import numpy as np
 import moviepy.editor as mp
 from moviepy.editor import *
+from moviepy.video.tools.subtitles import SubtitlesClip
 from os.path import isfile
 
 def custom_sort(frame_img):
@@ -157,6 +158,7 @@ def concat_imgs_to_video(
                 "code": 1,
                 "type": "concat_imgs_to_video",
                 "step": 2,
+                "message": "concat images to video success",
             }
         )
     )
@@ -243,6 +245,91 @@ def concat_audio(audio_path, save_name, selected_wavs):
     sys.stdout.flush()
 
 
+# class RealizeAddSubtitles:
+#     """
+#     合成字幕与视频
+#     https://blog.csdn.net/qq_40584593/article/details/110353923
+#     """
+
+#     def __init__(self, videoFile, txtFile, video_clip, audio_clip, tmpSavePath, sysout):
+#         self.src_video = videoFile
+#         self.sentences = txtFile
+#         # 传入音轨和视频轨道
+#         video_with_audio = video_clip.set_audio(audio_clip)
+#         video_with_audio.write_videofile(videoFile, codec="libx264", audio_codec="aac")
+
+#         # 同步UI进度 - 音频视频合成完毕
+#         sys.stdout = sysout
+#         print(
+#             json.dumps(
+#                 {
+#                     "code": 1,
+#                     "type": "concat_imgs_to_video",
+#                     "step": 3,
+#                     "message": "add audio to video success"
+#                 }
+#             )
+#         )
+#         sys.stdout.flush()
+#         sysout = sys.stdout
+#         sys.stdout = NullWriter()
+
+#         if not (
+#             isfile(self.src_video)
+#             and self.src_video.endswith((".avi", ".mp4"))
+#             and isfile(self.sentences)
+#             and self.sentences.endswith(".srt")
+#         ):
+#             print("视频仅支持avi以及mp4，字幕仅支持srt格式")
+#         else:
+#             video = VideoFileClip(self.src_video)
+#             # 获取视频的宽度和高度
+#             w, h = video.w, video.h
+#             # 所有字幕剪辑
+#             txts = []
+#             content = read_srt(self.sentences)
+#             sequences = get_sequences(content)
+
+#             for line in sequences:
+#                 if len(line) < 3:
+#                     continue
+#                 sentences = line[2]
+#                 start = line[1].split(" --> ")[0]
+#                 end = line[1].split(" --> ")[1]
+
+#                 start = strFloatTime(start)
+#                 end = strFloatTime(end)
+
+#                 start, end = map(float, (start, end))
+#                 span = end - start
+#                 txt = (
+#                     TextClip(
+#                         sentences,
+#                         fontsize=select_font_size,
+#                         font=select_font,
+#                         stroke_color="black",
+#                         stroke_width=1,
+#                         size=(w - 40, None),
+#                         align="center",
+#                         method="caption",
+#                         color="white",
+#                     )
+#                     .set_position((20, h * 0.8))
+#                     .set_duration(span)
+#                     .set_start(start)
+#                 )
+#                 txts.append(txt)
+#             video = CompositeVideoClip([video_with_audio, *txts])
+#             video.write_videofile(videoFile)
+
+#             video_clip.close()
+#             audio_clip.close()
+#             video_with_audio.close()
+#             video.close()
+#             # 删除临时文件
+#             os.remove(tmpSavePath)
+
+
 class RealizeAddSubtitles:
     """
     合成字幕与视频
@@ -252,9 +339,10 @@ class RealizeAddSubtitles:
     def __init__(self, videoFile, txtFile, video_clip, audio_clip, tmpSavePath, sysout):
         self.src_video = videoFile
         self.sentences = txtFile
-        # 传入音轨和视频轨道
+        # 获取视频的宽度和高度
+        w, h = video_clip.w, video_clip.h
+        # 传入音轨和视频轨
         video_with_audio = video_clip.set_audio(audio_clip)
-        video_with_audio.write_videofile(videoFile, codec="libx264", audio_codec="aac")
 
         # 同步UI进度 - 音频视频合成完毕
         sys.stdout = sysout
@@ -264,68 +352,59 @@ class RealizeAddSubtitles:
                     "code": 1,
                     "type": "concat_imgs_to_video",
                     "step": 3,
+                    "message": "add audio to video success",
                 }
             )
         )
         sys.stdout.flush()
         sysout = sys.stdout
         sys.stdout = NullWriter()
+        generator = lambda txt: TextClip(
+            txt,
+            fontsize=select_font_size,
+            font=select_font,
+            stroke_color="black",
+            stroke_width=1,
+            size=(w - 40, None),
+            align="center",
+            method="caption",
+            color="white",
+        )
 
-        if not (
-            isfile(self.src_video)
-            and self.src_video.endswith((".avi", ".mp4"))
-            and isfile(self.sentences)
-            and self.sentences.endswith(".srt")
-        ):
-            print("视频仅支持avi以及mp4，字幕仅支持srt格式")
-        else:
-            video = VideoFileClip(self.src_video)
-            # 获取视频的宽度和高度
-            w, h = video.w, video.h
-            # 所有字幕剪辑
-            txts = []
-            content = read_srt(self.sentences)
-            sequences = get_sequences(content)
+        txts = []
+        content = read_srt(self.sentences)
+        sequences = get_sequences(content)
 
-            for line in sequences:
-                if len(line) < 3:
-                    continue
-                sentences = line[2]
-                start = line[1].split(" --> ")[0]
-                end = line[1].split(" --> ")[1]
+        for line in sequences:
+            if len(line) < 3:
+                continue
+            sentences = line[2]
+            start = line[1].split(" --> ")[0]
+            end = line[1].split(" --> ")[1]
 
-                start = strFloatTime(start)
-                end = strFloatTime(end)
+            start = strFloatTime(start)
+            end = strFloatTime(end)
 
-                start, end = map(float, (start, end))
-                span = end - start
-                txt = (
-                    TextClip(
-                        sentences,
-                        fontsize=select_font_size,
-                        font=select_font,
-                        stroke_color="black",
-                        stroke_width=1,
-                        size=(w - 40, None),
-                        align="center",
-                        method="caption",
-                        color="white",
-                    )
-                    .set_position((20, h * 0.8))
-                    .set_duration(span)
-                    .set_start(start)
-                )
-                txts.append(txt)
-            video = CompositeVideoClip([video_with_audio, *txts])
-            video.write_videofile(videoFile)
+            start, end = map(float, (start, end))
+            txts.append(((start, end), sentences))
 
-            video_clip.close()
-            audio_clip.close()
-            video_with_audio.close()
-            video.close()
-            # 删除临时文件
-            os.remove(tmpSavePath)
+        subtitles = SubtitlesClip(txts, generator)
+        video_with_subtitles = CompositeVideoClip(
+            [video_with_audio, subtitles.set_position(("center", "bottom"))]
+        )
+        video_with_subtitles.write_videofile(
+            (Path(videoFile).parent / "ouput.mp4").as_posix(),
+            codec="libx264",
+            audio_codec="aac",
+        )
 
+        video_clip.close()
+        audio_clip.close()
+        video_with_audio.close()
+        video_with_subtitles.close()
+        # 删除临时文件
+        os.remove(tmpSavePath)
+        sys.stdout = sysout
 
 args = parse_args()
 with open(args.config_file, "r", encoding="utf-8") as f:
