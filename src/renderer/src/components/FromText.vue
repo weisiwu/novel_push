@@ -165,7 +165,7 @@ if (window.ipcRenderer) {
   window.ipcRenderer.receive('export-process-update', (res) => {
     if (Number(res) === 1) {
       progressBarPercentage.value = 25
-      progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
+      progressBarText.value = '已将音频片段合并到一体，正在合并图片为视频'
     } else if (Number(res) === 2) {
       progressBarPercentage.value = 50
       progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
