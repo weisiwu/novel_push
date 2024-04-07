@@ -10,8 +10,6 @@ import {
   audioOutputFolder
 } from '../../../BaoganAiConfig.json'
 import initPrompt from './init_prompt?asset&asarUnpack'
-import introToSdPrompt from './intro_to_sd_prompt?asset&asarUnpack'
-import getCharactorsSentencesStreamPrompt from './get_charactors_sentences_stream_prompt?asset&asarUnpack'
 import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
 /**
@@ -21,10 +19,6 @@ import configPath from '../../../BaoganAiConfig.json?commonjs-external&asset&asa
 const charactorReg = /\[charactor\](.*?)\[\/charactor\]/
 const sentenceReg = /\[sentence\](.*?)\[\/sentence\]/
 const init_prompt = fs.readFileSync(initPrompt, { encoding: 'utf8' })
-const intro_to_sd_prompt = fs.readFileSync(introToSdPrompt, { encoding: 'utf8' })
-const get_charactors_sentences_stream_prompt = fs.readFileSync(getCharactorsSentencesStreamPrompt, {
-  encoding: 'utf8'
-})
 
 function readLocalConfig() {
   const initConfigBuffer = readFileSync(configPath)
@@ -37,11 +31,6 @@ function readLocalConfig() {
   }
   return initConfig
 }
-
-const conversions = [
-  { role: 'user', content: intro_to_sd_prompt },
-  { role: 'user', content: init_prompt }
-]
 
 /**
  * 对传入的文章，分出句子和角色
@@ -56,8 +45,13 @@ function getCharactorsSentencesFromTextStream(
   sentencesTask,
   ttsTask
 ) {
+  const conversions = [
+    // { role: 'system', content: intro_to_sd_prompt },
+    // { role: 'system', content: get_charactors_sentences_stream_prompt },
+    { role: 'system', content: init_prompt }
+  ]
   conversions.push({ role: 'user', content: text })
-  conversions.push({ role: 'user', content: get_charactors_sentences_stream_prompt })
+  // console.log('wswTest: texttexttext', text)
   axios
     .post(
       `${kimiBaseUrl}${kimiChatApi}`,
@@ -65,7 +59,7 @@ function getCharactorsSentencesFromTextStream(
         model: 'moonshot-v1-128k',
         messages: conversions,
         max_tokens: 1024 * 100,
-        temperature: 0.1,
+        temperature: 0.3,
         stream: true
       },
       {
@@ -82,6 +76,7 @@ function getCharactorsSentencesFromTextStream(
       const sentences = []
       data.on('data', (objBuffer) => {
         const objStr = objBuffer.toString().replace('\\n', '')
+        console.log('wswTest: 接受到的数据', objStr)
         if (objStr.includes('[DONE]')) {
           // console.log('wswTest: done?', objStr)
           return
@@ -98,7 +93,7 @@ function getCharactorsSentencesFromTextStream(
               info += ''
             }
           })
-        console.log('wswTest文本处理的结果: info', info)
+        // console.log('wswTest文本处理的结果: info', info)
 
         const matcheSentence = info.match(sentenceReg)
         if (matcheSentence?.length > 1) {
@@ -153,8 +148,8 @@ function getCharactorsSentencesFromTextStream(
           }
         }
 
-        console.log('wswTest: 角色有', charactors)
-        console.log('wswTest: 句子有', sentences)
+        // console.log('wswTest: 角色有', charactors)
+        // console.log('wswTest: 句子有', sentences)
       })
       // end是读取流的末尾，finish是写流的末尾
       data.on('end', (info) => {
