@@ -197,6 +197,7 @@ function drawImageByPrompts({
     })
     .catch((e) => {
       console.log('[drawImageByPrompts] execption =>', retryTimes)
+      console.log('[drawImageByPrompts] 错误信息', e)
       if (retryTimes < MAX_RETRY_TIMES) {
         return drawImageByPrompts({
           type,
@@ -259,16 +260,27 @@ function updatePeiyinTask(newTexts = []) {
  * Notice: 这里会自动按照顺序，依次给每个场景常规重新生成配音、字幕、图像
  * 等待用户确认调整完毕后，开始执行绘图、配音任务
  */
-function processPromptsToImgsAndAudio(everyUpdate, newTexts) {
+function processPromptsToImgsAndAudio(
+  everyUpdate,
+  newTexts,
+  sentenceTable = [],
+  charactorTable = []
+) {
   const texts = []
 
   // 更新配音字幕
   updatePeiyinTask(newTexts)
 
   // step2: 依次处理人物队列和句子队列中的绘图任务
+  const allTableData = [...charactorTable, ...sentenceTable]
   const allTask = [...charactorsTask, ...sentencesTask]
-  allTask.reduce((task, taskInfo) => {
+  allTask.reduce((task, taskInfo, index) => {
     return task.then(() => {
+      // 如果已经绘图完成
+      console.log('wswTest: 当前任务的值是什么', allTableData[index])
+      if (allTableData[index]) {
+        return Promise.resolve()
+      }
       if (taskInfo.type === 'charactor') {
         return drawImageByPrompts(taskInfo)
       }

@@ -24,6 +24,9 @@ const cancelLoading = ref(false)
 const progressBarPercentage = ref(0)
 const progressBarText = ref('')
 const parseTextLoading = ref(false)
+const showCharactorTable = ref(true)
+const disabledCharactorTable = ref(false)
+const disabledSentenceTable = ref(false)
 // 操作按钮栏状态
 const actionbarStatus = {
   PARSE: 'PARSE', // 智能解析文本
@@ -37,6 +40,7 @@ const setencesTableData = ref([])
 const getSetencesTableData = () => {
   return Array.from(setencesTableData.value)
 }
+
 /**
  * 选择备选图
  */
@@ -263,6 +267,18 @@ const updateProcess = () => {
       progressBarPercentage.value = 0
     }
   }
+  // 是否展示角色表
+  showCharactorTable.value = [actionbarStatus.PARSE, actionbarStatus.PREPARE_TO_GENERATE].includes(
+    actionbarCurrentStatus.value
+  )
+  // 是否是否禁用角色表格按钮和操作
+  disabledCharactorTable.value = showProgressBar.value
+  // 是否是否禁用场景表格按钮和操作
+  disabledSentenceTable.value =
+    showProgressBar.value ||
+    ![actionbarStatus.PARSE, actionbarStatus.PREPARE_TO_GENERATE].includes(
+      actionbarCurrentStatus.value
+    )
 }
 
 // 删除行
@@ -337,11 +353,11 @@ const startProcess = () => {
 const startGenerate = () => {
   isDrawAndPeiyin.value = true
   showProgressBar.value = true
-  window.ipcRenderer.send(
-    'generate-image-audio-process-start',
-    // TODO:(wsw) 这里已经生成过的都不再生成
-    setencesTableData?.value?.map?.((row) => row?.text || '')
-  )
+  window.ipcRenderer.send('generate-image-audio-process-start', {
+    text: setencesTableData?.value?.map?.((row) => row?.text || ''),
+    sentenceTable: setencesTableData?.value?.map?.((row) => row?.image || ''),
+    charactorTable: charactorsTableData.value?.map?.((row) => row?.image || '')
+  })
 }
 const amplifyToHD = () => {
   // 开始对图片进行放大
@@ -423,7 +439,7 @@ const cancelProcess = () => {
         :loading="isDrawAndPeiyin"
         :disabled="isDrawAndPeiyin"
         @click="startGenerate"
-        >点我:自动绘制分镜和配音</n-button
+        >点我:字幕配音和补全未绘制图片</n-button
       >
     </div>
     <!-- 开始高清放大 -->
@@ -458,11 +474,7 @@ const cancelProcess = () => {
   <div v-if="showTable">
     <!-- 角色表 -->
     <vxe-table
-      v-if="
-        [actionbarStatus.PREPARE_TO_GENERATE, actionbarStatus.AMPLIFY_TO_HD].includes(
-          actionbarCurrentStatus
-        ) && !amplifyHDLoading
-      "
+      v-if="showCharactorTable"
       ref="charactorTableRef"
       show-overflow
       align="center"
@@ -480,7 +492,7 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="绘图提示词"
-            :disabled="showProgressBar"
+            :disabled="disabledCharactorTable"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
@@ -507,7 +519,7 @@ const cancelProcess = () => {
           </n-spin>
         </template>
       </vxe-column>
-      <vxe-column field="image" width="300" title="可选角色效果">
+      <vxe-column v-if="!disabledSentenceTable" field="image" width="300" title="可选角色效果">
         <template #default="{ row }">
           <div :style="{ display: 'flex', 'flex-wrap': 'wrap' }">
             <n-image
@@ -538,7 +550,7 @@ const cancelProcess = () => {
             >
             <n-button
               type="primary"
-              :disabled="showProgressBar"
+              :disabled="showProgressBar || disabledCharactorTable"
               :loading="row.redrawing"
               @click="redrawCharactorRow(row)"
               >绘图</n-button
@@ -566,9 +578,7 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="字幕文案"
-            :disabled="
-              showProgressBar || actionbarCurrentStatus !== actionbarStatus.PREPARE_TO_GENERATE
-            "
+            :disabled="disabledSentenceTable"
             :on-update:value="(text) => updateScentence(text, row)"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
@@ -582,9 +592,7 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="绘图提示词"
-            :disabled="
-              showProgressBar || actionbarCurrentStatus !== actionbarStatus.PREPARE_TO_GENERATE
-            "
+            :disabled="disabledSentenceTable"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
@@ -614,18 +622,7 @@ const cancelProcess = () => {
           </n-spin>
         </template>
       </vxe-column>
-      <vxe-column
-        v-if="
-          [
-            actionbarStatus.PARSE,
-            actionbarStatus.PREPARE_TO_GENERATE,
-            actionbarStatus.AMPLIFY_TO_HD
-          ].includes(actionbarCurrentStatus) && !amplifyHDLoading
-        "
-        field="image"
-        width="300"
-        title="可选镜头图"
-      >
+      <vxe-column v-if="!disabledSentenceTable" field="image" width="300" title="可选镜头图">
         <template #default="{ row }">
           <div :style="{ display: 'flex', 'flex-wrap': 'wrap' }">
             <n-image
@@ -657,22 +654,16 @@ const cancelProcess = () => {
             >
             <n-button
               v-show="!row.HDImage"
-              v-if="
-                [actionbarStatus.PREPARE_TO_GENERATE, actionbarStatus.AMPLIFY_TO_HD].includes(
-                  actionbarCurrentStatus
-                ) && !amplifyHDLoading
-              "
+              :disabled="showProgressBar || disabledSentenceTable"
               type="primary"
               :style="{ 'margin-bottom': '8px' }"
-              :disabled="startLoading || showProgressBar"
               :loading="row.redrawing"
               @click="redrawSentenceRow(row)"
               >绘图</n-button
             >
             <n-button
-              v-if="actionbarCurrentStatus === actionbarStatus.AMPLIFY_TO_HD"
+              v-if="row.HDImage"
               type="primary"
-              :disabled="row.HDImage || startLoading || showProgressBar"
               :loading="row.redrawing"
               @click="reAmplifySentenceRow(row)"
               >重新放大</n-button
