@@ -195,7 +195,7 @@ app.whenReady().then(() => {
   /**
    * 开始执行音频、绘图任务
    */
-  ipcMain.on('generate-image-audio-process-start', (event, newTexts) => {
+  ipcMain.on('generate-image-audio-process-start', (event, obj) => {
     if (!mainWindow) {
       return
     }
@@ -205,7 +205,8 @@ app.whenReady().then(() => {
       }
       event.sender.send('texttovideo-process-update', args)
     }
-    processPromptsToImgsAndAudio(everyUpdate, newTexts)
+    const { newTexts, sentenceTable, charactorTable } = obj || {}
+    processPromptsToImgsAndAudio(everyUpdate, newTexts, sentenceTable, charactorTable)
   })
 
   /**

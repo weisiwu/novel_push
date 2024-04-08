@@ -24,6 +24,9 @@ const cancelLoading = ref(false)
 const progressBarPercentage = ref(0)
 const progressBarText = ref('')
 const parseTextLoading = ref(false)
+const showCharactorTable = ref(true)
+const disabledCharactorTable = ref(false)
+const disabledSentenceTable = ref(false)
 // 操作按钮栏状态
 const actionbarStatus = {
   PARSE: 'PARSE', // 智能解析文本
@@ -37,6 +40,7 @@ const setencesTableData = ref([])
 const getSetencesTableData = () => {
   return Array.from(setencesTableData.value)
 }
+
 /**
  * 选择备选图
  */
@@ -50,11 +54,6 @@ const selectImg = (img, row) => {
 }
 // 角色表是否可以编辑 - 包括按钮是否可点击
 const disableCharactorEdit = showProgressBar
-// 是否展示角色表
-const showCharactorTable = [actionbarStatus.PARSE, actionbarStatus.PREPARE_TO_GENERATE].includes(
-  actionbarCurrentStatus.value
-)
-console.log('wswTest: showCharactorTable', showCharactorTable)
 // 表格是否可编辑 - 包括按钮是否可点击
 // 1、不在处理中 2、处于导出前任一阶段，且没有高清放大
 const disableSentenceEdit =
@@ -175,7 +174,7 @@ if (window.ipcRenderer) {
   window.ipcRenderer.receive('export-process-update', (res) => {
     if (Number(res) === 1) {
       progressBarPercentage.value = 25
-      progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
+      progressBarText.value = '已将音频片段合并到一体，正在合并图片为视频'
     } else if (Number(res) === 2) {
       progressBarPercentage.value = 50
       progressBarText.value = '已将图片转化为视频，正在合并音频和视频'
@@ -276,6 +275,18 @@ const updateProcess = () => {
       progressBarPercentage.value = 0
     }
   }
+  // 是否展示角色表
+  showCharactorTable.value = [actionbarStatus.PARSE, actionbarStatus.PREPARE_TO_GENERATE].includes(
+    actionbarCurrentStatus.value
+  )
+  // 是否是否禁用角色表格按钮和操作
+  disabledCharactorTable.value = showProgressBar.value
+  // 是否是否禁用场景表格按钮和操作
+  disabledSentenceTable.value =
+    showProgressBar.value ||
+    ![actionbarStatus.PARSE, actionbarStatus.PREPARE_TO_GENERATE].includes(
+      actionbarCurrentStatus.value
+    )
 }
 
 // 删除行
@@ -350,11 +361,11 @@ const startProcess = () => {
 const startGenerate = () => {
   isDrawAndPeiyin.value = true
   showProgressBar.value = true
-  window.ipcRenderer.send(
-    'generate-image-audio-process-start',
-    // TODO:(wsw) 这里已经生成过的都不再生成
-    setencesTableData?.value?.map?.((row) => row?.text || '')
-  )
+  window.ipcRenderer.send('generate-image-audio-process-start', {
+    text: setencesTableData?.value?.map?.((row) => row?.text || ''),
+    sentenceTable: setencesTableData?.value?.map?.((row) => row?.image || ''),
+    charactorTable: charactorsTableData.value?.map?.((row) => row?.image || '')
+  })
 }
 const amplifyToHD = () => {
   // 开始对图片进行放大
@@ -434,7 +445,7 @@ const cancelProcess = () => {
         :loading="isDrawAndPeiyin"
         :disabled="isDrawAndPeiyin"
         @click="startGenerate"
-        >点我:自动绘制分镜和配音</n-button
+        >点我:字幕配音和补全未绘制图片</n-button
       >
     </div>
     <!-- 开始高清放大 -->
@@ -487,7 +498,7 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="绘图提示词"
-            :disabled="disableCharactorEdit"
+            :disabled="disabledCharactorTable"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
@@ -514,7 +525,7 @@ const cancelProcess = () => {
           </n-spin>
         </template>
       </vxe-column>
-      <vxe-column field="image" width="300" title="可选角色效果">
+      <vxe-column v-if="!disabledSentenceTable" field="image" width="300" title="可选角色效果">
         <template #default="{ row }">
           <div :style="{ display: 'flex', 'flex-wrap': 'wrap' }">
             <n-image
@@ -545,7 +556,7 @@ const cancelProcess = () => {
             >
             <n-button
               type="primary"
-              :disabled="disableCharactorEdit"
+              :disabled="showProgressBar || disabledCharactorTable"
               :loading="row.redrawing"
               @click="redrawCharactorRow(row)"
               >绘图</n-button
@@ -573,7 +584,7 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="字幕文案"
-            :disabled="disableSentenceEdit"
+            :disabled="disabledSentenceTable"
             :on-update:value="(text) => updateScentence(text, row)"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
@@ -587,7 +598,7 @@ const cancelProcess = () => {
             type="textarea"
             maxlength="100"
             placeholder="绘图提示词"
-            :disabled="disableSentenceEdit"
+            :disabled="disabledSentenceTable"
             :autosize="{ minRows: 1, maxRows: 7 }"
           >
           </n-input>
@@ -617,7 +628,7 @@ const cancelProcess = () => {
           </n-spin>
         </template>
       </vxe-column>
-      <vxe-column v-if="!disableSentenceEdit" field="image" width="300" title="可选镜头图">
+      <vxe-column v-if="!disabledSentenceTable" field="image" width="300" title="可选镜头图">
         <template #default="{ row }">
           <div :style="{ display: 'flex', 'flex-wrap': 'wrap' }">
             <n-image
@@ -648,17 +659,17 @@ const cancelProcess = () => {
               >删除</n-button
             >
             <n-button
+              v-show="!row.HDImage"
+              :disabled="showProgressBar || disabledSentenceTable"
               type="primary"
               :style="{ 'margin-bottom': '8px' }"
-              :disabled="disableSentenceEdit"
               :loading="row.redrawing"
               @click="redrawSentenceRow(row)"
               >绘图</n-button
             >
             <n-button
-              v-show="row.HDImage"
+              v-if="row.HDImage"
               type="primary"
-              :disabled="disableSentenceEdit"
               :loading="row.redrawing"
               @click="reAmplifySentenceRow(row)"
               >重新放大</n-button

@@ -393,7 +393,7 @@ class RealizeAddSubtitles:
             [video_with_audio, subtitles.set_position(("center", "bottom"))]
         )
         video_with_subtitles.write_videofile(
-            (Path(videoFile).parent / "ouput.mp4").as_posix(),
+            (Path(videoFile).parent / "output.mp4").as_posix(),
             codec="libx264",
             audio_codec="aac",
         )
