@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import LoginBox from './LoginBox.vue'
 import RegisterBox from './RegisterBox.vue'
-// import ChargeBox from './ChargeBox.vue'
 const tabs = ['login', 'register', 'charge']
 
 const valueRef = ref(tabs[0])
@@ -40,11 +39,6 @@ const switchToTab = (index = 0) => {
               <RegisterBox :switch-to-tab="switchToTab" />
             </div>
           </n-tab-pane>
-          <!-- <n-tab-pane class="tab_item" name="charge" tab="联系方式">
-            <div class="pannel">
-              <ChargeBox />
-            </div>
-          </n-tab-pane> -->
         </n-tabs>
       </n-card>
     </div>

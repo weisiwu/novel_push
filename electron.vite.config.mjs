@@ -11,7 +11,11 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/preload/index.js'),
+          // index: resolve(__dirname, 'src/preload/index.js'),
+          distribute_multiple_platforms: resolve(
+            __dirname,
+            'src/preload/distribute_multiple_platforms.js'
+          ),
           main: resolve(__dirname, 'src/preload/main.js')
         }
       }
@@ -26,7 +30,11 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html'),
+          distribute_multiple_platforms: resolve(
+            __dirname,
+            'src/renderer/distribute_multiple_platforms.html'
+          ),
+          // index: resolve(__dirname, 'src/renderer/index.html'),
           main: resolve(__dirname, 'src/renderer/main.html')
         }
       }

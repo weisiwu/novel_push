@@ -1,25 +1,15 @@
 import os from 'os'
 import fs from 'fs'
 import asar from 'asar'
-import { dirname, join, resolve } from 'path'
-import { spawn } from 'child_process'
+import { join, resolve } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
+import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
+import platform_send_video from '../../resources/sdk/node/platform_api/platform_send_video.js'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
-import accountInfoPath from '../../resources/AccountInfo.json?commonjs-external&asset&asarUnpack'
-import update_srt_img_wav_from_table from '../../resources/sdk/node/update_srt_img_wav_from_table/update_srt_img_wav_from_table.js'
-import {
-  processTextToPromptsStream,
-  processPromptsToImgsAndAudio,
-  amplifySentencesImageToHD,
-  drawImageByPrompts
-} from '../../resources/sdk/node/text_to_img/textToImg.js'
-// import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video.exe?asset&asarUnpack'
-// @Notice: 注意，mac使用
-import concatVideoBin from '../../resources/sdk/python/concat_video/dist/concat_video/concat_video?asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -39,8 +29,7 @@ if (fs.existsSync(configPath)) {
     const isWin = os.platform() === 'win32'
     const isMacOS = os.platform() === 'darwin'
 
-    // 1、windows下，非盘符开头的路径
-    // 2、Mac下，非绝对路径
+    // 1、windows下，非盘符开头的路径 2、Mac下，非绝对路径
     if ((isWin && !/^[A-Z]:\\/.test(outputPath)) || (isMacOS && !outputPath.startsWith('/'))) {
       initConfig.outputPath = resolve(join(os.homedir(), 'Desktop', outputFolder))
       writeFileSync(configPath, JSON.stringify(initConfig))
@@ -50,17 +39,24 @@ if (fs.existsSync(configPath)) {
   }
 }
 
+/**
+ * 创建初始化窗口的配置
+ * 加载起始页面逻辑需要优化
+ */
 function createWindow() {
   startWindow = new BrowserWindow({
-    width: 900,
-    height: 500,
+    // width: 900,
+    // height: 500,
+    // TODO:(wsw) 分发，高大于宽
+    width: 700,
+    height: 900,
     show: false,
     maximizable: false,
     autoHideMenuBar: true,
     contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
     icon,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/distribute_multiple_platforms.js'),
       sandbox: false
     }
   })
@@ -75,9 +71,11 @@ function createWindow() {
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    startWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    startWindow.loadURL(
+      process.env['ELECTRON_RENDERER_URL'] + '/distribute_multiple_platforms.html'
+    )
   } else {
-    startWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    startWindow.loadFile(join(__dirname, '../renderer/distribute_multiple_platforms.html'))
   }
 }
 
@@ -120,231 +118,21 @@ app.whenReady().then(() => {
 
   ipcMain.on('open-new-window', () => {
     if (startWindow) {
-      openSpecialWindow()
+      openSpecialWindow('distribute_multiple_platforms')
     }
   })
 
   /**
-   * 检查是否登录成功
+   * 登录平台
    */
-  ipcMain.on('check-account-password-valid', (event, userInput) => {
-    // 读取本地账号密码
-    const accountInfo = JSON.parse(readFileSync(accountInfoPath).toString())
-    const { account, password } = accountInfo || {}
-    const { account: inputAccout, password: inputPassword } = userInput || {}
-    let result = { code: 0 }
-    if (account && password && account === inputAccout && password === inputPassword) {
-      result = { code: 1, msg: '登录成功' }
-    } else if (!inputAccout) {
-      result = { code: 0, msg: '未填写账号' }
-    } else if (!inputPassword) {
-      result = { code: 0, msg: '未填写密码' }
-    } else {
-      result = { code: 0, msg: '账号信息错误' }
-    }
-    event.sender.send('check-account-password-result', result)
+  ipcMain.on('platform-login', async (event, info) => {
+    const { platform } = info || {}
+    platform_login(platform)
   })
 
-  /**
-   * 注册账号
-   */
-  ipcMain.on('register-account', (event, userInput) => {
-    // 读取本地账号密码
-    const accountInfo = JSON.parse(readFileSync(accountInfoPath).toString())
-    const { account, password } = accountInfo || {}
-    const { account: inputAccout, password: inputPassword } = userInput || {}
-
-    let result = {}
-    if (account && password) {
-      result = { code: false, msg: '已注册过' }
-      event.sender.send('register-account-result', result)
-      return
-    }
-
-    writeFileSync(
-      accountInfoPath,
-      JSON.stringify({ account: inputAccout, password: inputPassword })
-    )
-    result = { code: true, msg: '注册完成' }
-    event.sender.send('register-account-result', result)
-  })
-
-  /**
-   * 对输入的文章开始智能分析，生成绘图任务和音频任务
-   */
-  ipcMain.on('texttovideo-process-start', async (event, text) => {
-    if (!mainWindow) {
-      return
-    }
-    const everyUpdate = (args) => {
-      if (!event?.sender?.send) {
-        return
-      }
-      // console.log('wswTest: 文章解析收到的参数===>', args)
-      event.sender.send('texttovideo-process-update', args)
-    }
-    const finish = () => {
-      if (!event?.sender?.send) {
-        return
-      }
-      event.sender.send?.('texttovideo-parsetext-process-finish')
-    }
-    processTextToPromptsStream(text, everyUpdate, finish)
-  })
-
-  /**
-   * 开始执行音频、绘图任务
-   */
-  ipcMain.on('generate-image-audio-process-start', (event, obj) => {
-    if (!mainWindow) {
-      return
-    }
-    const everyUpdate = (args) => {
-      if (!event?.sender?.send) {
-        return
-      }
-      event.sender.send('texttovideo-process-update', args)
-    }
-    const { newTexts, sentenceTable, charactorTable } = obj || {}
-    processPromptsToImgsAndAudio(everyUpdate, newTexts, sentenceTable, charactorTable)
-  })
-
-  /**
-   * 高清放大
-   */
-  ipcMain.on('amplify-to-hd', (event, dataStr) => {
-    if (!mainWindow) {
-      return
-    }
-    let sentencesList = []
-    try {
-      sentencesList = JSON.parse(dataStr)
-    } catch (e) {
-      sentencesList = []
-    }
-    const everyUpdate = (args) => {
-      if (!event?.sender?.send) {
-        return
-      }
-      event.sender.send('texttovideo-process-update', args)
-    }
-    amplifySentencesImageToHD(everyUpdate, sentencesList)
-  })
-
-  /**
-   * 单图重绘
-   */
-  ipcMain.on('start-redraw', async (event, params) => {
-    if (!mainWindow) {
-      return
-    }
-    const everyUpdate = (args) => {
-      if (!event?.sender?.send) {
-        return
-      }
-      event.sender.send('texttovideo-process-update', args)
-    }
-    drawImageByPrompts({
-      type: params?.type,
-      name: params?.name,
-      prompt: params?.prompt,
-      isHd: params?.isHd,
-      sIndex: params?.sIndex,
-      image: params?.image,
-      relatedCharactor: params?.relatedCharactor,
-      everyUpdate
-    })
-  })
-
-  /**
-   * 将已生成的图片、音频合并为视频
-   */
-  ipcMain.on('concat-video', async (event, dataStr) => {
-    if (!mainWindow) {
-      return
-    }
-    let sentencesList = []
-    let data = null
-    try {
-      sentencesList = JSON.parse(dataStr)
-    } catch (e) {
-      sentencesList = []
-    }
-
-    // 处理本地文件，包括用户修改选中的行、用户删除的行
-    // 组装数据，发送给导出进程，统一处理
-    const [selectedImgs, wavs, durations] = await update_srt_img_wav_from_table(sentencesList)
-    event.sender.send('export-process-update', 1)
-
-    console.log(
-      'wswTest: [重要调试使用]调用合成参数是',
-      durations,
-      resolve(join(configPath, '..', 'ttf')),
-      configPath,
-      wavs,
-      selectedImgs
-    )
-
-    const childProcess = spawn(concatVideoBin, [
-      '--durations',
-      durations,
-      '--font_base',
-      resolve(join(configPath, '..', 'ttf')),
-      '--config_file',
-      configPath,
-      '--wavs',
-      wavs,
-      '--imgs',
-      selectedImgs
-    ])
-
-    childProcess.stdout.on('data', (dataStr) => {
-      try {
-        data = JSON.parse(dataStr)
-      } catch (e) {
-        data = {}
-      }
-      if (data?.type === 'concat_imgs_to_video') {
-        event.sender.send('export-process-update', data?.step)
-      }
-    })
-
-    // 监听子进程的退出事件
-    childProcess.on('close', (exitCode) => {
-      const { code, outputFile } = data || {}
-      console.log('wswTest:  整体进程退出', data)
-      if (Number(code) === 1 && outputFile) {
-        shell.openPath(outputFile).catch((e) => {
-          console.log('wswTest: 尝试自动打开导出视频报错', e)
-          shell.openPath(dirname(outputFile))
-        })
-      } else {
-        // TODO:(wsw) 如果进程失败，这里需要怎么处理？
-        // 导出进程失败。返回上一级
-        // event.sender.send('export-process-fail')
-      }
-    })
-
-    // 监听处理过程中是否有取消当前进程请求
-    ipcMain.on('cancel-process-start', (event) => {
-      childProcess.kill('SIGTERM')
-      event.sender.send('cancel-process-finish', true)
-    })
-  })
-
-  // 监听打开文件夹
-  ipcMain.on('open-dialog', (event) => {
-    const result = dialog.showOpenDialogSync(mainWindow, {
-      title: '请选择视频保存文件夹',
-      defaultPath: process.resourcesPath,
-      buttonLabel: '选取',
-      properties: ['openDirectory']
-    })
-    // 用户取消
-    if (result?.canceled || !result?.length) {
-      return
-    }
-    event.sender.send('select-folder', result?.[0] || process.resourcesPath || '')
+  ipcMain.on('platform-send-video', async (event, info) => {
+    const { platform, videoInfo = {} } = info || {}
+    platform_send_video(platform, videoInfo)
   })
 
   // 保存全局配置

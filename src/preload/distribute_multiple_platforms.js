@@ -1,13 +1,24 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, shell, dialog } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-const api = {}
-const mainWindowChannels = ['open-new-window']
+const mainWindowChannels = [
+  'open-new-window',
+  'open-dialog',
+  'select-folder',
+  'fetch-config',
+  'read-config',
+  'save-config',
+  'platform-login',
+  'platform-send-video'
+]
 
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('dialog', dialog)
     contextBridge.exposeInMainWorld('electron', electronAPI)
+    contextBridge.exposeInMainWorld('openPath', shell.openPath)
+    contextBridge.exposeInMainWorld('openExternal', shell.openExternal)
+
     // 将ipcRenderer暴露出去
     // https://stackoverflow.com/questions/63615355/how-to-import-ipcrenderer-in-vue-js-dirname-is-not-defined
     contextBridge.exposeInMainWorld('ipcRenderer', {
@@ -18,7 +29,9 @@ if (process.contextIsolated) {
       },
       receive: (channel, func) => {
         if (mainWindowChannels.includes(channel)) {
-          ipcRenderer.on(channel, (event, ...args) => func(...args))
+          ipcRenderer.on(channel, (event, ...args) => {
+            func(...args)
+          })
         }
       }
     })
@@ -26,6 +39,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
+  window.dialog = dialog
   window.electron = electronAPI
-  window.api = api
+  window.openPath = shell.openPath
+  window.openExternal = shell.openExternal
 }
