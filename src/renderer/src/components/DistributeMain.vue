@@ -1,6 +1,13 @@
 <template>
   <div class="main">
     <el-row>
+      <el-col :span="9"></el-col>
+      <el-col :span="6">
+        <el-button type="primary" @click="selectFile">选择视频</el-button>
+      </el-col>
+      <el-col :span="9"></el-col>
+    </el-row>
+    <el-row>
       <el-col :span="4"></el-col>
       <el-col :span="6"> <el-button type="primary" @click="login">登录</el-button></el-col>
       <el-col :span="4"></el-col>
@@ -15,6 +22,9 @@
 <script setup>
 const login = () => {
   window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
+}
+const selectFile = () => {
+  window.ipcRenderer.send('open-dialog')
 }
 const sendVideo = () => {
   window.ipcRenderer.send('platform-send-video', {
