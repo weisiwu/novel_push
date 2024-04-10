@@ -8,7 +8,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
-import platform_send_video from '../../resources/sdk/node/platform_api/platform_send_video.js'
+import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 
 let startWindow = null
@@ -135,7 +135,7 @@ app.whenReady().then(() => {
    */
   ipcMain.on('platform-send-video', async (event, info) => {
     const { platform, videoInfo = {} } = info || {}
-    platform_send_video(platform, videoInfo)
+    platform_upload_video(platform, videoInfo)
   })
 
   // 监听打开文件夹

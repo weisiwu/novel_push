@@ -38,8 +38,12 @@ const sendVideo = () => {
       // TODO:(wsw) mac下测试使用
       // video: String(selected_file.value.path), // 视频路径
       // videoSize: selected_file.value.size,
-      video: 'C:\\Users\\Administrator\\Desktop\\baogao_ai_novel_push_output\\output.mp4',
-      videoSize: 10981560,
+      // TODO:(wsw) mac专用
+      video: '/Users/siwu/Desktop/baogao_ai_novel_push_output/x.mp4',
+      videoSize: 3685867,
+      // TODO windows专用
+      // video: 'C:\\Users\\Administrator\\Desktop\\baogao_ai_novel_push_output\\output.mp4',
+      // videoSize: 10981560,
       title: '【AI】小说文本转视频-效果预览-1',
       describe: '【AI】小说文本转视频，目前正在开发中，效果预览+推送测试。'
     }
