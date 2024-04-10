@@ -107,12 +107,11 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
        */
       const bilibili_get_upload_id = (params, times = 0) => {
         const { endpoint, upload_path, auth, ...restParams } = params || {}
-        const extraStr = '?uploads&output=json'
+        const extraStr = `?uploads&output=json&${qstr(restParams)}`
         const api = `https:${endpoint}/${upload_path}${extraStr}`
 
         return fetch(api, {
           method: 'post',
-          body: JSON.stringify(restParams),
           headers: {
             Origin: 'https://member.bilibili.com',
             Referer: 'https://member.bilibili.com/',
@@ -213,6 +212,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
         } else {
           console.log('wswTest: ', '上传视频失败')
         }
+        return uploadSuccess
       }
 
       /**
@@ -286,6 +286,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
           if (!video_task_info) {
             return console.log('wswTest: 创建视频上传任务失败')
           }
+          console.log('wswTest: 创建视频上传任务成功', video_task_info)
 
           const { chunk_size, biz_id, upload_path, endpoint, auth } = video_task_info || {}
           // S2: 获取上传任务id
@@ -302,6 +303,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
           if (!upload_id) {
             return console.log('wswTest: 获取上传任务id失败')
           }
+          console.log('wswTest: 获取上传任务id成功', upload_id)
 
           // S3: 启动上传任务
           const upload_result = await bilibili_stream_upload_video(file, {
@@ -313,11 +315,14 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
             uploadId: upload_id
           })
           if (!upload_result) {
-            return console.log('wswTest: 上传视频文件失败')
+            return console.log('wswTest: 上传视频文件失败', upload_result)
           }
+          console.log('wswTest: 上传视频文件成功', upload_result, upload_id)
 
           // TODO:(wsw) 上传封面
-          // S4: 投稿
+          // S4: 上传封面
+
+          // S5: 投稿
           const upload_file_name = upload_path?.split?.('/')?.[1] || ''
           bilibili_video_draft_auditing({
             cover:
