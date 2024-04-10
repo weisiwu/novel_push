@@ -5,6 +5,8 @@ const mainWindowChannels = [
   'open-new-window',
   'open-dialog',
   'select-folder',
+  'select-video',
+  'select-video-finish',
   'fetch-config',
   'read-config',
   'save-config',

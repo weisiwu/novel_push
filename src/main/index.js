@@ -3,7 +3,7 @@ import fs from 'fs'
 import asar from 'asar'
 import { join, resolve } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
@@ -130,9 +130,32 @@ app.whenReady().then(() => {
     platform_login(platform)
   })
 
+  /**
+   * 平台发布稿件
+   */
   ipcMain.on('platform-send-video', async (event, info) => {
     const { platform, videoInfo = {} } = info || {}
     platform_send_video(platform, videoInfo)
+  })
+
+  // 监听打开文件夹
+  ipcMain.on('select-video', (event) => {
+    const result = dialog.showOpenDialogSync(mainWindow, {
+      title: '请选择视频保存文件夹',
+      defaultPath: process.resourcesPath,
+      buttonLabel: '选取',
+      properties: ['openFile']
+    })
+    // 用户取消
+    if (result?.canceled || !result?.length) {
+      return
+    }
+    const finalPath = result?.[0] || process.resourcesPath || ''
+    // console.log('wswTest: 大小是事多啥哦', fs.statSync(finalPath).size)
+    event.sender.send('select-video-finish', {
+      path: finalPath,
+      size: fs.statSync(finalPath).size
+    })
   })
 
   // 保存全局配置
