@@ -124,52 +124,41 @@ app.whenReady().then(() => {
   })
 
   /**
+   * 【分发】更新进度生成函数
+   */
+  const updateProgress =
+    (event) =>
+    (msg = '') => {
+      event?.sender?.send?.('distribute-update-process', { msg })
+    }
+
+  /**
    * 登录平台
    */
   ipcMain.on('platform-login', async (event, info) => {
     const { platform } = info || {}
-    platform_login(platform)
+    platform_login(platform, updateProgress(event))
   })
 
   /**
    * 平台发布稿件
    */
-  ipcMain.on('platform-send-video', async (event, info) => {
-    const { platform, videoInfo = {} } = info || {}
-    console.log('wswTest: 开始处理视频信息', videoInfo)
+  ipcMain.on('platform-send-video', async (event, infoStr) => {
     const configStr = fs.readFileSync(distributeConfigPath, { encoding: 'utf-8' })
     let config = {}
     try {
+      const info = JSON.parse(infoStr)
+      const { platform, videos = [], videoInfo = {} } = info || {}
+      console.log('wswTest: 开始处理视频信息', videoInfo)
       config = JSON.parse(configStr)
+      console.log('wswTest: 读取的本地配置', config)
+      // TODO:(wsw) 合并逻辑完善
+      // 合并填写视频信息和本地模板信息
+      const mergeVideoInfo = { ...config, ...videoInfo }
+      platform_upload_video(platform, mergeVideoInfo, videos, updateProgress(event))
     } catch (e) {
       console.log('wswTest:[platform-send-video]e:', e)
-      config = {}
     }
-    console.log('wswTest: 读取的本地配置', config)
-    // TODO:(wsw) 合并逻辑完善
-    // 合并填写视频信息和本地模板信息
-    const mergeVideoInfo = { ...config, ...videoInfo }
-    platform_upload_video(platform, mergeVideoInfo)
-  })
-
-  // 监听打开文件夹
-  ipcMain.on('select-video', (event) => {
-    const result = dialog.showOpenDialogSync(mainWindow, {
-      title: '请选择视频保存文件夹',
-      defaultPath: process.resourcesPath,
-      buttonLabel: '选取',
-      properties: ['openFile']
-    })
-    // 用户取消
-    if (result?.canceled || !result?.length) {
-      return
-    }
-    const finalPath = result?.[0] || process.resourcesPath || ''
-    // console.log('wswTest: 大小是事多啥哦', fs.statSync(finalPath).size)
-    event.sender.send('select-video-finish', {
-      path: finalPath,
-      size: fs.statSync(finalPath).size
-    })
   })
 
   // 保存全局配置

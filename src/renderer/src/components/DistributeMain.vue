@@ -8,13 +8,12 @@
         show-icon
       />
     </div>
-    <el-upload class="upload-demo" drag action="" multiple limit="10">
+    <el-upload class="upload-demo" :on-change="selectFile" drag action="" multiple limit="10">
       <el-icon class="el-icon--upload"><upload-filled /></el-icon>
       <div class="el-upload__text">将待分发视频拖放到这里或者<em>点击选择</em></div>
       <template #tip>
         <div class="el-upload__tip">最多可选择10个视频，将按照选中顺序依次进行分发</div>
       </template>
-      <!-- <el-button v-if="!selected_file" type="primary" @click="selectFile">选择视频</el-button> -->
     </el-upload>
     <div :style="{ display: 'flex', justifyContent: 'center', marginTop: '20px' }">
       <el-button type="primary" @click="login">授权登录</el-button>
@@ -40,23 +39,23 @@
     <!-- 分发执行日志 -->
     <terminal
       id="terminal"
-      :ref="terminal_ref"
+      ref="terminal_ref"
       :style="{ height: '350px', position: 'fixed', width: '660px', bottom: '30px' }"
       name="分发执行日志"
-      context="爆肝分发"
+      :context="terminalContext"
       context-suffix=":"
       title="分发执行日志"
       :show-header="false"
       :auto-help="false"
       :init-log="{ content: `[${new Date().toLocaleString()}]爆肝分发软件启动~` }"
       :input-filter="() => ''"
-      @exec-cmd="onExecCmd"
     ></terminal>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { version } from '../../../../package.json'
+import { ref, onMounted } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import Terminal from 'vue-web-terminal'
@@ -64,49 +63,33 @@ import 'vue-web-terminal/lib/theme/dark.css'
 
 const input_val = ref('')
 const desc_val = ref('')
-const terminal_ref = ref('')
+const terminal_ref = ref()
+const selected_videos = ref([])
 const drawer = ref(false)
-const selected_file = ref(null)
+const terminalContext = `爆肝分发(${version})`
 const login = () => {
   window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
 }
-const selectFile = () => {
-  window.ipcRenderer.send('select-video')
-  window.ipcRenderer.receive('select-video-finish', ({ path, size } = {}) => {
-    selected_file.value = { path, size }
-  })
+const selectFile = (_, files) => {
+  selected_videos.value =
+    files?.map?.((file) => {
+      return { path: file?.raw?.path, size: file?.raw?.size, name: file?.name }
+    }) || []
 }
-const onExecCmd = (key, command, success, failed) => {
-  if (key === 'fail') {
-    failed('Something wrong!!!')
-  } else {
-    let allClass = ['success', 'error', 'system', 'info', 'warning']
-
-    let clazz = allClass[Math.floor(Math.random() * allClass.length)]
-    success({
-      type: 'normal',
-      class: clazz,
-      tag: '成功',
-      content: command
-    })
-  }
-}
-
-setTimeout(() => {
-  console.log('wswTest: terminal_ref.value.pushMessage', terminal_ref.value.pushMessage)
-  terminal_ref.value.pushMessage('hello world!')
-}, 100)
 
 const sendVideo = () => {
-  window.ipcRenderer.send('platform-send-video', {
-    platform: 'bilibili',
-    videoInfo: {
-      video: String(selected_file.value.path), // 视频路径
-      videoSize: selected_file.value.size, // 视频大小
-      title: input_val.value || '',
-      describe: desc_val.value || ''
-    }
-  })
+  window.ipcRenderer.send(
+    'platform-send-video',
+    JSON.stringify({
+      platform: 'bilibili',
+      videos: Array.from(selected_videos.value),
+      videoInfo: {
+        // TODO:(wsw) 临时事假戳标题
+        title: input_val.value || `胡言乱语的我${Math.random() * 1000}adafa` || '',
+        describe: desc_val.value || '胡言乱语的我要起飞了' || ''
+      }
+    })
+  )
 }
 const handleTemplateModelClose = (done) => {
   ElMessageBox.confirm('是否离开编辑模板?', '注意', {
@@ -123,6 +106,17 @@ const handleTemplateModelCancel = () => {
 const handleTemplateModelConfirm = () => {
   drawer.value = false
 }
+
+onMounted(() => {
+  if (window.ipcRenderer) {
+    window.ipcRenderer.receive('distribute-update-process', (info) => {
+      if (!terminal_ref.value) {
+        return false
+      }
+      terminal_ref.value.pushMessage(info?.msg || '')
+    })
+  }
+})
 </script>
 
 <style scoped>
