@@ -4,8 +4,22 @@
       <el-col v-if="!selected_file" :span="9"></el-col>
       <el-col :span="6">
         <el-button v-if="!selected_file" type="primary" @click="selectFile">选择视频</el-button>
-        <p v-if="selected_file">{{ selected_file.value.path }}</p>
+        <p v-if="selected_file">{{ selected_file.path }}</p>
       </el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="9"></el-col>
+      <el-col :span="6">
+        <input v-model="input_val" type="text" placeholder="输入标题" />
+      </el-col>
+      <el-col :span="9"></el-col>
+    </el-row>
+    <el-row>
+      <el-col :span="9"></el-col>
+      <el-col :span="6">
+        <input v-model="desc_val" type="text" placeholder="输入描述" />
+      </el-col>
+      <el-col :span="9"></el-col>
     </el-row>
     <el-row>
       <el-col :span="4"></el-col>
@@ -21,7 +35,10 @@
 
 <script setup>
 import { ref } from 'vue'
-const selected_file = ref('')
+
+const input_val = ref('')
+const desc_val = ref('')
+const selected_file = ref(null)
 const login = () => {
   window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
 }
@@ -35,17 +52,10 @@ const sendVideo = () => {
   window.ipcRenderer.send('platform-send-video', {
     platform: 'bilibili',
     videoInfo: {
-      // TODO:(wsw) mac下测试使用
-      // video: String(selected_file.value.path), // 视频路径
-      // videoSize: selected_file.value.size,
-      // TODO:(wsw) mac专用
-      video: '/Users/siwu/Desktop/baogao_ai_novel_push_output/x.mp4',
-      videoSize: 3685867,
-      // TODO windows专用
-      // video: 'C:\\Users\\Administrator\\Desktop\\baogao_ai_novel_push_output\\output.mp4',
-      // videoSize: 10981560,
-      title: '【AI】小说文本转视频-效果预览-1',
-      describe: '【AI】小说文本转视频，目前正在开发中，效果预览+推送测试。'
+      video: String(selected_file.value.path), // 视频路径
+      videoSize: selected_file.value.size, // 视频大小
+      title: input_val.value || '',
+      describe: desc_val.value || ''
     }
   })
 }

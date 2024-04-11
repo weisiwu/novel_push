@@ -10,6 +10,7 @@ import macIcon from '../../resources/imgs/icon.png?asset'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
 import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
+import distributeConfigPath from '../../resources/BaoganDistributeConfig.json?commonjs-external&asset&asarUnpack'
 
 let startWindow = null
 let mainWindow = null
@@ -135,7 +136,20 @@ app.whenReady().then(() => {
    */
   ipcMain.on('platform-send-video', async (event, info) => {
     const { platform, videoInfo = {} } = info || {}
-    platform_upload_video(platform, videoInfo)
+    console.log('wswTest: 开始处理视频信息', videoInfo)
+    const configStr = fs.readFileSync(distributeConfigPath, { encoding: 'utf-8' })
+    let config = {}
+    try {
+      config = JSON.parse(configStr)
+    } catch (e) {
+      console.log('wswTest:[platform-send-video]e:', e)
+      config = {}
+    }
+    console.log('wswTest: 读取的本地配置', config)
+    // TODO:(wsw) 合并逻辑完善
+    // 合并填写视频信息和本地模板信息
+    const mergeVideoInfo = { ...config, ...videoInfo }
+    platform_upload_video(platform, mergeVideoInfo)
   })
 
   // 监听打开文件夹
