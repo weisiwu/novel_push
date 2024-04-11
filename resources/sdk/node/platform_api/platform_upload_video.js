@@ -4,9 +4,13 @@ import ffmpeg from 'fluent-ffmpeg'
 
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
+// TODO:(wsw) 不支持视频分P
+// TODO:(wsw) b站上传工具版本同步更新机制
 /**
  * B站的上传视频，整体逻辑反编译自
  * https://pypi.org/project/bilibili-toolman/
+ * b站错误吗参考
+ * https://github.com/Yesterday17/bilibili-errorcode/blob/master/main_site.go
  */
 const maxRetryTime = 3
 const videoUploadInput = 'videoUploadInput'
@@ -431,50 +435,44 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
 
           // S4: 投稿
           const upload_file_name = upload_path?.split?.('/')?.[1] || ''
+          // TODO:(wsw) 获取tid
+          // TODO:(wsw) 获取tag
           bilibili_video_draft_auditing({
-            cover: cover_url,
-            title: '我又来投稿件了，哈哈哈哈1212 ',
-            desc: '',
-            desc_format_id: 0,
-            copyright: 1,
-            // TODO:(wsw) 这里的tid，如何获取？
-            tid: 168,
-            // TODO:(wsw) 这里的tag是否手动写？
-            tag: '小说,AI小说,网文,效果,生成',
+            cover: cover_url, // 视频封面
+            title: '我又来投稿件了，哈哈哈哈1212 ', // 视频标题
+            desc: '', // 视频介绍
+            desc_format_id: 0, //
+            copyright: 1, // 自制1 转载2
+            act_reserve_create: 0, //
+            no_disturbance: 0,
+            no_reprint: 1, // 禁止转载 0：无 1：禁止
+            open_elec: 1, // 是否开启充电 0: 无 1: 开启
+            tid: 168, // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
+            tag: '小说,AI小说,网文,效果,生成', // 标签
+            recreate: 1, //
+            dynamic: '', //
+            interactive: 0, //
+            subtitle: { open: 0, lan: 'zh-CN' }, // 字幕相关
+            dolby: 0, //
+            lossless_music: 0, //
+            up_selection_reply: false, //
+            up_close_reply: false, //
+            up_close_danmu: false, //
+            web_os: 2, // 系统标识
+            csrf: getCookieValueByName('bili_jct'), // 防跨站伪造攻击
             // 这些个参数还没有拿到
-            // mission_id: 4011933,
-            // topic_id: 99191,
-            // topic_detail: {
-            //   from_topic_id: 99191,
-            //   from_source: 'arc.web.recommend'
-            // },
-            recreate: 1,
-            dynamic: '',
-            interactive: 0,
+            mission_id: 4011933, // 任务id
+            topic_id: 99191, // 话题id
+            // 话题详情
+            topic_detail: { from_topic_id: 99191, from_source: 'arc.web.recommend' },
             videos: [
               {
                 filename: upload_file_name?.split?.('.')?.[0],
                 title: '这是第一个分p',
                 desc: '描述描述'
-                // 弹幕池id，暂时不要试试看效果
-                // TODO:(wsw) 缺少个入参
                 // cid: biz_id
               }
-            ],
-            act_reserve_create: 0,
-            no_disturbance: 0,
-            no_reprint: 1,
-            subtitle: {
-              open: 0,
-              lan: 'zh-CN'
-            },
-            dolby: 0,
-            lossless_music: 0,
-            up_selection_reply: false,
-            up_close_reply: false,
-            up_close_danmu: false,
-            web_os: 2,
-            csrf: getCookieValueByName('bili_jct')
+            ]
           })
         }
       })
