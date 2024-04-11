@@ -1,5 +1,6 @@
 import { join, basename } from 'path'
 import puppeteer from 'puppeteer'
+import ffmpeg from 'fluent-ffmpeg'
 
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
@@ -10,6 +11,32 @@ const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 const maxRetryTime = 3
 const videoUploadInput = 'videoUploadInput'
 const mainPageUrl = 'https://member.bilibili.com/platform/upload/video/frame'
+/**
+ * 根据视频地址，获取视频第一帧作为封面
+ * 以视频名+_cover保存在相同目录
+ */
+const get_cover_from_video = (video_path) => {
+  if (!video_path) {
+    return false
+  }
+  const video_name = basename(video_path)
+  const base_path = video_path.replace(video_name, '')
+  const cover_path = `${base_path}${video_name?.split?.('.')?.[0]}_cover.png`
+  return new Promise((resolve, reject) => {
+    ffmpeg(video_path)
+      .frames(1)
+      .on('end', () => {
+        console.log('wswTest: 截取第一帧完成，获取封面完成')
+        resolve(cover_path)
+      })
+      .on('error', (err) => {
+        console.log('wswTest: 获取视频封面失败', err)
+        reject(false)
+      })
+      .save(cover_path)
+  })
+}
+
 const platform_upload_video = async (platform, videoInfo = {}) => {
   const browser = await puppeteer.launch({
     headless: false,
@@ -19,12 +46,22 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
   // 投稿主页
   const mainPage = await browser.newPage()
 
+  // 监听处理进度
+  mainPage.on('console', (msg) => {
+    // 将浏览器中的 console 输出捕获到 Node.js 的 console 中
+    if (msg.type() === 'log') {
+      // 这里可以根据需要捕获不同类型的控制台消息
+      console.log(`BROWSER LOG: ${msg.text()}`)
+    }
+  })
+
   await mainPage.goto(mainPageUrl, { waitUntil: 'load' })
   // 向页面添加input，并传入视频
   await mainPage.evaluate(
     (params) => {
       const newInput = document.createElement('input')
       newInput.setAttribute('type', 'file')
+      newInput.setAttribute('multiple', 'true')
       newInput.setAttribute('id', params?.videoUploadInput)
       document.body.appendChild(newInput)
     },
@@ -51,6 +88,21 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
       }
 
       /**
+       * 将文件转换为base64
+       */
+      const read_file_base64 = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result)
+          reader.onerror = (error) => reject(error)
+          if (!file) {
+            reject(new Error('将视频封面转换为base64，传入的封面文件为空'))
+          }
+          reader.readAsDataURL(file)
+        })
+      }
+
+      /**
        * 获取指定名称的cookie
        */
       const getCookieValueByName = (name) => {
@@ -74,7 +126,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
         return fetch(`${registerStoreNSApi}?${qstr(queryParams)}`)
           .then((res) => {
             if (!res.ok) {
-              throw new Error(`HTTP error! status: ${res.status}`)
+              throw new Error(`[bilibili_create_update_task]HTTP error! status: ${res.status}`)
             }
             return res.json().catch((e) => {
               if (times + 1 >= maxRetryTime) {
@@ -120,7 +172,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
         })
           .then((res) => {
             if (!res.ok) {
-              throw new Error(`HTTP error! status: ${res.status}`)
+              throw new Error(`[bilibili_get_upload_id]HTTP error! status: ${res.status}`)
             }
             return res.json().catch((e) => {
               if (times + 1 >= maxRetryTime) {
@@ -186,7 +238,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
           })
             .then((res) => {
               if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`)
+                throw new Error(`[bilibili_stream_upload_video]HTTP error! status: ${res.status}`)
               }
               return res.text().catch((e) => {
                 if (times + 1 >= maxRetryTime) {
@@ -208,9 +260,9 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
         // TODO:(wsw) 待添加逻辑
         // 视频分段上传完毕后，根据结果通知用户
         if (uploadSuccess) {
-          console.log('wswTest: ', '上传视频成功')
+          console.log('wswTest: 上传视频成功')
         } else {
-          console.log('wswTest: ', '上传视频失败')
+          console.log('wswTest: 上传视频失败')
         }
         return uploadSuccess
       }
@@ -220,7 +272,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
        */
       const bilibili_video_draft_auditing = (draft_params, times = 0) => {
         const video_draft_auditing_api = `https://member.bilibili.com/x/vu/web/add/v3?t=${new Date().getTime()}&csrf=${getCookieValueByName('bili_jct')}`
-        // TODO:(wsw) 调试用
+        // TODO:(wsw) 调试用log,后续删除
         console.log('wswTest: 推送视频投稿参数', draft_params)
         console.log('wswTest: 推送视频投稿提交接口', video_draft_auditing_api)
         return fetch(video_draft_auditing_api, {
@@ -234,7 +286,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
         })
           .then((res) => {
             if (!res.ok) {
-              throw new Error(`HTTP error! status: ${res.status}`)
+              throw new Error(`[bilibili_video_draft_auditing]HTTP error! status: ${res.status}`)
             }
             return res.json().catch((e) => {
               if (times + 1 >= maxRetryTime) {
@@ -261,6 +313,53 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
           })
       }
 
+      /**
+       * 视频封面上传
+       */
+      const bilibili_video_cover_upload = (params, times = 0) => {
+        const formData = new URLSearchParams()
+        for (let param in params) {
+          formData.append(param, params[param])
+        }
+        const api = `https://member.bilibili.com/x/vu/web/cover/up?t=${new Date().getTime()}`
+
+        return fetch(api, {
+          method: 'post',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: formData
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error(`[bilibili_video_cover_upload]HTTP error! status: ${res.status}`)
+            }
+            return res.json().catch((e) => {
+              if (times + 1 >= maxRetryTime) {
+                console.log('wswTest:[bilibili_video_cover_upload]', e)
+                return null
+              }
+              return bilibili_video_cover_upload(params, times + 1)
+            })
+          })
+          .then((data) => {
+            const cover_url = data?.data?.url || ''
+            if (!cover_url) {
+              console.log('wswTest:[bilibili_video_cover_upload]', data)
+              return null
+            }
+            return { cover_url }
+          })
+          .catch((e) => {
+            if (times + 1 >= maxRetryTime) {
+              console.log('wswTest:[bilibili_video_cover_upload]', e)
+              return null
+            }
+            return bilibili_video_cover_upload(params, times + 1)
+          })
+      }
+
+      // 视频上传基础参数
       const baseParams = {
         r: 'upos',
         ssl: 0,
@@ -274,8 +373,19 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
       const profile = 'ugcfx%2Fbup'
       const fileInputElement = document.querySelector(`#${videoUploadInput}`)
       fileInputElement.addEventListener('change', async (event) => {
-        const file = event?.target?.files?.[0]
-        if (file) {
+        const [cover_file, video_file] = event?.target?.files || []
+        let cover_url = ''
+        // TODO:(wsw) 传入文件数量不足2
+        // S4: 上传封面
+        if (cover_file) {
+          const cover_file_base64 = await read_file_base64(cover_file)
+          const upload_res = await bilibili_video_cover_upload({
+            cover: cover_file_base64,
+            csrf: getCookieValueByName('bili_jct')
+          })
+          cover_url = (upload_res || {}).cover_url || ''
+        }
+        if (video_file) {
           // S1: 对视频建立上传任务
           const video_task_info = await bilibili_create_update_task({
             ...baseParams,
@@ -306,7 +416,7 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
           console.log('wswTest: 获取上传任务id成功', upload_id)
 
           // S3: 启动上传任务
-          const upload_result = await bilibili_stream_upload_video(file, {
+          const upload_result = await bilibili_stream_upload_video(video_file, {
             auth,
             endpoint,
             upload_path,
@@ -319,14 +429,10 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
           }
           console.log('wswTest: 上传视频文件成功', upload_result, upload_id)
 
-          // TODO:(wsw) 上传封面
-          // S4: 上传封面
-
-          // S5: 投稿
+          // S4: 投稿
           const upload_file_name = upload_path?.split?.('/')?.[1] || ''
           bilibili_video_draft_auditing({
-            cover:
-              'https://archive.biliimg.com/bfs/archive/cf9b93eb6f3d208c3124cce46ecafcfc3e64f89f.png',
+            cover: cover_url,
             title: '我又来投稿件了，哈哈哈哈1212 ',
             desc: '',
             desc_format_id: 0,
@@ -376,9 +482,14 @@ const platform_upload_video = async (platform, videoInfo = {}) => {
     { fileName, videoSize: videoInfo.videoSize, videoUploadInput, maxRetryTime }
   )
 
+  // TODO:(wsw) videoInfo.video 无值
+  // TODO:(wsw) videoInfo.video 对应非视频
   // 触发文件上传，开始投稿流程
   const elementHandle = await mainPage.$(`#${videoUploadInput}`)
-  await elementHandle.uploadFile(videoInfo.video)
+  // TODO:(wsw) 获取封面失败
+  // 获取封面图片，保存并上传
+  const cover_path = await get_cover_from_video(videoInfo.video)
+  await elementHandle.uploadFile(cover_path, videoInfo.video)
 }
 
 export default platform_upload_video
