@@ -71,7 +71,13 @@
               </el-button>
             </el-form-item>
             <el-form-item label="视频分类">
-              <el-input v-model="form.tid" />
+              <el-tree-select
+                v-model="form.tid"
+                filterable
+                placeholder="请选择视频默认分区"
+                :data="bilibili_tids"
+                :render-after-expand="false"
+              />
             </el-form-item>
             <el-form-item label="活动任务">
               <el-input v-model="form.mission_id" />
@@ -95,31 +101,27 @@
 <script setup>
 import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
+import bilibili_tids from '../../../../resources/sdk/node/platform_api/bilibili_tids.json'
 import 'vue-web-terminal/lib/theme/dark.css'
+console.log('wswTest: bilibili_tids', bilibili_tids)
 
 const props = defineProps({ pushMessage: Function, localConfig: Object })
-const localConfig = props?.localConfig || {}
 const platformNames = ['bilibili']
-// TODO:(wsw) 临时测四，将drawer显示
-// const drawer = ref(true)
 const drawer = ref(false)
-// TODO:(wsw) 临时测试
-const activeName = ref(platformNames[0])
-// const activeName = ref('')
+const activeName = ref('')
 const form = reactive({
   title_prefix: '',
   desc: '',
   copyright: '1',
   no_reprint: '1',
   open_elec: '1',
+  tid: '',
+  tag: [],
   // TODO:(wsw) 待确认字段
   recreate: '',
   no_disturbance: '',
   act_reserve_create: '',
   dolby: '',
-  tag: [],
-  // TODO:(wsw) 假值
-  tid: 168,
   mission_id: 4011933,
   topic_id: 99191
 })
@@ -183,7 +185,7 @@ watchEffect(() => {
   form.act_reserve_create = props?.localConfig?.act_reserve_create || ''
   form.dolby = props?.localConfig?.dolby || ''
   form.tag = props?.localConfig?.tag?.split?.(',') || []
-  form.tid = props?.localConfig?.tid || 168
+  form.tid = props?.localConfig?.tid || ''
   form.mission_id = props?.localConfig?.mission_id || 4011933
   form.topic_id = props?.localConfig?.topic_id || 99191
 })

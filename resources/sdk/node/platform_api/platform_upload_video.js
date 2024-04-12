@@ -12,6 +12,9 @@ const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
  * @ref b站错误码 https://github.com/Yesterday17/bilibili-errorcode/blob/master/main_site.go
  * @ref b站网页版视频投稿接口分析 https://blog.csdn.net/weixin_45904404/article/details/131680787
  * @ref 分发项目文档: https://www.yuque.com/weisiwu/kb/ylq9vgicobgy6z07
+ * @ref tid列表 https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
+ * @ref midssion https://member.bilibili.com/x/vupre/app/h5/mission/type/all?tid=168&from=0&t=1712912378510
+ * @ref topic https://member.bilibili.com/x/vupre/web/topic/type?type_id=168&pn=0&ps=6&title=&t=1712912378510
  */
 const maxRetryTime = 3
 const videoUploadInput = 'videoUploadInput'

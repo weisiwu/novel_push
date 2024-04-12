@@ -194,8 +194,8 @@ app.whenReady().then(() => {
           userTplModel.act_reserve_create || localTplModel.act_reserve_create || '',
         dolby: userTplModel.dolby || localTplModel.dolby || '',
         tag: userTplModel.tag?.join?.(',') || localTplModel.tag || '',
+        tid: Number(userTplModel.tid || localTplModel.tid || ''),
         // TODO:(wsw) 这三个取值赋值没有搞定
-        tid: Number(userTplModel.tid || localTplModel.tid || 168),
         mission_id: Number(userTplModel.mission_id || localTplModel.mission_id || 1),
         topic_id: Number(userTplModel.topic_id || localTplModel.topic_id || 1)
       })
