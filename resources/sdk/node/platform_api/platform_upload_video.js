@@ -49,8 +49,8 @@ const get_cover_from_video = (video_path) => {
 const platform_upload_video = async (platform, videoInfo = {}, videoList = [], updateProgress) => {
   const browser = await puppeteer.launch({
     // TODO:(wsw) 调试模式
-    headless: false,
-    // headless: true,
+    // headless: false,
+    headless: true,
     userDataDir: chromeUserDataPath
   })
 
@@ -92,7 +92,7 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
       // 视频合并的时候需要此参数，参数在视频分段上传时产生。保存为全局变量，方便读取
       let _totalChunks = 1
       const { videoInfo, videoList, videoUploadInput, maxRetryTime } = params || {}
-      const { title, describe } = videoInfo || {}
+      const { title_prefix, describe } = videoInfo || {}
 
       const qstr = (obj) => {
         let str = ''
@@ -515,7 +515,7 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
           // TODO:(wsw) 获取tag
           const upload_draft_result = await bilibili_video_draft_auditing({
             cover: cover_url, // 视频封面
-            title, // 视频标题
+            title: `${title_prefix || ''}${fileName}`, // 视频标题
             desc: describe, // 视频介绍
             desc_format_id: 0, //
             copyright: 1, // 自制1 转载2

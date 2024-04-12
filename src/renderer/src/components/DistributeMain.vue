@@ -28,7 +28,16 @@
       <template #header>
         <h4>视频信息模板</h4>
       </template>
-      <template #default> </template>
+      <template #default>
+        <el-form :model="form" label-width="auto" style="max-width: 600px">
+          <el-form-item label="视频标题前缀">
+            <el-input v-model="form.title_prefix" />
+          </el-form-item>
+          <el-form-item label="视频描述">
+            <el-input v-model="form.desc" />
+          </el-form-item>
+        </el-form>
+      </template>
       <template #footer>
         <div style="flex: auto">
           <el-button @click="handleTemplateModelCancel">取消</el-button>
@@ -55,14 +64,16 @@
 
 <script setup>
 import { version } from '../../../../package.json'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import Terminal from 'vue-web-terminal'
 import 'vue-web-terminal/lib/theme/dark.css'
 
-const input_val = ref('')
-const desc_val = ref('')
+const form = reactive({
+  title_prefix: '',
+  desc: ''
+})
 const terminal_ref = ref()
 const selected_videos = ref([])
 const drawer = ref(false)
@@ -84,9 +95,8 @@ const sendVideo = () => {
       platform: 'bilibili',
       videos: Array.from(selected_videos.value),
       videoInfo: {
-        // TODO:(wsw) 临时事假戳标题
-        title: input_val.value || `胡言乱语的我${Math.random() * 1000}adafa` || '',
-        describe: desc_val.value || '胡言乱语的我要起飞了' || ''
+        title_prefix: form.title_prefix || '',
+        describe: form.desc || ''
       }
     })
   )
