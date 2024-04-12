@@ -80,7 +80,20 @@
               />
             </el-form-item>
             <el-form-item label="活动任务">
-              <el-input v-model="form.mission_id" />
+              <el-select v-model="form.mission_id" placeholder="请选择要参与的活动任务">
+                <el-option
+                  v-for="item in missions_list"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                >
+                  <span style="float: left">{{ item.label }}</span>
+                  <span
+                    style="float: right; color: var(--el-text-color-secondary); font-size: 13px"
+                    >{{ item.value }}</span
+                  >
+                </el-option>
+              </el-select>
             </el-form-item>
             <el-form-item label="活动话题">
               <el-input v-model="form.topic_id" />
@@ -99,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
+import { ref, reactive, watchEffect, nextTick, defineProps, onMounted } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
 import bilibili_tids from '../../../../resources/sdk/node/platform_api/bilibili_tids.json'
 import 'vue-web-terminal/lib/theme/dark.css'
@@ -107,6 +120,7 @@ console.log('wswTest: bilibili_tids', bilibili_tids)
 
 const props = defineProps({ pushMessage: Function, localConfig: Object })
 const platformNames = ['bilibili']
+const maxRetryTimes = 3
 const drawer = ref(false)
 const activeName = ref('')
 const form = reactive({
@@ -117,18 +131,19 @@ const form = reactive({
   open_elec: '1',
   tid: '',
   tag: [],
+  mission_id: 4011933,
   // TODO:(wsw) 待确认字段
   recreate: '',
   no_disturbance: '',
   act_reserve_create: '',
   dolby: '',
-  mission_id: 4011933,
   topic_id: 99191
 })
-
 const add_tag_input_val = ref('')
 const add_tag_input_visible = ref(false)
 const add_tag_input_ref = ref()
+const missions_list = ref([]) // 任务列表
+const topics_list = ref([]) // 话题列表
 
 // 删除标签
 const delete_tag = (tag) => {
@@ -186,8 +201,13 @@ watchEffect(() => {
   form.dolby = props?.localConfig?.dolby || ''
   form.tag = props?.localConfig?.tag?.split?.(',') || []
   form.tid = props?.localConfig?.tid || ''
-  form.mission_id = props?.localConfig?.mission_id || 4011933
-  form.topic_id = props?.localConfig?.topic_id || 99191
+  form.mission_id = props?.localConfig?.mission_id || ''
+  form.topic_id = props?.localConfig?.topic_id || ''
+
+  // 获取tid后，开始更新missions和topics
+  console.log('wswTest: 新的tid', form.tid)
+  update_missions_list(form.tid)
+  update_topics_list(form.tid)
 })
 
 /**
@@ -203,6 +223,66 @@ const handleTemplateModelConfirm = () => {
     class: 'success'
   })
   setTimeout(() => globalLoadingIns.close(), 300)
+}
+
+// TODO:(wsw) 这两个任务都需要移动到puppeteer中去
+/**
+ * 获取任务列表
+ */
+const update_missions_list = (tid, times = 0) => {
+  return fetch(
+    `https://member.bilibili.com/x/app/h5/mission/type/v3?tid=${tid}&from=0&pn=1&ps=10&version=0&t=${new Date().getTime()}`
+  )
+    .then((res) => {
+      if (res.ok) {
+        const resJson = res.json()
+        console.log('wswTest:获取任务列表 ', resJson.data)
+        missions_list.value = resJson?.data?.acts?.map?.((act) => {
+          return {
+            value: act.id,
+            label: act.name,
+            url: act.act_url
+          }
+        })
+      } else {
+        update_missions_list(times + 1)
+      }
+    })
+    .catch((e) => {
+      if (times < maxRetryTimes) {
+        update_missions_list(times + 1)
+      }
+    })
+}
+
+/**
+ * 获取话题列表
+ */
+const update_topics_list = (tid, times = 0) => {
+  return fetch(
+    `https://member.bilibili.com/x/vupre/web/topic/type?type_id=${tid}&pn=0&ps=6&title=&t=${new Date().getTime()}`
+  )
+    .then((res) => {
+      if (res.ok) {
+        const resJson = res.json()
+        console.log('wswTest:获取话题列表 ', resJson.data)
+
+        topics_list.value = resJson.data?.topics?.map?.((topic) => {
+          return {
+            value: topic.topic_id,
+            label: topic.topic_name,
+            mission_id: topic.mission_id
+          }
+        })
+      } else {
+        update_topics_list(times + 1)
+      }
+    })
+    .catch((e) => {
+      if (times < maxRetryTimes) {
+        update_topics_list(times + 1)
+      }
+    })
 }
 </script>
 
