@@ -128,8 +128,8 @@ app.whenReady().then(() => {
    */
   const updateProgress =
     (event) =>
-    (msg = '') => {
-      event?.sender?.send?.('distribute-update-process', { msg })
+    (msg = '', className = 'info', type = 'normal') => {
+      event?.sender?.send?.('distribute-update-process', { msg, className, type })
     }
 
   /**

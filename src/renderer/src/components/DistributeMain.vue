@@ -89,6 +89,12 @@ const selectFile = (_, files) => {
 }
 
 const sendVideo = () => {
+  if (!selected_videos.value.length) {
+    terminal_ref.value.pushMessage({
+      content: `[${new Date().toLocaleString()}]未选择视频，无法开始分发`,
+      class: 'error'
+    })
+  }
   window.ipcRenderer.send(
     'platform-send-video',
     JSON.stringify({
@@ -120,10 +126,15 @@ const handleTemplateModelConfirm = () => {
 onMounted(() => {
   if (window.ipcRenderer) {
     window.ipcRenderer.receive('distribute-update-process', (info) => {
-      if (!terminal_ref.value) {
+      const { msg, className, type } = info || {}
+      if (!terminal_ref.value || !msg) {
         return false
       }
-      terminal_ref.value.pushMessage(info?.msg || '')
+      terminal_ref.value.pushMessage({
+        content: `[${new Date().toLocaleString()}]${msg || ''}`,
+        class: className,
+        type
+      })
     })
   }
 })

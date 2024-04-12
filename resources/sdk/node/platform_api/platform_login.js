@@ -7,7 +7,7 @@ const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
 const platform_login = async (platform, updateProgress) => {
   console.log('wswTest: 将要登录平台', platform)
-  updateProgress(`[${new Date().toLocaleString()}]将要登录平台: ${platform}`)
+  updateProgress(`将要登录平台: ${platform}`)
   const browser = await puppeteer.launch({
     headless: false,
     // 指定用户数据目录
@@ -24,7 +24,7 @@ const platform_login = async (platform, updateProgress) => {
   loginPage.on('response', async (response) => {
     const responseUrl = response.url()
     if (responseUrl.indexOf(bilibiliSetLoginApi) >= 0) {
-      updateProgress(`[${new Date().toLocaleString()}]开始检查登录`)
+      updateProgress(`开始检查登录`)
       console.log('wswTest: 开始检查登录')
       response.json().then((data) => {
         console.log('wswTest: 登录的结果到底是什么说明书上', data)
@@ -34,15 +34,15 @@ const platform_login = async (platform, updateProgress) => {
         // 等待页面加载完成
         await loginPage.waitForNavigation()
         console.log('wswTest: 登录成功')
-        updateProgress(`[${new Date().toLocaleString()}]登录成功`)
+        updateProgress(`登录成功`, 'success')
         // 获取登录Cookie并保存到本地文件中
         const cookies = await loginPage.cookies()
         fs.writeFileSync(bilibiliCookiesPath, JSON.stringify(cookies), 'utf-8')
         console.log('wswTest: 关闭登录页面')
-        updateProgress(`[${new Date().toLocaleString()}]关闭登录页面`)
+        updateProgress(`关闭登录页面`)
         await browser.close()
       } else {
-        updateProgress(`[${new Date().toLocaleString()}]登录失败`)
+        updateProgress(`登录失败`, 'error')
       }
     }
 
@@ -50,11 +50,11 @@ const platform_login = async (platform, updateProgress) => {
       if (response.status()) {
         response.json().then((data) => {
           if (data?.data?.isLogin) {
-            updateProgress(`[${new Date().toLocaleString()}]已保持登录态`)
+            updateProgress(`已保持登录态`, 'success')
             console.log('wswTest: 已保持登录态')
             browser.close()
           } else {
-            updateProgress(`[${new Date().toLocaleString()}]未登录${platform}，请登录`)
+            updateProgress(`未登录${platform}，请登录`, 'error')
             console.log(`wswTest: 未登录${platform}，请登录`)
           }
         })
