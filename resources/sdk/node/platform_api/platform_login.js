@@ -1,17 +1,17 @@
 import fs from 'fs'
 import { join } from 'path'
 import puppeteer from 'puppeteer'
+// import puppeteer_manage from './puppeteer_manage.js'
 import bilibiliCookiesPath from '../../../cookies/BilibiliCookies.json?commonjs-external&asset&asarUnpack'
 
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
-const platform_login = async (platform, updateProgress) => {
+const platform_login = async (platform, updateProgress = () => {}) => {
   console.log('wswTest: 将要登录平台', platform)
   updateProgress(`将要登录平台: ${platform}`)
   const winSize = 1080
   const browser = await puppeteer.launch({
     headless: false,
-    // 指定用户数据目录
     userDataDir: chromeUserDataPath,
     args: [`--window-size=${winSize},${winSize}`]
   })
@@ -29,9 +29,6 @@ const platform_login = async (platform, updateProgress) => {
     if (responseUrl.indexOf(bilibiliSetLoginApi) >= 0) {
       updateProgress(`开始检查登录`)
       console.log('wswTest: 开始检查登录')
-      response.json().then((data) => {
-        console.log('wswTest: 登录的结果到底是什么说明书上', data)
-      })
       // 登录成功: 种cookie请求，只要成功返回了，可不用检查返回值内部状态
       if (response.status()) {
         // 等待页面加载完成
@@ -43,24 +40,24 @@ const platform_login = async (platform, updateProgress) => {
         fs.writeFileSync(bilibiliCookiesPath, JSON.stringify(cookies), 'utf-8')
         console.log('wswTest: 关闭登录页面')
         updateProgress(`关闭登录页面`)
-        await browser.close()
       } else {
         updateProgress(`登录失败`, 'error')
       }
+      await browser.close()
     }
 
     if (responseUrl.indexOf(bilibiliCoolieApi) >= 0) {
       if (response.status()) {
-        response.json().then((data) => {
+        await response.json().then((data) => {
           if (data?.data?.isLogin) {
             updateProgress(`已保持登录态`, 'success')
             console.log('wswTest: 已保持登录态')
-            browser.close()
           } else {
             updateProgress(`未登录${platform}，请登录`, 'error')
             console.log(`wswTest: 未登录${platform}，请登录`)
           }
         })
+        await browser.close()
       }
     }
   })

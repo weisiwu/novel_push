@@ -1,6 +1,7 @@
 import { join, basename } from 'path'
 import puppeteer from 'puppeteer'
 import ffmpeg from 'fluent-ffmpeg'
+// import puppeteer_manage from './puppeteer_manage.js'
 
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
@@ -549,8 +550,6 @@ const platform_upload_video = async (
 
           // S5: 投稿
           const upload_file_name = upload_path?.split?.('/')?.[1] || ''
-          // TODO:(wsw) 获取tid
-          // TODO:(wsw) 获取tag
           const upload_draft_result = await bilibili_video_draft_auditing({
             cover: cover_url, // 视频封面
             title: `${videoInfo?.title_prefix || ''}${fileName}`, // 视频标题
@@ -573,20 +572,9 @@ const platform_upload_video = async (
             up_close_reply: videoInfo?.up_close_reply || false, //
             up_close_danmu: videoInfo?.up_close_danmu || false, //
             csrf: getCookieValueByName('bili_jct'), // 防跨站伪造攻击
-            // TODO:(wsw) mission_id
-            // TODO:(wsw) topic_id topic_detail
-            // mission_id: 4011933, // 任务id
-            // topic_id: 99191, // 话题id
-            // // 话题详情
-            // topic_detail: { from_topic_id: 99191, from_source: 'arc.web.recommend' },
-            videos: [
-              {
-                filename: upload_file_name?.split?.('.')?.[0]
-                // title: '这是第一个分p',
-                // desc: '描述描述'
-                // cid: biz_id
-              }
-            ]
+            mission_id: videoInfo?.mission_id || '', // 任务id
+            topic_id: videoInfo?.topic_id || '', // 话题id
+            videos: [{ filename: upload_file_name?.split?.('.')?.[0] }]
           })
           if (!upload_draft_result) {
             console.log('wswTest:', '===============================')

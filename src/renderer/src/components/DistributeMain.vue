@@ -40,7 +40,7 @@
     <terminal
       id="terminal"
       ref="terminal_ref"
-      :style="{ height: '350px', position: 'fixed', width: '660px', bottom: '20px' }"
+      :style="{ height: '350px', position: 'fixed', width: '645px', bottom: '20px' }"
       name="分发执行日志"
       :context="terminalContext"
       context-suffix=":"
@@ -122,7 +122,10 @@ onMounted(() => {
      * 接受分发进程进度更新日志
      */
     window.ipcRenderer.receive('distribute-update-process', (info) => {
-      const { msg, className, type } = info || {}
+      const { msg, className, type, action } = info || {}
+      if (action) {
+        return false
+      }
       if (!terminal_ref.value || !msg) {
         return false
       }
@@ -160,8 +163,8 @@ onMounted(() => {
      * 2、查看cookie文件是否存在，存在则认为已登录
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
-    window.ipcRenderer.send('distribute-read-tpl-model')
-    window.ipcRenderer.receive('distribute-read-tpl-model-result', (info) => {
+    window.ipcRenderer.send('platform-init', { platform: 'bilibili' })
+    window.ipcRenderer.receive('platform-init-result', (info) => {
       try {
         localConfig.value = JSON.parse(info) || {}
         console.log('wswTest: 收到的读取信息', info)
@@ -176,6 +179,7 @@ onMounted(() => {
         })
         console.log('wswTest: error', error?.message || '')
       }
+
       setTimeout(() => {
         globalLoadingIns.close()
       }, 1000)

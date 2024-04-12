@@ -3,10 +3,11 @@ import fs from 'fs'
 import asar from 'asar'
 import { join, resolve } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
+import platform_init from '../../resources/sdk/node/platform_api/platform_init.js'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
 import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
@@ -125,8 +126,8 @@ app.whenReady().then(() => {
    */
   const updateProgress =
     (event) =>
-    (msg = '', className = 'info', type = 'normal') => {
-      event?.sender?.send?.('distribute-update-process', { msg, className, type })
+    (msg = '', className = 'info', type = 'normal', action = null) => {
+      event?.sender?.send?.('distribute-update-process', { msg, className, type, action })
     }
 
   /**
@@ -135,8 +136,6 @@ app.whenReady().then(() => {
   const removeSuccessVideos =
     (event) =>
     (msg = '') => {
-      console.log('wswTest: 开始处理数据', msg)
-      // TODO:(wsw) 移除成功的
       event?.sender?.send?.('distribute-remove-finished-videos', msg)
     }
 
@@ -146,6 +145,13 @@ app.whenReady().then(() => {
   ipcMain.on('platform-login', async (event, info) => {
     const { platform } = info || {}
     platform_login(platform, updateProgress(event))
+  })
+
+  /**
+   * 初始化平台相关信息
+   */
+  ipcMain.on('distribute-fetch-mission-topic', async (event, tid) => {
+    platform_init(tid, updateProgress(event))
   })
 
   /**
@@ -206,18 +212,18 @@ app.whenReady().then(() => {
   })
 
   /**
-   * 读取已保存到本地的分发视频模板配置
+   * 1、读取已保存到本地的分发视频模板配置
    */
-  ipcMain.on('distribute-read-tpl-model', (event) => {
+  ipcMain.on('platform-init', (event) => {
     if (!existsSync(distributeConfigPath)) {
-      event.sender.send('distribute-read-tpl-model-result', 'null')
+      event.sender.send('platform-init-result', 'null')
       return
     }
     try {
       const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
-      event.sender.send('distribute-read-tpl-model-result', JSON.stringify(localTplModel))
+      event.sender.send('platform-init-result', JSON.stringify(localTplModel))
     } catch (e) {
-      event.sender.send('distribute-read-tpl-model-result', 'null')
+      event.sender.send('platform-init-result', 'null')
       console.log('wswTest: 本地写入配置失败', e)
     }
   })
