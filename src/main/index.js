@@ -130,6 +130,17 @@ app.whenReady().then(() => {
     }
 
   /**
+   * 删除已经成功投稿的视频
+   */
+  const removeSuccessVideos =
+    (event) =>
+    (msg = '') => {
+      console.log('wswTest: 开始处理数据', msg)
+      // TODO:(wsw) 移除成功的
+      event?.sender?.send?.('distribute-remove-finished-videos', msg)
+    }
+
+  /**
    * 登录平台
    */
   ipcMain.on('platform-login', async (event, info) => {
@@ -147,8 +158,13 @@ app.whenReady().then(() => {
       const info = JSON.parse(infoStr)
       const { platform, videos = [] } = info || {}
       config = JSON.parse(configStr)
-      console.log('wswTest: 读取的本地视频模板配置', config)
-      platform_upload_video(platform, config, videos, updateProgress(event))
+      platform_upload_video(
+        platform,
+        config,
+        videos,
+        updateProgress(event),
+        removeSuccessVideos(event)
+      )
     } catch (e) {
       console.log('wswTest:[platform-send-video]e:', e)
     }

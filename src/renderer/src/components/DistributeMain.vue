@@ -11,6 +11,7 @@
       </div>
     </transition>
     <el-upload
+      ref="video_upload_ref"
       class="upload-demo"
       :on-change="selectFile"
       :on-exceed="videoNumberExceed"
@@ -29,7 +30,7 @@
     <div :style="{ display: 'flex', justifyContent: 'center', marginTop: '20px' }">
       <el-button type="primary" @click="login">授权登录</el-button>
       <div :style="{ width: '30px' }"></div>
-      <el-button type="primary" :disabled="!selected_videos.length" @click="sendVideo"
+      <el-button type="primary" :disabled="disabled_distribute" @click="sendVideo"
         >一键分发</el-button
       >
     </div>
@@ -64,7 +65,9 @@ import 'vue-web-terminal/lib/theme/dark.css'
 const maxVideoNumber = 10
 const localConfig = ref(null)
 const terminal_ref = ref()
+const video_upload_ref = ref()
 const info_alert_show = ref(true)
+const disabled_distribute = ref(true)
 const selected_videos = ref([])
 const terminalContext = `爆肝分发(${version})`
 const login = () => {
@@ -76,8 +79,15 @@ const selectFile = (_, files) => {
   info_alert_show.value = false
   selected_videos.value =
     files?.map?.((file) => {
-      return { path: file?.raw?.path, size: file?.raw?.size, name: file?.name }
+      return {
+        path: file?.raw?.path,
+        size: file?.size,
+        name: file?.name,
+        status: file?.status,
+        uid: file?.uid
+      }
     }) || []
+  disabled_distribute.value = !selected_videos.value.length
 }
 const videoNumberExceed = () => {
   terminal_ref.value.pushMessage({
@@ -93,6 +103,7 @@ const sendVideo = () => {
       class: 'error'
     })
   }
+  disabled_distribute.value = true
   window.ipcRenderer.send(
     'platform-send-video',
     JSON.stringify({
@@ -107,6 +118,9 @@ onMounted(() => {
   setTimeout(() => (info_alert_show.value = false), 1e4)
 
   if (window.ipcRenderer) {
+    /**
+     * 接受分发进程进度更新日志
+     */
     window.ipcRenderer.receive('distribute-update-process', (info) => {
       const { msg, className, type } = info || {}
       if (!terminal_ref.value || !msg) {
@@ -120,8 +134,30 @@ onMounted(() => {
     })
 
     /**
+     * 接受分发进程投稿完毕指令，移除投稿成功的视频
+     */
+    window.ipcRenderer.receive('distribute-remove-finished-videos', (msg) => {
+      if (!msg) {
+        disabled_distribute.value = false
+        return false
+      }
+      try {
+        const finished_videos = JSON.parse(msg) || []
+        console.log('wswTest: 解析出来的要移除的视频列表', finished_videos)
+        // TODO:(wsw) 删除掉上传成功的文件
+        finished_videos.forEach((finished_video) => {
+          video_upload_ref?.value?.handleRemove?.(finished_video)
+        })
+        disabled_distribute.value = !selected_videos.value.length
+      } catch (e) {
+        return false
+      }
+    })
+
+    /**
      * 初始化，执行以下操作，同时全局loading
      * 1、启动后，读取本地已保存视频模板配置
+     * 2、查看cookie文件是否存在，存在则认为已登录
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
     window.ipcRenderer.send('distribute-read-tpl-model')

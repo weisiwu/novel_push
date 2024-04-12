@@ -42,13 +42,25 @@ const get_cover_from_video = (video_path) => {
   })
 }
 
+let uploadBrowser = null
 /**
  * @params platform平台标识符
  * @videoInfo 视频相关信息，包含平台特殊信息
  * @videoList 将要投递的视频列表，视频稿件最终信息以videoInfo信息和videoList中信息混合而成
  */
-const platform_upload_video = async (platform, videoInfo = {}, videoList = [], updateProgress) => {
-  const browser = await puppeteer.launch({
+const platform_upload_video = async (
+  platform,
+  videoInfo = {},
+  videoList = [],
+  updateProgress,
+  removeSuccessVideos
+) => {
+  // 关闭已有的页面，重新执行
+  if (uploadBrowser) {
+    await uploadBrowser?.close?.()
+    uploadBrowser = null
+  }
+  uploadBrowser = await puppeteer.launch({
     // TODO:(wsw) 调试模式
     // headless: false,
     headless: true,
@@ -56,13 +68,21 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
   })
 
   // 投稿主页
-  const mainPage = await browser.newPage()
+  const mainPage = await uploadBrowser.newPage()
+  // 指令
+  const RM_SUCCESS_VIDEOS = 'wswTest:[action=remove_success_videos]'
 
   // 监听处理进度: 将浏览器中的 console 输出捕获到 Node.js 的 console 中
   mainPage.on('console', (msg) => {
     const m_type = msg.type()
     const m_text = msg.text()
     console.log(`BROWSER LOG: ${m_text}`)
+    // 指令日志: 队列处理完毕，以下视频投稿成功，从视频列表中移除
+    if (m_text?.indexOf?.(RM_SUCCESS_VIDEOS) >= 0) {
+      const msg_text = m_text?.replace?.(RM_SUCCESS_VIDEOS, '')?.trim()
+      return removeSuccessVideos?.(msg_text)
+    }
+
     if (m_text?.indexOf('wswTest:') < 0) {
       return
     }
@@ -99,7 +119,8 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
     async (params) => {
       // 视频合并的时候需要此参数，参数在视频分段上传时产生。保存为全局变量，方便读取
       let _totalChunks = 1
-      const { videoInfo, videoList, videoUploadInput, maxRetryTime } = params || {}
+      const { videoInfo, videoList, videoUploadInput, maxRetryTime, RM_SUCCESS_VIDEOS } =
+        params || {}
 
       const qstr = (obj) => {
         let str = ''
@@ -590,6 +611,7 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
         const files = event?.target?.files || []
         let distribute_times = 0
         let distribute_success = 0
+        const success_video_list = []
         console.log('wswTest: 开始分发当前选中视频队列')
         for (let i = 0; i < files.length; i = i + 2) {
           if (!files[i] || !files[i + 1]) {
@@ -598,7 +620,10 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
           distribute_times++
           // TODO:(wsw) 传入文件数量不足2
           const distribute_res = await distribute_draft(files[i], files[i + 1], i / 2)
-          distribute_success = distribute_success + (distribute_res ? 1 : 0)
+          if (distribute_res) {
+            success_video_list.push(videoList[i / 2])
+            distribute_success = distribute_success + 1
+          }
           const wait_time = Math.ceil(Math.max(0.2, Math.random()) * 10) * 1000
           console.log(`wswTest: 等待${wait_time / 1000}秒，继续投稿`)
           await new Promise((resolve) => setTimeout(resolve, wait_time))
@@ -612,9 +637,10 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
             `wswTest: 当前视频队列已分发完毕，成功${distribute_success}个/共${distribute_times}个`
           )
         }
+        console.log(`${RM_SUCCESS_VIDEOS}${JSON.stringify(success_video_list)}`)
       })
     },
-    { videoInfo, videoList, videoUploadInput, maxRetryTime }
+    { videoInfo, videoList, videoUploadInput, maxRetryTime, RM_SUCCESS_VIDEOS }
   )
 
   // TODO:(wsw) videoInfo.video 无值

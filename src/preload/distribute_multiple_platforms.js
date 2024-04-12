@@ -8,12 +8,13 @@ const mainWindowChannels = [
   'fetch-config',
   'read-config',
   'save-config',
-  'platform-login',
-  'platform-send-video',
-  'distribute-update-process',
-  'distribute-read-tpl-model',
-  'distribute-read-tpl-model-result',
-  'distribute-save-tpl-model'
+  'platform-login', // 授权登录平台
+  'platform-send-video', // 开始分发投稿视频
+  'distribute-update-process', // 更新分发进程日志
+  'distribute-read-tpl-model', // 主进程读取本地视频模板
+  'distribute-read-tpl-model-result', // 读取本地视频模板结果
+  'distribute-save-tpl-model', // 保存视频模板
+  'distribute-remove-finished-videos' // 删除分发进程中已经投稿完成的视频
 ]
 
 if (process.contextIsolated) {

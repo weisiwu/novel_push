@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { join } from 'path'
 import puppeteer from 'puppeteer'
-import bilibiliCookiesPath from '../../../BilibiliCookies.json?commonjs-external&asset&asarUnpack'
+import bilibiliCookiesPath from '../../../cookies/BilibiliCookies.json?commonjs-external&asset&asarUnpack'
 
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
