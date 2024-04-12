@@ -8,13 +8,16 @@ const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 const platform_login = async (platform, updateProgress) => {
   console.log('wswTest: 将要登录平台', platform)
   updateProgress(`将要登录平台: ${platform}`)
+  const winSize = 1080
   const browser = await puppeteer.launch({
     headless: false,
     // 指定用户数据目录
     userDataDir: chromeUserDataPath,
-    args: ['--window-size=1080,1080']
+    args: [`--window-size=${winSize},${winSize}`]
   })
   const loginPage = await browser.newPage()
+  // 设置视窗的宽高
+  await loginPage.setViewport({ width: winSize, height: winSize })
 
   // B站种cookie，通过多个接口，分别给主站、游戏、漫画种上登录态
   const bilibiliSetLoginApi = 'https://passport.biligame.com/x/passport-login/web/sso/set'

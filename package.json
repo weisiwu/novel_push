@@ -1,7 +1,7 @@
 {
   "name": "baogao_ai_novel_push",
-  "version": "0.3.0",
-  "description": "小说推文",
+  "version": "0.4.0",
+  "description": "小说推文_视频分发",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",

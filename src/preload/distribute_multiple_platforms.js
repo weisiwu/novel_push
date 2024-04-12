@@ -10,7 +10,10 @@ const mainWindowChannels = [
   'save-config',
   'platform-login',
   'platform-send-video',
-  'distribute-update-process'
+  'distribute-update-process',
+  'distribute-read-tpl-model',
+  'distribute-read-tpl-model-result',
+  'distribute-save-tpl-model'
 ]
 
 if (process.contextIsolated) {

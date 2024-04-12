@@ -11,6 +11,7 @@ const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
  * @ref 上传逻辑 https://pypi.org/project/bilibili-toolman/
  * @ref b站错误码 https://github.com/Yesterday17/bilibili-errorcode/blob/master/main_site.go
  * @ref b站网页版视频投稿接口分析 https://blog.csdn.net/weixin_45904404/article/details/131680787
+ * @ref 分发项目文档: https://www.yuque.com/weisiwu/kb/ylq9vgicobgy6z07
  */
 const maxRetryTime = 3
 const videoUploadInput = 'videoUploadInput'
@@ -49,8 +50,8 @@ const get_cover_from_video = (video_path) => {
 const platform_upload_video = async (platform, videoInfo = {}, videoList = [], updateProgress) => {
   const browser = await puppeteer.launch({
     // TODO:(wsw) 调试模式
-    headless: false,
-    // headless: true,
+    // headless: false,
+    headless: true,
     userDataDir: chromeUserDataPath
   })
 
@@ -99,7 +100,6 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
       // 视频合并的时候需要此参数，参数在视频分段上传时产生。保存为全局变量，方便读取
       let _totalChunks = 1
       const { videoInfo, videoList, videoUploadInput, maxRetryTime } = params || {}
-      const { title_prefix, describe } = videoInfo || {}
 
       const qstr = (obj) => {
         let str = ''
@@ -529,36 +529,37 @@ const platform_upload_video = async (platform, videoInfo = {}, videoList = [], u
           // TODO:(wsw) 获取tag
           const upload_draft_result = await bilibili_video_draft_auditing({
             cover: cover_url, // 视频封面
-            title: `${title_prefix || ''}${fileName}`, // 视频标题
-            desc: describe, // 视频介绍
-            desc_format_id: 0, //
-            copyright: 1, // 自制1 转载2
-            act_reserve_create: 0, //
-            no_disturbance: 0,
-            no_reprint: 1, // 禁止转载 0：无 1：禁止
-            open_elec: 1, // 是否开启充电 0: 无 1: 开启
-            tid: 168, // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
-            tag: '小说,AI小说,网文,效果,生成', // 标签
-            recreate: 1, //
-            dynamic: '', //
-            interactive: 0, //
+            title: `${videoInfo?.title_prefix || ''}${fileName}`, // 视频标题
+            desc: videoInfo?.desc || '', // 视频介绍
+            desc_format_id: videoInfo?.desc_format_id || 0, //
+            copyright: videoInfo?.copyright || 1, // 自制1 转载2
+            act_reserve_create: videoInfo?.act_reserve_create || 0, //
+            no_disturbance: videoInfo?.no_disturbance || 0,
+            no_reprint: videoInfo?.no_reprint || 1, // 禁止转载 0：无 1：禁止
+            open_elec: videoInfo?.open_elec || 1, // 是否开启充电 0: 无 1: 开启
+            tid: videoInfo?.tid || 168, // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
+            tag: videoInfo?.tag || '', // 标签
+            recreate: videoInfo?.recreate || 1, //
+            dynamic: videoInfo?.dynamic || '', //
+            interactive: videoInfo?.interactive || 0, //
             subtitle: { open: 0, lan: 'zh-CN' }, // 字幕相关
-            dolby: 0, //
-            lossless_music: 0, //
-            up_selection_reply: false, //
-            up_close_reply: false, //
-            up_close_danmu: false, //
+            dolby: videoInfo?.dolby || 0, //
+            lossless_music: videoInfo?.lossless_music || 0, //
+            up_selection_reply: videoInfo?.up_selection_reply || false, //
+            up_close_reply: videoInfo?.up_close_reply || false, //
+            up_close_danmu: videoInfo?.up_close_danmu || false, //
             csrf: getCookieValueByName('bili_jct'), // 防跨站伪造攻击
-            // 这些个参数还没有拿到
+            // TODO:(wsw) mission_id
+            // TODO:(wsw) topic_id topic_detail
             // mission_id: 4011933, // 任务id
             // topic_id: 99191, // 话题id
             // // 话题详情
             // topic_detail: { from_topic_id: 99191, from_source: 'arc.web.recommend' },
             videos: [
               {
-                filename: upload_file_name?.split?.('.')?.[0],
-                title: '这是第一个分p',
-                desc: '描述描述'
+                filename: upload_file_name?.split?.('.')?.[0]
+                // title: '这是第一个分p',
+                // desc: '描述描述'
                 // cid: biz_id
               }
             ]

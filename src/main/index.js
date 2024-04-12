@@ -46,9 +46,6 @@ if (fs.existsSync(configPath)) {
  */
 function createWindow() {
   startWindow = new BrowserWindow({
-    // width: 900,
-    // height: 500,
-    // TODO:(wsw) 分发，高大于宽
     width: 700,
     height: 900,
     show: false,
@@ -148,16 +145,64 @@ app.whenReady().then(() => {
     let config = {}
     try {
       const info = JSON.parse(infoStr)
-      const { platform, videos = [], videoInfo = {} } = info || {}
-      console.log('wswTest: 开始处理视频信息', videoInfo)
+      const { platform, videos = [] } = info || {}
       config = JSON.parse(configStr)
-      console.log('wswTest: 读取的本地配置', config)
-      // TODO:(wsw) 合并逻辑完善
-      // 合并填写视频信息和本地模板信息
-      const mergeVideoInfo = { ...config, ...videoInfo }
-      platform_upload_video(platform, mergeVideoInfo, videos, updateProgress(event))
+      console.log('wswTest: 读取的本地视频模板配置', config)
+      platform_upload_video(platform, config, videos, updateProgress(event))
     } catch (e) {
       console.log('wswTest:[platform-send-video]e:', e)
+    }
+  })
+
+  /**
+   * 保存分发视频模板配置
+   */
+  ipcMain.on('distribute-save-tpl-model', (event, params) => {
+    if (!existsSync(distributeConfigPath)) {
+      writeFileSync(distributeConfigPath)
+    }
+    try {
+      const userTplModel = JSON.parse(params) || {}
+      const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
+      // 将要写入本地的配置
+      const localConfig = JSON.stringify({
+        ...localTplModel,
+        title_prefix: userTplModel.title_prefix || localTplModel.title_prefix || '',
+        desc: userTplModel.desc || localTplModel.desc || '',
+        copyright: Number(userTplModel.copyright || localTplModel.copyright || 1),
+        no_reprint: Number(userTplModel.no_reprint || localTplModel.no_reprint || 1),
+        open_elec: Number(userTplModel.open_elec || localTplModel.open_elec || 1),
+        recreate: userTplModel.recreate || localTplModel.recreate || '',
+        no_disturbance: userTplModel.no_disturbance || localTplModel.no_disturbance || '',
+        act_reserve_create:
+          userTplModel.act_reserve_create || localTplModel.act_reserve_create || '',
+        dolby: userTplModel.dolby || localTplModel.dolby || '',
+        tag: userTplModel.tag?.join?.(',') || localTplModel.tag || '',
+        // TODO:(wsw) 这三个取值赋值没有搞定
+        tid: Number(userTplModel.tid || localTplModel.tid || 168),
+        mission_id: Number(userTplModel.mission_id || localTplModel.mission_id || 1),
+        topic_id: Number(userTplModel.topic_id || localTplModel.topic_id || 1)
+      })
+      writeFileSync(distributeConfigPath, localConfig)
+    } catch (e) {
+      console.log('wswTest: 本地写入配置失败', e)
+    }
+  })
+
+  /**
+   * 读取已保存到本地的分发视频模板配置
+   */
+  ipcMain.on('distribute-read-tpl-model', (event) => {
+    if (!existsSync(distributeConfigPath)) {
+      event.sender.send('distribute-read-tpl-model-result', 'null')
+      return
+    }
+    try {
+      const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
+      event.sender.send('distribute-read-tpl-model-result', JSON.stringify(localTplModel))
+    } catch (e) {
+      event.sender.send('distribute-read-tpl-model-result', 'null')
+      console.log('wswTest: 本地写入配置失败', e)
     }
   })
 
