@@ -17,10 +17,26 @@
       <el-radio value="1">开启</el-radio>
     </el-radio-group>
   </el-form-item>
-  <!-- <el-form-item label="【待确认】bilibili_recreate">
-    <el-input v-model="form.bilibili_recreate" />
+  <el-form-item label="是否支持二创(勾选即允许创作者基于您的投稿视频内容进行二创)">
+    <el-radio-group v-model="form.bilibili_recreate">
+      <el-radio value="0">不支持</el-radio>
+      <el-radio value="1">支持</el-radio>
+    </el-radio-group>
   </el-form-item>
-  <el-form-item label="【待确认】bilibili_no_disturbance">
+  <el-form-item label="定时发布">
+    <!-- 单位是s的时间戳 -->
+    <el-date-picker
+      v-model="form.bilibili_dtime"
+      type="datetime"
+      :disabled-date="check_time_is_available"
+      placeholder="选择定时发送时间"
+      format="YYYY-MM-DD HH:mm:ss"
+      date-format="MMM DD, YYYY"
+      time-format="HH:mm"
+      value-format=""
+    />
+  </el-form-item>
+  <!-- <el-form-item label="【待确认】bilibili_no_disturbance">
     <el-input v-model="form.bilibili_no_disturbance" />
   </el-form-item>
   <el-form-item label="【待确认】bilibili_act_reserve_create">
@@ -72,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watchEffect, defineProps } from 'vue'
+import { ref, watchEffect, defineProps } from 'vue'
 import bilibili_tids from '../../../../resources/sdk/node/platform_api/bilibili_tids.json'
 import 'vue-web-terminal/lib/theme/dark.css'
 
@@ -92,7 +108,8 @@ watchEffect(() => {
   form.bilibili_copyright = String(props?.localConfig?.bilibili_copyright) || '1'
   form.bilibili_no_reprint = String(props?.localConfig?.bilibili_no_reprint) || '1'
   form.bilibili_open_elec = String(props?.localConfig?.bilibili_open_elec) || '1'
-  form.bilibili_recreate = props?.localConfig?.bilibili_recreate || ''
+  form.bilibili_recreate = props?.localConfig?.bilibili_recreate || '0'
+  form.bilibili_dtime = String(props?.localConfig?.bilibili_dtime) || ''
   form.bilibili_no_disturbance = props?.localConfig?.bilibili_no_disturbance || ''
   form.bilibili_act_reserve_create = props?.localConfig?.bilibili_act_reserve_create || ''
   form.bilibili_dolby = props?.localConfig?.bilibili_dolby || ''
@@ -105,6 +122,21 @@ const tidChange = (bilibili_tid) => {
   // 获取bilibili_tid后，开始更新missions和topics
   fetch_mission_topic_loading.value = true
   window.ipcRenderer.send('distribute-fetch-mission-topic', bilibili_tid)
+}
+
+// B站定时发布允许时间: 当前+2小时 ≤ 可选时间 ≤ 当前+15天
+const check_time_is_available = (date) => {
+  const now_time = new Date().getTime()
+  const d_time = date.getTime()
+  const hour_mil_sec = 60 * 60 * 1e3
+  // 不到两个小时
+  if (d_time - now_time < 2 * hour_mil_sec) {
+    return true
+  }
+  if (d_time - now_time > 15 * 24 * hour_mil_sec) {
+    return true
+  }
+  return false
 }
 
 window.ipcRenderer.receive('distribute-update-process', (info) => {

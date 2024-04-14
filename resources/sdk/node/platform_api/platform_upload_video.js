@@ -565,8 +565,9 @@ const platform_upload_video = async (
             no_disturbance: videoInfo?.bilibili_no_disturbance || 0,
             no_reprint: videoInfo?.bilibili_no_reprint || 1, // 禁止转载 0：无 1：禁止
             open_elec: videoInfo?.bilibili_open_elec || 1, // 是否开启充电 0: 无 1: 开启
+            recreate: videoInfo?.bilibili_recreate || 0, // 是否支持二创 0: 不支持 1: 支持
+            dtime: videoInfo?.bilibili_dtime || 0, // 是否定时发送，值为以秒为单位的时间戳
             tid: videoInfo?.bilibili_tid || '', // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
-            recreate: videoInfo?.bilibili_recreate || 1, //
             dynamic: videoInfo?.dynamic || '', //
             interactive: videoInfo?.interactive || 0, //
             subtitle: { open: 0, lan: 'zh-CN' }, // 字幕相关

@@ -186,6 +186,7 @@ app.whenReady().then(() => {
     try {
       const userTplModel = JSON.parse(params) || {}
       const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
+      const timeStrToTime = (timeStr) => Math.floor(new Date(timeStr).getTime() / 1000)
       // 将要写入本地的配置
       const localConfig = JSON.stringify({
         ...localTplModel,
@@ -193,24 +194,36 @@ app.whenReady().then(() => {
         desc: userTplModel.desc || localTplModel.desc || '',
         tag: userTplModel.tag?.join?.(',') || localTplModel.tag || '',
         // b站特有字段
-        copyright: Number(userTplModel.bilibili_copyright || localTplModel.bilibili_copyright || 1),
-        no_reprint: Number(
+        bilibili_copyright: Number(
+          userTplModel.bilibili_copyright || localTplModel.bilibili_copyright || 1
+        ),
+        bilibili_no_reprint: Number(
           userTplModel.bilibili_no_reprint || localTplModel.bilibili_no_reprint || 1
         ),
-        open_elec: Number(userTplModel.bilibili_open_elec || localTplModel.bilibili_open_elec || 1),
-        recreate: userTplModel.bilibili_recreate || localTplModel.bilibili_recreate || '',
-        no_disturbance:
+        bilibili_open_elec: Number(
+          userTplModel.bilibili_open_elec || localTplModel.bilibili_open_elec || 1
+        ),
+        bilibili_recreate: Number(
+          userTplModel.bilibili_recreate || localTplModel.bilibili_recreate || 0
+        ),
+        bilibili_dtime:
+          timeStrToTime(userTplModel.bilibili_dtime) ||
+          timeStrToTime(localTplModel.bilibili_dtime) ||
+          0,
+        bilibili_no_disturbance:
           userTplModel.bilibili_no_disturbance || localTplModel.bilibili_no_disturbance || '',
-        act_reserve_create:
+        bilibili_act_reserve_create:
           userTplModel.bilibili_act_reserve_create ||
           localTplModel.bilibili_act_reserve_create ||
           '',
-        dolby: userTplModel.bilibili_dolby || localTplModel.bilibili_dolby || '',
-        tid: Number(userTplModel.bilibili_tid || localTplModel.bilibili_tid || ''),
-        mission_id: Number(
+        bilibili_dolby: userTplModel.bilibili_dolby || localTplModel.bilibili_dolby || '',
+        bilibili_tid: Number(userTplModel.bilibili_tid || localTplModel.bilibili_tid || ''),
+        bilibili_mission_id: Number(
           userTplModel.bilibili_mission_id || localTplModel.bilibili_mission_id || 1
         ),
-        topic_id: Number(userTplModel.bilibili_topic_id || localTplModel.bilibili_topic_id || 1)
+        bilibili_topic_id: Number(
+          userTplModel.bilibili_topic_id || localTplModel.bilibili_topic_id || 1
+        )
         // 特有字段
       })
       writeFileSync(distributeConfigPath, localConfig)
