@@ -14,105 +14,38 @@
         <el-form-item label="描述">
           <el-input v-model="form.desc" placeholder="投稿描述" />
         </el-form-item>
+        <el-form-item label="视频标签">
+          <el-tag
+            v-for="tag in form.tag"
+            :key="tag"
+            v-model="form.tag"
+            closable
+            :disable-transitions="false"
+            @close="delete_tag(tag)"
+          >
+            {{ tag }}
+          </el-tag>
+          <el-input
+            v-if="add_tag_input_visible"
+            ref="add_tag_input_ref"
+            v-model="add_tag_input_val"
+            class="w-20"
+            size="small"
+            @keyup.enter="add_tag"
+            @blur="add_tag"
+          />
+          <el-button v-else class="button-new-tag" size="small" @click="show_add_tag_btn">
+            添加标签
+          </el-button>
+        </el-form-item>
         <el-collapse v-model="activeName" accordion>
           <el-collapse-item title="B站" name="bilibili">
-            <el-form-item label="是否自制">
-              <el-radio-group v-model="form.copyright">
-                <el-radio value="1">自制</el-radio>
-                <el-radio value="2">转载</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="是否禁止转载">
-              <el-radio-group v-model="form.no_reprint">
-                <el-radio value="0">允许</el-radio>
-                <el-radio value="1">禁止</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="是否开启充电">
-              <el-radio-group v-model="form.open_elec">
-                <el-radio value="0">不开启</el-radio>
-                <el-radio value="1">开启</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <!-- <el-form-item label="【待确认】recreate">
-              <el-input v-model="form.recreate" />
-            </el-form-item>
-            <el-form-item label="【待确认】no_disturbance">
-              <el-input v-model="form.no_disturbance" />
-            </el-form-item>
-            <el-form-item label="【待确认】act_reserve_create">
-              <el-input v-model="form.act_reserve_create" />
-            </el-form-item>
-            <el-form-item label="【待确认】dolby">
-              <el-input v-model="form.dolby" />
-            </el-form-item> -->
-            <el-form-item label="视频标签">
-              <el-tag
-                v-for="tag in form.tag"
-                :key="tag"
-                v-model="form.tag"
-                closable
-                :disable-transitions="false"
-                @close="delete_tag(tag)"
-              >
-                {{ tag }}
-              </el-tag>
-              <el-input
-                v-if="add_tag_input_visible"
-                ref="add_tag_input_ref"
-                v-model="add_tag_input_val"
-                class="w-20"
-                size="small"
-                @keyup.enter="add_tag"
-                @blur="add_tag"
-              />
-              <el-button v-else class="button-new-tag" size="small" @click="show_add_tag_btn">
-                添加标签
-              </el-button>
-            </el-form-item>
-            <el-form-item label="视频分类">
-              <el-tree-select
-                v-model="form.tid"
-                filterable
-                placeholder="请选择视频默认分区"
-                :data="bilibili_tids"
-                :render-after-expand="false"
-                @change="tidChange"
-              />
-            </el-form-item>
-            <div
-              v-loading="fetch_mission_topic_loading"
-              element-loading-text="正在切换新分区的任务和话题"
-            >
-              <el-form-item label="活动任务（请先选分类）">
-                <el-select v-model="form.mission_id" placeholder="请选择要参与的活动任务">
-                  <el-option
-                    v-for="item in missions_list"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  >
-                    <a :href="item.url" target="_blank">
-                      <span style="float: left">{{ item.label }}</span>
-                    </a>
-                    <p style="float: left">{{ item.protocol }}</p>
-                  </el-option>
-                </el-select>
-              </el-form-item>
-              <el-form-item label="活动话题（请先选分类）">
-                <el-select v-model="form.topic_id" placeholder="请选择要参与的活动任务">
-                  <el-option
-                    v-for="item in topics_list"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  >
-                    <span style="float: left">{{ item.label }}</span>
-                    <p style="float: left">{{ item.description }}</p>
-                  </el-option>
-                </el-select>
-              </el-form-item>
-            </div>
+            <!-- b站特有字段 -->
+            <BilibiliPartTemplateModel
+              :platform="platformNames.BILIBILI"
+              :local-config="localConfig"
+              :form="form"
+            />
           </el-collapse-item>
         </el-collapse>
       </el-form>
@@ -129,35 +62,24 @@
 <script setup>
 import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
-import bilibili_tids from '../../../../resources/sdk/node/platform_api/bilibili_tids.json'
+import BilibiliPartTemplateModel from './BilibiliPartTemplateModel.vue'
 import 'vue-web-terminal/lib/theme/dark.css'
 
+// 平台列表
+const platformNames = {
+  BILIBILI: 'bilibili'
+}
 const props = defineProps({ pushMessage: Function, localConfig: Object })
-const platformNames = ['bilibili']
 const drawer = ref(false)
-const fetch_mission_topic_loading = ref(false)
 const activeName = ref('')
 const form = reactive({
   title_prefix: '',
   desc: '',
-  copyright: '1',
-  no_reprint: '1',
-  open_elec: '1',
-  tid: '',
-  tag: [],
-  mission_id: '',
-  topic_id: ''
-  // TODO:(wsw) 待确认字段
-  // recreate: '',
-  // no_disturbance: '',
-  // act_reserve_create: '',
-  // dolby: ''
+  tag: []
 })
 const add_tag_input_val = ref('')
 const add_tag_input_visible = ref(false)
 const add_tag_input_ref = ref()
-const missions_list = ref([]) // 任务列表
-const topics_list = ref([]) // 话题列表
 
 // 删除标签
 const delete_tag = (tag) => {
@@ -206,17 +128,18 @@ watchEffect(() => {
   }
   form.title_prefix = props?.localConfig?.title_prefix || ''
   form.desc = props?.localConfig?.desc || ''
-  form.copyright = String(props?.localConfig?.copyright) || '1'
-  form.no_reprint = String(props?.localConfig?.no_reprint) || '1'
-  form.open_elec = String(props?.localConfig?.open_elec) || '1'
-  form.recreate = props?.localConfig?.recreate || ''
-  form.no_disturbance = props?.localConfig?.no_disturbance || ''
-  form.act_reserve_create = props?.localConfig?.act_reserve_create || ''
-  form.dolby = props?.localConfig?.dolby || ''
   form.tag = props?.localConfig?.tag?.split?.(',') || []
-  form.tid = props?.localConfig?.tid || ''
-  form.mission_id = props?.localConfig?.mission_id || ''
-  form.topic_id = props?.localConfig?.topic_id || ''
+  // b站相关字段
+  form.bilibili_copyright = String(props?.localConfig?.bilibili_copyright) || '1'
+  form.bilibili_no_reprint = String(props?.localConfig?.bilibili_no_reprint) || '1'
+  form.bilibili_open_elec = String(props?.localConfig?.bilibili_open_elec) || '1'
+  form.bilibili_recreate = props?.localConfig?.bilibili_recreate || ''
+  form.bilibili_no_disturbance = props?.localConfig?.bilibili_no_disturbance || ''
+  form.bilibili_act_reserve_create = props?.localConfig?.bilibili_act_reserve_create || ''
+  form.bilibili_dolby = props?.localConfig?.bilibili_dolby || ''
+  form.bilibili_tid = props?.localConfig?.bilibili_tid || ''
+  form.bilibili_mission_id = props?.localConfig?.bilibili_mission_id || ''
+  form.bilibili_topic_id = props?.localConfig?.bilibili_topic_id || ''
 })
 
 /**
@@ -233,33 +156,6 @@ const handleTemplateModelConfirm = () => {
   })
   setTimeout(() => globalLoadingIns.close(), 300)
 }
-
-const tidChange = (tid) => {
-  // 获取tid后，开始更新missions和topics
-  fetch_mission_topic_loading.value = true
-  window.ipcRenderer.send('distribute-fetch-mission-topic', tid)
-}
-
-window.ipcRenderer.receive('distribute-update-process', (info) => {
-  const { action } = info || {}
-  let data = null
-
-  if (action) {
-    const { data: dataStr, type } = action || {}
-    try {
-      data = JSON.parse(dataStr) || {}
-    } catch (e) {
-      fetch_mission_topic_loading.value = false
-      return false
-    }
-    if (type === 'topic') {
-      topics_list.value = data
-    } else if (type === 'mission') {
-      missions_list.value = data
-    }
-    fetch_mission_topic_loading.value = false
-  }
-})
 </script>
 
 <style scoped>

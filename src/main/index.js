@@ -191,19 +191,27 @@ app.whenReady().then(() => {
         ...localTplModel,
         title_prefix: userTplModel.title_prefix || localTplModel.title_prefix || '',
         desc: userTplModel.desc || localTplModel.desc || '',
-        copyright: Number(userTplModel.copyright || localTplModel.copyright || 1),
-        no_reprint: Number(userTplModel.no_reprint || localTplModel.no_reprint || 1),
-        open_elec: Number(userTplModel.open_elec || localTplModel.open_elec || 1),
-        recreate: userTplModel.recreate || localTplModel.recreate || '',
-        no_disturbance: userTplModel.no_disturbance || localTplModel.no_disturbance || '',
-        act_reserve_create:
-          userTplModel.act_reserve_create || localTplModel.act_reserve_create || '',
-        dolby: userTplModel.dolby || localTplModel.dolby || '',
         tag: userTplModel.tag?.join?.(',') || localTplModel.tag || '',
-        tid: Number(userTplModel.tid || localTplModel.tid || ''),
-        // TODO:(wsw) 这三个取值赋值没有搞定
-        mission_id: Number(userTplModel.mission_id || localTplModel.mission_id || 1),
-        topic_id: Number(userTplModel.topic_id || localTplModel.topic_id || 1)
+        // b站特有字段
+        copyright: Number(userTplModel.bilibili_copyright || localTplModel.bilibili_copyright || 1),
+        no_reprint: Number(
+          userTplModel.bilibili_no_reprint || localTplModel.bilibili_no_reprint || 1
+        ),
+        open_elec: Number(userTplModel.bilibili_open_elec || localTplModel.bilibili_open_elec || 1),
+        recreate: userTplModel.bilibili_recreate || localTplModel.bilibili_recreate || '',
+        no_disturbance:
+          userTplModel.bilibili_no_disturbance || localTplModel.bilibili_no_disturbance || '',
+        act_reserve_create:
+          userTplModel.bilibili_act_reserve_create ||
+          localTplModel.bilibili_act_reserve_create ||
+          '',
+        dolby: userTplModel.bilibili_dolby || localTplModel.bilibili_dolby || '',
+        tid: Number(userTplModel.bilibili_tid || localTplModel.bilibili_tid || ''),
+        mission_id: Number(
+          userTplModel.bilibili_mission_id || localTplModel.bilibili_mission_id || 1
+        ),
+        topic_id: Number(userTplModel.bilibili_topic_id || localTplModel.bilibili_topic_id || 1)
+        // 特有字段
       })
       writeFileSync(distributeConfigPath, localConfig)
     } catch (e) {

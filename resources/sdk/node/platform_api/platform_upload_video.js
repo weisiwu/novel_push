@@ -554,30 +554,32 @@ const platform_upload_video = async (
           // S5: 投稿
           const upload_file_name = upload_path?.split?.('/')?.[1] || ''
           const upload_draft_result = await bilibili_video_draft_auditing({
-            cover: cover_url, // 视频封面
             title: `${videoInfo?.title_prefix || ''}${fileName}`, // 视频标题
             desc: videoInfo?.desc || '', // 视频介绍
-            desc_format_id: videoInfo?.desc_format_id || 0, //
-            copyright: videoInfo?.copyright || 1, // 自制1 转载2
-            act_reserve_create: videoInfo?.act_reserve_create || 0, //
-            no_disturbance: videoInfo?.no_disturbance || 0,
-            no_reprint: videoInfo?.no_reprint || 1, // 禁止转载 0：无 1：禁止
-            open_elec: videoInfo?.open_elec || 1, // 是否开启充电 0: 无 1: 开启
-            tid: videoInfo?.tid || 168, // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
             tag: videoInfo?.tag || '', // 标签
-            recreate: videoInfo?.recreate || 1, //
+            cover: cover_url, // 视频封面
+            // b站特有的字段
+            desc_format_id: videoInfo?.desc_format_id || 0, //
+            copyright: videoInfo?.bilibili_copyright || 1, // 自制1 转载2
+            act_reserve_create: videoInfo?.bilibili_act_reserve_create || 0, //
+            no_disturbance: videoInfo?.bilibili_no_disturbance || 0,
+            no_reprint: videoInfo?.bilibili_no_reprint || 1, // 禁止转载 0：无 1：禁止
+            open_elec: videoInfo?.bilibili_open_elec || 1, // 是否开启充电 0: 无 1: 开启
+            tid: videoInfo?.bilibili_tid || '', // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
+            recreate: videoInfo?.bilibili_recreate || 1, //
             dynamic: videoInfo?.dynamic || '', //
             interactive: videoInfo?.interactive || 0, //
             subtitle: { open: 0, lan: 'zh-CN' }, // 字幕相关
-            dolby: videoInfo?.dolby || 0, //
+            dolby: videoInfo?.bilibili_dolby || 0, //
             lossless_music: videoInfo?.lossless_music || 0, //
             up_selection_reply: videoInfo?.up_selection_reply || false, //
             up_close_reply: videoInfo?.up_close_reply || false, //
             up_close_danmu: videoInfo?.up_close_danmu || false, //
             csrf: getCookieValueByName('bili_jct'), // 防跨站伪造攻击
-            mission_id: videoInfo?.mission_id || '', // 任务id
-            topic_id: videoInfo?.topic_id || '', // 话题id
+            mission_id: videoInfo?.bilibili_mission_id || '', // 任务id
+            topic_id: videoInfo?.bilibili_topic_id || '', // 话题id
             videos: [{ filename: upload_file_name?.split?.('.')?.[0] }]
+            // 其他平台特有字段
           })
           if (!upload_draft_result) {
             console.log('wswTest:', '===============================')
