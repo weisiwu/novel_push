@@ -2,6 +2,7 @@ import fs from 'fs'
 import { join } from 'path'
 import puppeteer from 'puppeteer'
 // import puppeteer_manage from './puppeteer_manage.js'
+import get_browser_exe from './get_local_browser_path.js'
 import bilibiliCookiesPath from '../../../cookies/BilibiliCookies.json?commonjs-external&asset&asarUnpack'
 
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
@@ -10,8 +11,10 @@ const platform_login = async (platform, updateProgress = () => {}) => {
   console.log('wswTest: 将要登录平台', platform)
   updateProgress(`将要登录平台: ${platform}`)
   const winSize = 1080
+  const headless = false
   const browser = await puppeteer.launch({
-    headless: false,
+    headless,
+    executablePath: get_browser_exe.get(headless),
     userDataDir: chromeUserDataPath,
     args: [`--window-size=${winSize},${winSize}`]
   })

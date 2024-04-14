@@ -1,8 +1,11 @@
 import { join, basename } from 'path'
 import puppeteer from 'puppeteer'
 import ffmpeg from 'fluent-ffmpeg'
-// import puppeteer_manage from './puppeteer_manage.js'
+import get_browser_exe from './get_local_browser_path.js'
+import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
 
+// import puppeteer_manage from './puppeteer_manage.js'
+ffmpeg.setFfmpegPath(ffmpegPath)
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
 // TODO:(wsw) 不支持视频分P
@@ -64,10 +67,10 @@ const platform_upload_video = async (
     await uploadBrowser?.close?.()
     uploadBrowser = null
   }
+  const headless = true
   uploadBrowser = await puppeteer.launch({
-    // TODO:(wsw) 调试模式
-    // headless: false,
-    headless: true,
+    headless,
+    executablePath: get_browser_exe.get(headless),
     userDataDir: chromeUserDataPath
   })
 

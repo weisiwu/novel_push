@@ -1,5 +1,6 @@
 import { join } from 'path'
 import puppeteer from 'puppeteer'
+import get_browser_exe from './get_local_browser_path.js'
 import cookies from '../../../cookies/BilibiliCookies.json'
 // import puppeteer_manage from './puppeteer_manage.js'
 
@@ -13,7 +14,12 @@ const platform_init = async (tid, updateProgress) => {
     return
   }
   updateProgress(`初始化平台特定信息: 任务、话题`)
-  const browser = await puppeteer.launch({ headless: true, userDataDir: chromeUserDataPath })
+  const headless = true
+  const browser = await puppeteer.launch({
+    headless,
+    executablePath: get_browser_exe.get(headless),
+    userDataDir: chromeUserDataPath
+  })
   const initPage = await browser.newPage()
 
   await initPage.goto('https://member.bilibili.com/', { waitUntil: 'load' })
