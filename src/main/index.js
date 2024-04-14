@@ -140,6 +140,15 @@ app.whenReady().then(() => {
     }
 
   /**
+   * 更新上传视频进度
+   */
+  const uploadVideoProgress =
+    (event) =>
+    (msg = '') => {
+      event?.sender?.send?.('upload-video-progress', msg)
+    }
+
+  /**
    * 登录平台
    */
   ipcMain.on('platform-login', async (event, info) => {
@@ -169,7 +178,8 @@ app.whenReady().then(() => {
         config,
         videos,
         updateProgress(event),
-        removeSuccessVideos(event)
+        removeSuccessVideos(event),
+        uploadVideoProgress(event)
       )
     } catch (e) {
       console.log('wswTest:[platform-send-video]e:', e)
@@ -186,7 +196,10 @@ app.whenReady().then(() => {
     try {
       const userTplModel = JSON.parse(params) || {}
       const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
-      const timeStrToTime = (timeStr) => Math.floor(new Date(timeStr).getTime() / 1000)
+      const timeStrToTime = (timeStr) => {
+        console.log('wswTest:timeStrToTime ', timeStr)
+        return Math.floor(new Date(timeStr).getTime())
+      }
       // 将要写入本地的配置
       const localConfig = JSON.stringify({
         ...localTplModel,
@@ -207,9 +220,7 @@ app.whenReady().then(() => {
           userTplModel.bilibili_recreate || localTplModel.bilibili_recreate || 0
         ),
         bilibili_dtime:
-          timeStrToTime(userTplModel.bilibili_dtime) ||
-          timeStrToTime(localTplModel.bilibili_dtime) ||
-          0,
+          timeStrToTime(userTplModel.bilibili_dtime || localTplModel.bilibili_dtime || 0) || '',
         bilibili_no_disturbance:
           userTplModel.bilibili_no_disturbance || localTplModel.bilibili_no_disturbance || '',
         bilibili_act_reserve_create:

@@ -129,18 +129,6 @@ watchEffect(() => {
   form.title_prefix = props?.localConfig?.title_prefix || ''
   form.desc = props?.localConfig?.desc || ''
   form.tag = props?.localConfig?.tag?.split?.(',') || []
-  // b站相关字段
-  form.bilibili_copyright = String(props?.localConfig?.bilibili_copyright) || '1'
-  form.bilibili_no_reprint = String(props?.localConfig?.bilibili_no_reprint) || '1'
-  form.bilibili_open_elec = String(props?.localConfig?.bilibili_open_elec) || '1'
-  form.bilibili_recreate = String(props?.localConfig?.bilibili_recreate) || '0'
-  form.bilibili_dtime = props?.localConfig?.bilibili_dtime || ''
-  form.bilibili_no_disturbance = props?.localConfig?.bilibili_no_disturbance || ''
-  form.bilibili_act_reserve_create = props?.localConfig?.bilibili_act_reserve_create || ''
-  form.bilibili_dolby = props?.localConfig?.bilibili_dolby || ''
-  form.bilibili_tid = props?.localConfig?.bilibili_tid || ''
-  form.bilibili_mission_id = props?.localConfig?.bilibili_mission_id || ''
-  form.bilibili_topic_id = props?.localConfig?.bilibili_topic_id || ''
 })
 
 /**

@@ -23,6 +23,36 @@
     >
       <el-icon class="el-icon--upload"><upload-filled /></el-icon>
       <div class="el-upload__text">将待分发视频拖放到这里或者<em>点击选择</em></div>
+      <template #file="{ file }">
+        <div @mouseenter="show_close_bt = true" @mouseleave="show_close_bt = false">
+          <span class="el-upload-list__item-actions">
+            <el-icon class="el-icon--document"><document /></el-icon>
+            <span>{{ file.name }}</span>
+            <el-progress
+              v-if="current_uid === file.uid"
+              :text-inside="true"
+              :stroke-width="20"
+              :percentage="progress_percent"
+              :style="{
+                width: '520px',
+                display: 'inline-block',
+                top: '15%',
+                left: '67px'
+              }"
+              status="success"
+            />
+            <el-icon v-show="!show_close_bt" class="el-icon--upload-success">
+              <circle-check />
+            </el-icon>
+            <el-icon
+              v-show="show_close_bt"
+              class="el-icon--close"
+              @click="() => removeSelectedFile(file)"
+              ><close
+            /></el-icon>
+          </span>
+        </div>
+      </template>
       <template #tip>
         <div class="el-upload__tip">最多可选择10个视频，将按照选中顺序依次进行分发</div>
       </template>
@@ -37,19 +67,41 @@
     <!-- 模板表单区 -->
     <TemplateModel :local-config="localConfig" :push-message="pushMessage" />
     <!-- 分发执行日志 -->
-    <terminal
-      id="terminal"
-      ref="terminal_ref"
-      :style="{ height: '350px', position: 'fixed', width: '645px', bottom: '20px' }"
-      name="分发执行日志"
-      :context="terminalContext"
-      context-suffix=":"
-      title="分发执行日志"
-      :show-header="false"
-      :auto-help="false"
-      :init-log="{ content: `[${new Date().toLocaleString()}]爆肝分发软件启动~` }"
-      :input-filter="() => ''"
-    ></terminal>
+    <div :style="{ position: 'fixed', bottom: '20px' }">
+      <el-button
+        type="success"
+        plain
+        size="small"
+        :style="{ position: 'absolute', right: 0, top: '-24px' }"
+        @click="() => (show_terminal_log = !show_terminal_log)"
+        >{{ `点我${show_terminal_log.value ? '收起' : '展开'}日志面板` }}</el-button
+      >
+      <el-collapse-transition>
+        <div v-show="show_terminal_log" :style="{ height: '350px', width: '645px' }">
+          <terminal
+            id="terminal"
+            ref="terminal_ref"
+            name="分发执行日志"
+            :context="terminalContext"
+            context-suffix=":"
+            title="分发执行日志"
+            :show-header="false"
+            :auto-help="false"
+            :init-log="{ content: `[${new Date().toLocaleString()}]爆肝分发软件启动~` }"
+            :input-filter="() => ''"
+          ></terminal>
+        </div>
+      </el-collapse-transition>
+      <div
+        v-show="!show_terminal_log"
+        :style="{
+          height: '20px',
+          width: '645px',
+          'background-color': '#333',
+          'border-radius': '5px 5x 0px 0px'
+        }"
+      ></div>
+    </div>
   </div>
 </template>
 
@@ -58,15 +110,19 @@ import { version } from '../../../../package.json'
 import { ref, onMounted } from 'vue'
 import Terminal from 'vue-web-terminal'
 import { ElLoading } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { UploadFilled, Close, Document, CircleCheck } from '@element-plus/icons-vue'
 import TemplateModel from './TemplateModel.vue'
 import 'vue-web-terminal/lib/theme/dark.css'
 
 const maxVideoNumber = 10
 const localConfig = ref(null)
 const terminal_ref = ref()
+const current_uid = ref(0)
+const show_close_bt = ref(false)
+const progress_percent = ref(0)
 const video_upload_ref = ref()
 const info_alert_show = ref(true)
+const show_terminal_log = ref(true)
 const disabled_distribute = ref(true)
 const selected_videos = ref([])
 const terminalContext = `爆肝分发(${version})`
@@ -87,7 +143,11 @@ const selectFile = (_, files) => {
         uid: file?.uid
       }
     }) || []
+  current_uid.value = selected_videos.value?.[0]?.uid || 0
   disabled_distribute.value = !selected_videos.value.length
+}
+const removeSelectedFile = (uploadFile) => {
+  video_upload_ref.value.handleRemove(uploadFile)
 }
 const videoNumberExceed = () => {
   terminal_ref.value.pushMessage({
@@ -158,6 +218,22 @@ onMounted(() => {
     })
 
     /**
+     * 视频上传百分比进度
+     */
+    window.ipcRenderer.receive('upload-video-progress', (msg) => {
+      try {
+        progress_percent.value = msg || 0
+        if (Number(msg) === 100) {
+          const next_index =
+            selected_videos.value.findIndex((video) => video.uid === current_uid.value) + 1
+          current_uid.value = selected_videos.value?.[next_index]?.uid || 0
+        }
+      } catch (e) {
+        return false
+      }
+    })
+
+    /**
      * 初始化，执行以下操作，同时全局loading
      * 1、启动后，读取本地已保存视频模板配置
      * 2、查看cookie文件是否存在，存在则认为已登录
@@ -197,5 +273,9 @@ onMounted(() => {
 .el-upload-list {
   max-height: 200px;
   overflow-y: scroll;
+}
+.el-icon--upload-success {
+  position: absolute;
+  right: 5px;
 }
 </style>

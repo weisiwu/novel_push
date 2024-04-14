@@ -33,7 +33,6 @@
       format="YYYY-MM-DD HH:mm:ss"
       date-format="MMM DD, YYYY"
       time-format="HH:mm"
-      value-format=""
     />
   </el-form-item>
   <!-- <el-form-item label="【待确认】bilibili_no_disturbance">
@@ -109,7 +108,7 @@ watchEffect(() => {
   form.bilibili_no_reprint = String(props?.localConfig?.bilibili_no_reprint) || '1'
   form.bilibili_open_elec = String(props?.localConfig?.bilibili_open_elec) || '1'
   form.bilibili_recreate = props?.localConfig?.bilibili_recreate || '0'
-  form.bilibili_dtime = String(props?.localConfig?.bilibili_dtime) || ''
+  form.bilibili_dtime = new Date(Number(props?.localConfig?.bilibili_dtime)) || '0'
   form.bilibili_no_disturbance = props?.localConfig?.bilibili_no_disturbance || ''
   form.bilibili_act_reserve_create = props?.localConfig?.bilibili_act_reserve_create || ''
   form.bilibili_dolby = props?.localConfig?.bilibili_dolby || ''

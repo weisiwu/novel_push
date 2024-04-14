@@ -1,11 +1,14 @@
 import { join, basename } from 'path'
 import puppeteer from 'puppeteer'
 import ffmpeg from 'fluent-ffmpeg'
+import { debug } from '../../../../package.json'
 import get_browser_exe from './get_local_browser_path.js'
 import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
 
 // import puppeteer_manage from './puppeteer_manage.js'
-ffmpeg.setFfmpegPath(ffmpegPath)
+if (!debug) {
+  ffmpeg.setFfmpegPath(ffmpegPath)
+}
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
 // TODO:(wsw) 不支持视频分P
@@ -60,7 +63,8 @@ const platform_upload_video = async (
   videoInfo = {},
   videoList = [],
   updateProgress,
-  removeSuccessVideos
+  removeSuccessVideos,
+  uploadVideoProgress
 ) => {
   // 关闭已有的页面，重新执行
   if (uploadBrowser) {
@@ -68,16 +72,18 @@ const platform_upload_video = async (
     uploadBrowser = null
   }
   const headless = true
-  uploadBrowser = await puppeteer.launch({
+  const puppeteerConfig = {
     headless,
-    executablePath: get_browser_exe.get(headless),
     userDataDir: chromeUserDataPath
-  })
+  }
+  !debug && (puppeteerConfig.executablePath = get_browser_exe.get(headless))
+  uploadBrowser = await puppeteer.launch(puppeteerConfig)
 
   // 投稿主页
   const mainPage = await uploadBrowser.newPage()
   // 指令
   const RM_SUCCESS_VIDEOS = 'wswTest:[action=remove_success_videos]'
+  const UPLOAD_PROGRESS = '[wswTest_progress]'
 
   // 监听处理进度: 将浏览器中的 console 输出捕获到 Node.js 的 console 中
   mainPage.on('console', (msg) => {
@@ -88,6 +94,11 @@ const platform_upload_video = async (
     if (m_text?.indexOf?.(RM_SUCCESS_VIDEOS) >= 0) {
       const msg_text = m_text?.replace?.(RM_SUCCESS_VIDEOS, '')?.trim()
       return removeSuccessVideos?.(msg_text)
+    }
+    // 指令日志: 上传视频成功
+    if (m_text?.indexOf?.(UPLOAD_PROGRESS) >= 0) {
+      const msg_text = m_text?.replace?.(UPLOAD_PROGRESS, '')?.trim()
+      return uploadVideoProgress?.(msg_text)
     }
 
     if (m_text?.indexOf('wswTest:') < 0) {
@@ -126,8 +137,14 @@ const platform_upload_video = async (
     async (params) => {
       // 视频合并的时候需要此参数，参数在视频分段上传时产生。保存为全局变量，方便读取
       let _totalChunks = 1
-      const { videoInfo, videoList, videoUploadInput, maxRetryTime, RM_SUCCESS_VIDEOS } =
-        params || {}
+      const {
+        videoInfo,
+        videoList,
+        videoUploadInput,
+        maxRetryTime,
+        UPLOAD_PROGRESS,
+        RM_SUCCESS_VIDEOS
+      } = params || {}
 
       const qstr = (obj) => {
         let str = ''
@@ -137,6 +154,41 @@ const platform_upload_video = async (
           str += `${key}=${obj[key]}${keysLen - 1 > index ? '&' : ''}`
         })
         return str
+      }
+
+      const xhrPromise = async (url, method, options, { aleradyUploaded = 0, totalSize = 0 }) => {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+          xhr.open(method, url)
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete =
+                ((aleradyUploaded + event.loaded) / (totalSize || event.total)) * 100
+              console.log(`${UPLOAD_PROGRESS}${percentComplete.toFixed(2)}`)
+            }
+          }
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.response)
+            } else {
+              reject(new Error(`请求失败：${xhr.status}`))
+            }
+          }
+
+          xhr.onerror = () => {
+            reject(new Error('网络错误'))
+          }
+
+          if (options && options.headers) {
+            for (const [header, value] of Object.entries(options.headers)) {
+              xhr.setRequestHeader(header, value)
+            }
+          }
+
+          xhr.send(options.body)
+        })
       }
 
       /**
@@ -281,30 +333,20 @@ const platform_upload_video = async (
             end,
             total: size
           }
-          uploadSuccess = await fetch(`${push_stream_api}?${qstr(queryParams)}`, {
-            method: 'put',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              Origin: 'https://member.bilibili.com',
-              Referer: 'https://member.bilibili.com/',
-              'X-Upos-Auth': auth
+          uploadSuccess = await xhrPromise(
+            `${push_stream_api}?${qstr(queryParams)}`,
+            'put',
+            {
+              headers: {
+                'Content-Type': 'application/octet-stream',
+                Origin: 'https://member.bilibili.com',
+                Referer: 'https://member.bilibili.com/',
+                'X-Upos-Auth': auth
+              },
+              body: chunk
             },
-            body: chunk
-          })
-            .then((res) => {
-              if (!res.ok) {
-                throw new Error(`[bilibili_stream_upload_video]HTTP error! status: ${res.status}`)
-              }
-              return res.text().catch((e) => {
-                if (times + 1 >= maxRetryTime) {
-                  console.error(
-                    `wswTest:[bilibili_stream_upload_video]res.text():${e?.message || ''}`
-                  )
-                  return null
-                }
-                return bilibili_stream_upload_video(file, params, times + 1)
-              })
-            })
+            { aleradyUploaded: start, totalSize: size }
+          )
             .then((res) => {
               if ('MULTIPART_PUT_SUCCESS' !== res?.trim()) {
                 console.error(`wswTest:[bilibili_stream_upload_video]upload_failed:${res?.trim()}`)
@@ -566,7 +608,7 @@ const platform_upload_video = async (
             no_reprint: videoInfo?.bilibili_no_reprint || 1, // 禁止转载 0：无 1：禁止
             open_elec: videoInfo?.bilibili_open_elec || 1, // 是否开启充电 0: 无 1: 开启
             recreate: videoInfo?.bilibili_recreate || 0, // 是否支持二创 0: 不支持 1: 支持
-            dtime: videoInfo?.bilibili_dtime || 0, // 是否定时发送，值为以秒为单位的时间戳
+            dtime: Number(Math.floor(videoInfo?.bilibili_dtime / 1e3)) || 0, // 是否定时发送，值为以秒为单位的时间戳
             tid: videoInfo?.bilibili_tid || '', // 分区ID https://github.com/SocialSisterYi/bilibili-API-collect/blob/master/docs/video/video_zone.md
             dynamic: videoInfo?.dynamic || '', //
             interactive: videoInfo?.interactive || 0, //
@@ -637,7 +679,7 @@ const platform_upload_video = async (
         console.log(`${RM_SUCCESS_VIDEOS}${JSON.stringify(success_video_list)}`)
       })
     },
-    { videoInfo, videoList, videoUploadInput, maxRetryTime, RM_SUCCESS_VIDEOS }
+    { videoInfo, videoList, videoUploadInput, maxRetryTime, UPLOAD_PROGRESS, RM_SUCCESS_VIDEOS }
   )
 
   // TODO:(wsw) videoInfo.video 无值
