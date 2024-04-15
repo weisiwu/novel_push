@@ -62,7 +62,8 @@ const platform_upload_video = async (
   videoList = [],
   updateProgress,
   removeSuccessVideos,
-  uploadVideoProgress
+  uploadVideoProgress,
+  uploadVideoStepProgress
 ) => {
   // 关闭已有的页面，重新执行
   if (uploadBrowser) {
@@ -79,9 +80,12 @@ const platform_upload_video = async (
 
   // 投稿主页
   const mainPage = await uploadBrowser.newPage()
-  // 指令
+  // 移除已上传视频完成指令
   const RM_SUCCESS_VIDEOS = 'wswTest:[action=remove_success_videos]'
-  const UPLOAD_PROGRESS = '[wswTest_progress]'
+  // 上传进度指令
+  const UPLOAD_PROGRESS = 'wswTest[action=progress]'
+  // 视频处理进度结果指令，指令末尾_1表示该步骤处理成功
+  const HANDLE_VIDEO_STEP_PROGRESS = 'wswTest:[action=handle_video_step_progress]'
 
   // 监听处理进度: 将浏览器中的 console 输出捕获到 Node.js 的 console 中
   mainPage.on('console', (msg) => {
@@ -97,6 +101,11 @@ const platform_upload_video = async (
     if (m_text?.indexOf?.(UPLOAD_PROGRESS) >= 0) {
       const msg_text = m_text?.replace?.(UPLOAD_PROGRESS, '')?.trim()
       return uploadVideoProgress?.(msg_text)
+    }
+    // 指令日志: 视频处理进度结果指令，每步完成则通知
+    if (m_text?.indexOf?.(HANDLE_VIDEO_STEP_PROGRESS) >= 0) {
+      const msg_text = m_text?.replace?.(HANDLE_VIDEO_STEP_PROGRESS, '')?.trim()
+      return uploadVideoStepProgress?.(msg_text)
     }
 
     if (m_text?.indexOf('wswTest:') < 0) {
@@ -141,7 +150,8 @@ const platform_upload_video = async (
         videoUploadInput,
         maxRetryTime,
         UPLOAD_PROGRESS,
-        RM_SUCCESS_VIDEOS
+        RM_SUCCESS_VIDEOS,
+        HANDLE_VIDEO_STEP_PROGRESS
       } = params || {}
 
       const qstr = (obj) => {
@@ -537,9 +547,11 @@ const platform_upload_video = async (
           })
           if (!video_task_info) {
             console.error('wswTest: 创建视频上传任务失败')
+            console.log(`${HANDLE_VIDEO_STEP_PROGRESS}创建视频上传任务失败`)
             return false
           }
-          console.log('wswTest: 创建视频上传任务成功', JSON.stringify(video_task_info))
+          console.log('wswTest:创建视频上传任务成功', JSON.stringify(video_task_info))
+          console.log(`${HANDLE_VIDEO_STEP_PROGRESS}创建视频上传任务成功_1`)
 
           const { chunk_size, biz_id, upload_path, endpoint, auth } = video_task_info || {}
           // S2: 获取上传任务id
@@ -555,9 +567,11 @@ const platform_upload_video = async (
             })) || {}
           if (!upload_id) {
             console.error('wswTest: 获取上传任务id失败')
+            console.log(`${HANDLE_VIDEO_STEP_PROGRESS}获取上传任务id失败`)
             return false
           }
           console.log('wswTest: 获取上传任务id成功', upload_id)
+          console.log(`${HANDLE_VIDEO_STEP_PROGRESS}获取上传任务id成功_1`)
 
           // S3: 启动上传任务
           const upload_result = await bilibili_stream_upload_video(video_file, {
@@ -570,9 +584,11 @@ const platform_upload_video = async (
           })
           if (!upload_result) {
             console.error('wswTest: 上传视频文件失败', upload_result)
+            console.log(`${HANDLE_VIDEO_STEP_PROGRESS}上传视频文件失败`)
             return false
           }
           console.log('wswTest: 上传视频文件成功', upload_result, upload_id)
+          console.log(`${HANDLE_VIDEO_STEP_PROGRESS}上传视频文件成功_1`)
 
           // S4: 合片
           const concat_result = await bilibili_upload_video_concat({
@@ -587,9 +603,11 @@ const platform_upload_video = async (
           })
           if (!concat_result) {
             console.error('wswTest: 视频合片失败', upload_result)
+            console.log(`${HANDLE_VIDEO_STEP_PROGRESS}视频合片失败`)
             return false
           }
           console.log('wswTest: 视频合片成功', concat_result)
+          console.log(`${HANDLE_VIDEO_STEP_PROGRESS}视频合片成功_1`)
 
           // S5: 投稿
           const upload_file_name = upload_path?.split?.('/')?.[1] || ''
@@ -626,12 +644,14 @@ const platform_upload_video = async (
             console.log('wswTest:', '===============================')
             console.log('wswTest: 分发结束', `${fileName}`)
             console.error('wswTest: 投稿失败')
+            console.log(`${HANDLE_VIDEO_STEP_PROGRESS}投稿失败`)
             console.log('wswTest:', '===============================')
             return false
           }
           console.log('wswTest:', '===============================')
           console.log('wswTest: 分发结束', `${fileName}`)
           console.info('wswTest: 投稿成功', JSON.stringify(upload_draft_result))
+          console.log(`${HANDLE_VIDEO_STEP_PROGRESS}投稿成功_1`)
           console.info(
             'wswTest: 稿件地址',
             `https://www.bilibili.com/video/${upload_draft_result?.bvid || ''}/`
@@ -677,7 +697,15 @@ const platform_upload_video = async (
         console.log(`${RM_SUCCESS_VIDEOS}${JSON.stringify(success_video_list)}`)
       })
     },
-    { videoInfo, videoList, videoUploadInput, maxRetryTime, UPLOAD_PROGRESS, RM_SUCCESS_VIDEOS }
+    {
+      videoInfo,
+      videoList,
+      videoUploadInput,
+      maxRetryTime,
+      UPLOAD_PROGRESS,
+      RM_SUCCESS_VIDEOS,
+      HANDLE_VIDEO_STEP_PROGRESS
+    }
   )
 
   // TODO:(wsw) videoInfo.video 无值

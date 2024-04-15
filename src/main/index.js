@@ -149,6 +149,15 @@ app.whenReady().then(() => {
     }
 
   /**
+   * 更新上传步骤级别进度结果
+   */
+  const uploadVideoStepProgress =
+    (event) =>
+    (msg = '') => {
+      event?.sender?.send?.('upload-video-step-progress', msg)
+    }
+
+  /**
    * 登录平台
    */
   ipcMain.on('platform-login', async (event, info) => {
@@ -179,7 +188,8 @@ app.whenReady().then(() => {
         videos,
         updateProgress(event),
         removeSuccessVideos(event),
-        uploadVideoProgress(event)
+        uploadVideoProgress(event),
+        uploadVideoStepProgress(event)
       )
     } catch (e) {
       console.log('wswTest:[platform-send-video]e:', e)

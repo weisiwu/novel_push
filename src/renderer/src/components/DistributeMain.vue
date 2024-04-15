@@ -12,6 +12,7 @@
     </transition>
     <el-upload
       ref="video_upload_ref"
+      v-model:file-list="selected_videos"
       class="upload-demo"
       :on-change="selectFile"
       :on-exceed="videoNumberExceed"
@@ -30,20 +31,24 @@
           @mouseleave="show_close_bt = false"
         >
           <el-icon class="el-icon--document"><document /></el-icon>
-          <!-- <span>{{ file.name }}</span> -->
-          <span class="el-upload-list-item-baogan-filename">{{ file.name }}</span>
+          <span class="el-upload-list-item-baogan-filename">{{
+            `${file.name}__${file.progress_percent}`
+          }}</span>
           <el-progress
-            v-if="current_uid === file.uid && current_uid"
+            v-if="file.progress_percent > 0 && !file.hide_progress"
             :text-inside="true"
             :stroke-width="20"
-            :percentage="progress_percent"
+            :percentage="file.progress_percent"
             class="el-upload-list-item-baogan-progress"
             status="success"
           />
-          <div
-            v-if="current_uid !== file.uid || !current_uid"
-            class="el-upload-list-item-baogan-progress"
-          ></div>
+          <div v-if="file.progress_percent <= 0" class="el-upload-list-item-baogan-progress"></div>
+          <span
+            v-if="file?.step_result"
+            class="el-upload-list-item-baogan-stepresult"
+            :style="{ color: file.step_result_success ? '#6bc441' : '#f36d6d' }"
+            >{{ file?.step_result }}</span
+          >
           <el-icon v-show="!show_close_bt" class="el-icon--upload-success">
             <circle-check />
           </el-icon>
@@ -109,7 +114,7 @@
 
 <script setup>
 import { version } from '../../../../package.json'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import Terminal from 'vue-web-terminal'
 import { ElLoading } from 'element-plus'
 import { UploadFilled, Close, Document, CircleCheck } from '@element-plus/icons-vue'
@@ -121,7 +126,6 @@ const localConfig = ref(null)
 const terminal_ref = ref()
 const current_uid = ref(0)
 const show_close_bt = ref(false)
-const progress_percent = ref(0)
 const video_upload_ref = ref()
 const info_alert_show = ref(true)
 const show_terminal_log = ref(true)
@@ -232,17 +236,50 @@ onMounted(() => {
      */
     window.ipcRenderer.receive('upload-video-progress', (msg) => {
       try {
-        progress_percent.value = msg || 0
-        if (Number(msg) === 100) {
+        const progress_percent = Number(msg)
+        selected_videos.value = selected_videos.value.map?.((video) => {
+          if (video.uid === current_uid.value) {
+            return {
+              ...video,
+              progress_percent,
+              step_result: false,
+              step_result_success: false
+            }
+          }
+          return video
+        })
+        if (progress_percent === 100) {
           const next_index =
             selected_videos.value.findIndex((video) => video.uid === current_uid.value) + 1
           // 转到下一个视频，开始上传，并将进度重置为0
           current_uid.value = selected_videos.value?.[next_index]?.uid || 0
-          progress_percent.value = 0
+          nextTick(() => {
+            selected_videos.value[next_index - 1] = {
+              ...selected_videos.value?.[next_index - 1],
+              hide_progress: true
+            }
+          })
         }
       } catch (e) {
         return false
       }
+    })
+
+    /**
+     * 更新上传步骤级别进度结果
+     */
+    window.ipcRenderer.receive('upload-video-step-progress', (msg) => {
+      if (!msg) {
+        return
+      }
+      const is_success = msg?.indexOf?.('_1') >= 0
+      msg = msg?.replace?.('_1', '')
+      selected_videos.value = selected_videos.value.map?.((video) => {
+        if (video.uid === current_uid.value) {
+          return { ...video, step_result: msg, step_result_success: is_success }
+        }
+        return video
+      })
     })
 
     /**
@@ -315,6 +352,15 @@ onMounted(() => {
     position: relative;
     top: 6px;
     right: 0px;
+  }
+  .el-upload-list-item-baogan-stepresult {
+    position: absolute;
+    left: 50%;
+    width: 200px;
+    margin-left: -100px;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: center;
   }
 }
 </style>

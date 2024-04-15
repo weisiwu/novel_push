@@ -16,7 +16,8 @@ const mainWindowChannels = [
   'distribute-save-tpl-model', // 保存视频模板
   'distribute-remove-finished-videos', // 删除分发进程中已经投稿完成的视频
   'distribute-fetch-mission-topic', // 获取tid相关的话题和任务id
-  'upload-video-progress' // 上传视频百分比进度
+  'upload-video-progress', // 上传视频百分比进度
+  'upload-video-step-progress' // 更新上传步骤级别进度结果
 ]
 
 if (process.contextIsolated) {
