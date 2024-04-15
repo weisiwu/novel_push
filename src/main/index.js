@@ -10,6 +10,7 @@ import macIcon from '../../resources/imgs/icon.png?asset'
 import platform_init from '../../resources/sdk/node/platform_api/platform_init.js'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
 import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
+import create_new_environment from '../../resources/sdk/node/platform_api/create_new_environment.js'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 import distributeConfigPath from '../../resources/BaoganDistributeConfig.json?commonjs-external&asset&asarUnpack'
 
@@ -166,10 +167,17 @@ app.whenReady().then(() => {
   })
 
   /**
-   * 初始化平台相关信息
+   * 初始化平台特定信息
    */
-  ipcMain.on('distribute-fetch-mission-topic', async (event, tid) => {
-    platform_init(tid, updateProgress(event))
+  ipcMain.on('platform-init', async (event, options) => {
+    platform_init(options, updateProgress(event), event)
+  })
+
+  /**
+   * 创建新的用户环境
+   */
+  ipcMain.on('create-new-environment', async (event, options) => {
+    create_new_environment(options, updateProgress(event), event)
   })
 
   /**
@@ -207,12 +215,14 @@ app.whenReady().then(() => {
       const userTplModel = JSON.parse(params) || {}
       const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
       const timeStrToTime = (timeStr) => {
-        console.log('wswTest:timeStrToTime ', timeStr)
         return Math.floor(new Date(timeStr).getTime())
       }
       // 将要写入本地的配置
       const localConfig = JSON.stringify({
         ...localTplModel,
+        // 软件环境字段
+        useEnvironment: userTplModel.useEnvironment || localTplModel.useEnvironment || '',
+        // 视频模板信息字段
         title_prefix: userTplModel.title_prefix || localTplModel.title_prefix || '',
         desc: userTplModel.desc || localTplModel.desc || '',
         tag: userTplModel.tag?.join?.(',') || localTplModel.tag || '',
@@ -249,23 +259,6 @@ app.whenReady().then(() => {
       })
       writeFileSync(distributeConfigPath, localConfig)
     } catch (e) {
-      console.log('wswTest: 本地写入配置失败', e)
-    }
-  })
-
-  /**
-   * 1、读取已保存到本地的分发视频模板配置
-   */
-  ipcMain.on('platform-init', (event) => {
-    if (!existsSync(distributeConfigPath)) {
-      event.sender.send('platform-init-result', 'null')
-      return
-    }
-    try {
-      const localTplModel = JSON.parse(readFileSync(distributeConfigPath).toString())
-      event.sender.send('platform-init-result', JSON.stringify(localTplModel))
-    } catch (e) {
-      event.sender.send('platform-init-result', 'null')
       console.log('wswTest: 本地写入配置失败', e)
     }
   })

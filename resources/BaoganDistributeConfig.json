@@ -23,5 +23,32 @@
   "bilibili_dolby": "",
   "bilibili_tid": 210,
   "bilibili_mission_id": 1721095,
-  "bilibili_topic_id": 1165384
+  "bilibili_topic_id": 1165384,
+  "environments": [
+    {
+      "path": "/Users/siwu/Desktop/github/novel_push/node_modules/electron/dist/Electron.app/Contents/Resources/chromeUserData",
+      "name": "默认环境"
+    },
+    {
+      "path": "/Users/siwu/Desktop/github/novel_push/node_modules/electron/dist/Electron.app/Contents/Resources/bd049177142a8274435056767a31b1b3",
+      "name": "抖音环境"
+    },
+    {
+      "path": "/Users/siwu/Desktop/github/novel_push/node_modules/electron/dist/Electron.app/Contents/Resources/277a984f92b56b82a2bbfe2043b19abc",
+      "name": "抖音"
+    }
+  ],
+  "distribute_platforms": [
+    { "name": "bilibili", "name_cn": "哔哩哔哩", "login_html": "", "login_api": "" },
+    { "name": "xigua", "name_cn": "西瓜视频", "login_html": "", "login_api": "" },
+    { "name": "douyin", "name_cn": "抖音", "login_html": "", "login_api": "" },
+    { "name": "kuaishou", "name_cn": "快手", "login_html": "", "login_api": "" }
+  ],
+  "support_distribute_platforms": [
+    { "name": "bilibili", "name_cn": "哔哩哔哩", "login_html": "", "login_api": "" },
+    { "name": "xigua", "name_cn": "西瓜视频", "login_html": "", "login_api": "" },
+    { "name": "douyin", "name_cn": "抖音", "login_html": "", "login_api": "" },
+    { "name": "kuaishou", "name_cn": "快手", "login_html": "", "login_api": "" }
+  ],
+  "useEnvironment": "抖音环境"
 }

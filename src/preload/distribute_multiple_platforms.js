@@ -8,16 +8,19 @@ const mainWindowChannels = [
   'fetch-config',
   'read-config',
   'save-config',
-  'platform-init', // 平台信息初始化，主进程读取本地视频模板
+  // 平台信息初始化，主进程读取本地视频模板
+  // 获取tid相关的话题和任务id
+  'platform-init',
   'platform-init-result', // 读取本地视频模板结果
   'platform-login', // 授权登录平台
   'platform-send-video', // 开始分发投稿视频
   'distribute-update-process', // 更新分发进程日志
   'distribute-save-tpl-model', // 保存视频模板
   'distribute-remove-finished-videos', // 删除分发进程中已经投稿完成的视频
-  'distribute-fetch-mission-topic', // 获取tid相关的话题和任务id
   'upload-video-progress', // 上传视频百分比进度
-  'upload-video-step-progress' // 更新上传步骤级别进度结果
+  'upload-video-step-progress', // 更新上传步骤级别进度结果
+  'create-new-environment', // 新建环境
+  'create-new-environment-result' // 新建环境结果
 ]
 
 if (process.contextIsolated) {

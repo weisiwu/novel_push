@@ -120,7 +120,7 @@ watchEffect(() => {
 const tidChange = (bilibili_tid) => {
   // 获取bilibili_tid后，开始更新missions和topics
   fetch_mission_topic_loading.value = true
-  window.ipcRenderer.send('distribute-fetch-mission-topic', bilibili_tid)
+  window.ipcRenderer.send('platform-init', { platform: ['bilibili'], bilibili_tid })
 }
 
 // B站定时发布允许时间: 当前+2小时 ≤ 可选时间 ≤ 当前+15天

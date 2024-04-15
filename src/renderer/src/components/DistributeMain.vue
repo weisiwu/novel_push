@@ -66,7 +66,30 @@
       </template>
     </el-upload>
     <div :style="{ display: 'flex', justifyContent: 'center', marginTop: '20px' }">
-      <el-button type="primary" @click="login">授权登录</el-button>
+      <el-dropdown
+        v-if="environment.name"
+        ref="environment_ref"
+        split-button
+        type="primary"
+        @command="chooseEnvironment"
+        @click="login"
+      >
+        {{ `快捷登录(${environment.name})` }}
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item
+              v-for="env in environment_list"
+              :key="env?.path"
+              divided
+              :command="env"
+              >{{ env?.name || '' }}</el-dropdown-item
+            >
+            <el-dropdown-item divided @click="createNewEnvironmentDialogVisible = true"
+              ><el-button type="primary">点我新建环境</el-button></el-dropdown-item
+            >
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <div :style="{ width: '30px' }"></div>
       <el-button type="primary" :disabled="disabled_distribute" @click="sendVideo"
         >一键分发</el-button
@@ -82,7 +105,7 @@
         size="small"
         :style="{ position: 'absolute', right: 0, top: '-24px' }"
         @click="() => (show_terminal_log = !show_terminal_log)"
-        >{{ `点我${show_terminal_log.value ? '收起' : '展开'}日志面板` }}</el-button
+        >{{ `点我${show_terminal_log ? '收起' : '展开'}日志面板` }}</el-button
       >
       <el-collapse-transition>
         <div v-show="show_terminal_log" :style="{ height: '350px', width: '645px' }">
@@ -111,13 +134,28 @@
       ></div>
     </div>
   </div>
+  <el-dialog v-model="createNewEnvironmentDialogVisible" title="新建环境" width="500" center>
+    <el-input
+      v-model="environment_name_val"
+      style="width: 300px; margin: 0 84px"
+      placeholder="请输入环境名"
+    />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="createNewEnvironmentDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!environment_name_val" @click="createNewEnvironment">
+          新建
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { version } from '../../../../package.json'
 import { ref, onMounted, nextTick } from 'vue'
 import Terminal from 'vue-web-terminal'
-import { ElLoading } from 'element-plus'
+import { ElDropdownItem, ElLoading, ElMessage } from 'element-plus'
 import { UploadFilled, Close, Document, CircleCheck } from '@element-plus/icons-vue'
 import TemplateModel from './TemplateModel.vue'
 import 'vue-web-terminal/lib/theme/dark.css'
@@ -128,15 +166,23 @@ const terminal_ref = ref()
 const current_uid = ref(0)
 const show_close_bt = ref(false)
 const video_upload_ref = ref()
+const environment_ref = ref()
+const environment = ref('默认环境') // 登录环境
+const environment_list = ref([])
+const environment_name_val = ref()
 const info_alert_show = ref(true)
 const show_terminal_log = ref(true)
 const disabled_distribute = ref(true)
+const createNewEnvironmentDialogVisible = ref(false)
 const selected_videos = ref([])
 const terminalContext = `爆肝分发(${version})`
+
 const login = () => {
   window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
 }
+
 const pushMessage = (args) => terminal_ref.value.pushMessage(args)
+
 // on-change会在文件选中上传中，多次触发，需要排除触发条件
 const selectFile = (_, files) => {
   // 开始选择文件，alet直接消失
@@ -156,6 +202,7 @@ const selectFile = (_, files) => {
   current_uid.value = selected_videos.value?.[0]?.uid || 0
   disabled_distribute.value = !selected_videos.value.length
 }
+
 const removeSelectedFile = (uploadFile) => {
   // 上传中，删除无效
   if (disabled_distribute.value) {
@@ -165,6 +212,7 @@ const removeSelectedFile = (uploadFile) => {
   selected_videos.value = selected_videos.value.filter((file) => file.uid !== uploadFile.uid)
   console.log('wswTest删除后的值是: ', selected_videos.value)
 }
+
 const videoNumberExceed = () => {
   terminal_ref.value.pushMessage({
     content: `[${new Date().toLocaleString()}]选择的视频超出最大限制(${maxVideoNumber}个)，无法继续添加`,
@@ -189,9 +237,41 @@ const sendVideo = () => {
   )
 }
 
+/**
+ * 创建新的登录环境
+ */
+const createNewEnvironment = async () => {
+  // 触发创建环境事件
+  window.ipcRenderer.send('create-new-environment', { name: environment_name_val.value })
+  window.ipcRenderer.receive('create-new-environment-result', (info) => {
+    if (info === 'true') {
+      ElMessage({
+        message: `环境${environment_name_val.value}创建成功`,
+        type: 'success'
+      })
+    } else {
+      ElMessage.error(`环境${environment_name_val.value}创建失败`)
+    }
+    createNewEnvironmentDialogVisible.value = false
+  })
+}
+
+/**
+ * 选择新环境
+ */
+const chooseEnvironment = (env) => {
+  environment.value = env
+  window.ipcRenderer.send(
+    'distribute-save-tpl-model',
+    JSON.stringify({
+      useEnvironment: env.name
+    })
+  )
+}
+
 onMounted(() => {
-  // 置顶消息，10s后自动隐藏
-  setTimeout(() => (info_alert_show.value = false), 1e4)
+  // 置顶消息，5s后自动隐藏
+  setTimeout(() => (info_alert_show.value = false), 5e3)
 
   if (window.ipcRenderer) {
     /**
@@ -224,8 +304,6 @@ onMounted(() => {
       try {
         const finished_videos = JSON.parse(msg) || []
         console.log('wswTest: 解析出来的要移除的视频列表', finished_videos)
-        // TODO:(wsw) 上传中，准备删除文件。
-        // TODO:(wsw) 删除掉上传成功的文件
         finished_videos.forEach((finished_video) => {
           removeSelectedFile(finished_video)
         })
@@ -292,20 +370,15 @@ onMounted(() => {
      * 2、查看cookie文件是否存在，存在则认为已登录
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
-    window.ipcRenderer.send('platform-init', { platform: 'bilibili' })
+    window.ipcRenderer.send('platform-init', { platform: ['bilibili'] })
     window.ipcRenderer.receive('platform-init-result', (info) => {
       try {
         localConfig.value = JSON.parse(info) || {}
-        console.log('wswTest: 收到的读取信息', info)
-        terminal_ref.value.pushMessage({
-          content: `[${new Date().toLocaleString()}]成功读取本地配置`,
-          class: 'success'
-        })
+        environment_list.value = localConfig.value?.environments || []
+        environment.value =
+          environment_list.value.find?.((env) => env.name === localConfig.value?.useEnvironment) ||
+          {}
       } catch (error) {
-        terminal_ref.value.pushMessage({
-          content: `[${new Date().toLocaleString()}]读取本地配置失败: ${error?.message || ''}`,
-          class: 'error'
-        })
         console.log('wswTest: error', error?.message || '')
       }
 

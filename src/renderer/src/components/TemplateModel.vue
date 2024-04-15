@@ -1,6 +1,6 @@
 <template>
   <div id="tplBtn">
-    <span @click="drawer = !drawer">查看模板</span>
+    <span @click="drawer = !drawer">模板管理</span>
   </div>
   <el-drawer v-model="drawer" size="90%" direction="btt" :before-close="handleTemplateModelClose">
     <template #header>
