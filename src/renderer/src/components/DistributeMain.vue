@@ -141,11 +141,11 @@ const pushMessage = (args) => terminal_ref.value.pushMessage(args)
 const selectFile = (_, files) => {
   // 开始选择文件，alet直接消失
   info_alert_show.value = false
-  const ready_files = files.filter((file) => file.status === 'success') || []
+  const ready_files = files.filter((file) => ['ready', 'success'].includes(file.status)) || []
   selected_videos.value =
     ready_files?.map?.((file) => {
       return {
-        path: file?.raw?.path,
+        path: file?.path || file?.raw?.path,
         size: file?.size,
         name: file?.name,
         status: file?.status,
@@ -154,11 +154,13 @@ const selectFile = (_, files) => {
     }) || []
   // 默认取第一个视频uid
   current_uid.value = selected_videos.value?.[0]?.uid || 0
-  console.log('wswTest: selected_videos', selected_videos.value)
-  console.log('wswTest: 当前的是什么current_uid.value', current_uid.value)
   disabled_distribute.value = !selected_videos.value.length
 }
 const removeSelectedFile = (uploadFile) => {
+  // 上传中，删除无效
+  if (disabled_distribute.value) {
+    return
+  }
   video_upload_ref.value.handleRemove(uploadFile)
   selected_videos.value = selected_videos.value.filter((file) => file.uid !== uploadFile.uid)
   console.log('wswTest删除后的值是: ', selected_videos.value)
@@ -212,6 +214,7 @@ onMounted(() => {
 
     /**
      * 接受分发进程投稿完毕指令，移除投稿成功的视频
+     * 这也是投稿任务队列结束事件
      */
     window.ipcRenderer.receive('distribute-remove-finished-videos', (msg) => {
       if (!msg) {
@@ -321,7 +324,7 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 .el-upload-list {
-  max-height: 200px;
+  max-height: 160px;
   overflow-y: scroll;
 }
 .el-upload-list-item-baogan {

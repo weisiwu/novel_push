@@ -29,12 +29,14 @@ class PuppeteerManager {
     !debug && (puppeteerConfig.executablePath = get_browser_exe.get(headless))
     try {
       // 发生模式切换
-      if (this.browser && this.headless !== headless) {
-        console.log('wswTest: ', '是否关闭现有浏览器')
+      if (this.browser && this.headless != headless) {
+        console.log('wswTest: 关闭现有浏览器')
         this.browser.close()
+        console.log('wswTest: 重启浏览器')
+        this.browser = await puppeteer.launch(puppeteerConfig)
       }
       if (!this.browser) {
-        console.log('wswTest: ', '启动浏览器')
+        console.log('wswTest: 启动浏览器')
         this.browser = await puppeteer.launch(puppeteerConfig)
       }
     } catch (e) {

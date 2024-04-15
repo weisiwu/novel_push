@@ -720,6 +720,8 @@ const platform_upload_video = async (
   for (let vid = 0; vid < videoList.length; vid++) {
     const videoObj = videoList[vid]
     const cover_path = await get_cover_from_video(videoObj?.path)
+    console.log('wswTest: cover_path', cover_path)
+    console.log('wswTest: videoObj', videoObj)
     drafts_list.push(cover_path)
     drafts_list.push(videoObj?.path)
   }
