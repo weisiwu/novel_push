@@ -239,8 +239,7 @@ app.whenReady().then(() => {
         bilibili_recreate: Number(
           userTplModel.bilibili_recreate || localTplModel.bilibili_recreate || 0
         ),
-        bilibili_dtime:
-          timeStrToTime(userTplModel.bilibili_dtime || localTplModel.bilibili_dtime || 0) || '',
+        bilibili_dtime: timeStrToTime(userTplModel.bilibili_dtime || 0) || '',
         bilibili_no_disturbance:
           userTplModel.bilibili_no_disturbance || localTplModel.bilibili_no_disturbance || '',
         bilibili_act_reserve_create:
