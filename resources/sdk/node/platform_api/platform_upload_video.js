@@ -3,16 +3,14 @@ import puppeteer from 'puppeteer'
 import ffmpeg from 'fluent-ffmpeg'
 import { debug } from '../../../../package.json'
 import get_browser_exe from './get_local_browser_path.js'
-import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
+// TODO:(wsw) mac临时注释
+// import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
+// if (!debug) {
+//   ffmpeg.setFfmpegPath(ffmpegPath)
+// }
 
-// import puppeteer_manage from './puppeteer_manage.js'
-if (!debug) {
-  ffmpeg.setFfmpegPath(ffmpegPath)
-}
 const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
-// TODO:(wsw) 不支持视频分P
-// TODO:(wsw) b站上传工具版本同步更新机制
 /**
  * B站的上传视频
  * @ref 上传逻辑 https://pypi.org/project/bilibili-toolman/

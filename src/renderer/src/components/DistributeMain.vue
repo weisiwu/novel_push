@@ -24,33 +24,35 @@
       <el-icon class="el-icon--upload"><upload-filled /></el-icon>
       <div class="el-upload__text">将待分发视频拖放到这里或者<em>点击选择</em></div>
       <template #file="{ file }">
-        <div @mouseenter="show_close_bt = true" @mouseleave="show_close_bt = false">
-          <span class="el-upload-list__item-actions">
-            <el-icon class="el-icon--document"><document /></el-icon>
-            <span>{{ file.name }}</span>
-            <el-progress
-              v-if="current_uid === file.uid"
-              :text-inside="true"
-              :stroke-width="20"
-              :percentage="progress_percent"
-              :style="{
-                width: '520px',
-                display: 'inline-block',
-                top: '15%',
-                left: '67px'
-              }"
-              status="success"
-            />
-            <el-icon v-show="!show_close_bt" class="el-icon--upload-success">
-              <circle-check />
-            </el-icon>
-            <el-icon
-              v-show="show_close_bt"
-              class="el-icon--close"
-              @click="() => removeSelectedFile(file)"
-              ><close
-            /></el-icon>
-          </span>
+        <div
+          class="el-upload-list-item-baogan"
+          @mouseenter="show_close_bt = true"
+          @mouseleave="show_close_bt = false"
+        >
+          <el-icon class="el-icon--document"><document /></el-icon>
+          <!-- <span>{{ file.name }}</span> -->
+          <span class="el-upload-list-item-baogan-filename">{{ file.name }}</span>
+          <el-progress
+            v-if="current_uid === file.uid && current_uid"
+            :text-inside="true"
+            :stroke-width="20"
+            :percentage="progress_percent"
+            class="el-upload-list-item-baogan-progress"
+            status="success"
+          />
+          <div
+            v-if="current_uid !== file.uid || !current_uid"
+            class="el-upload-list-item-baogan-progress"
+          ></div>
+          <el-icon v-show="!show_close_bt" class="el-icon--upload-success">
+            <circle-check />
+          </el-icon>
+          <el-icon
+            v-show="show_close_bt"
+            class="el-icon--close"
+            @click="() => removeSelectedFile(file)"
+            ><close
+          /></el-icon>
         </div>
       </template>
       <template #tip>
@@ -130,11 +132,13 @@ const login = () => {
   window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
 }
 const pushMessage = (args) => terminal_ref.value.pushMessage(args)
+// on-change会在文件选中上传中，多次触发，需要排除触发条件
 const selectFile = (_, files) => {
   // 开始选择文件，alet直接消失
   info_alert_show.value = false
+  const ready_files = files.filter((file) => file.status === 'success') || []
   selected_videos.value =
-    files?.map?.((file) => {
+    ready_files?.map?.((file) => {
       return {
         path: file?.raw?.path,
         size: file?.size,
@@ -143,7 +147,10 @@ const selectFile = (_, files) => {
         uid: file?.uid
       }
     }) || []
+  // 默认取第一个视频uid
   current_uid.value = selected_videos.value?.[0]?.uid || 0
+  console.log('wswTest: selected_videos', selected_videos.value)
+  console.log('wswTest: 当前的是什么current_uid.value', current_uid.value)
   disabled_distribute.value = !selected_videos.value.length
 }
 const removeSelectedFile = (uploadFile) => {
@@ -207,6 +214,7 @@ onMounted(() => {
       try {
         const finished_videos = JSON.parse(msg) || []
         console.log('wswTest: 解析出来的要移除的视频列表', finished_videos)
+        // TODO:(wsw) 上传中，准备删除文件。
         // TODO:(wsw) 删除掉上传成功的文件
         finished_videos.forEach((finished_video) => {
           video_upload_ref?.value?.handleRemove?.(finished_video)
@@ -226,7 +234,9 @@ onMounted(() => {
         if (Number(msg) === 100) {
           const next_index =
             selected_videos.value.findIndex((video) => video.uid === current_uid.value) + 1
+          // 转到下一个视频，开始上传，并将进度重置为0
           current_uid.value = selected_videos.value?.[next_index]?.uid || 0
+          progress_percent.value = 0
         }
       } catch (e) {
         return false
@@ -274,8 +284,35 @@ onMounted(() => {
   max-height: 200px;
   overflow-y: scroll;
 }
-.el-icon--upload-success {
-  position: absolute;
-  right: 5px;
+.el-upload-list-item-baogan {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  height: 30px;
+  line-height: 30px;
+  align-items: center;
+
+  .el-upload-list-item-baogan-filename {
+    flex-shrink: 2;
+    max-width: 300px;
+    text-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .el-upload-list-item-baogan-progress {
+    flex-grow: 1;
+    flex-shrink: 1;
+    top: 0px;
+    position: relative;
+  }
+  .el-icon--upload-success {
+  }
+  .el-icon--close {
+    position: relative;
+    top: 6px;
+    right: 0px;
+  }
 }
 </style>
