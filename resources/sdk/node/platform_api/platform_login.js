@@ -1,25 +1,15 @@
 import fs from 'fs'
-import { join } from 'path'
-import puppeteer from 'puppeteer'
-import { debug } from '../../../../package.json'
-// import puppeteer_manage from './puppeteer_manage.js'
-import get_browser_exe from './get_local_browser_path.js'
+import puppeteer_manage from './puppeteer_manage.js'
 import bilibiliCookiesPath from '../../../cookies/BilibiliCookies.json?commonjs-external&asset&asarUnpack'
-
-const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
 const platform_login = async (platform, updateProgress = () => {}) => {
   console.log('wswTest: 将要登录平台', platform)
   updateProgress(`将要登录平台: ${platform}`)
   const winSize = 1080
   const headless = false
-  const puppeteerConfig = {
-    headless,
-    userDataDir: chromeUserDataPath,
+  const browser = await puppeteer_manage.launch(headless, {
     args: [`--window-size=${winSize},${winSize}`]
-  }
-  !debug && (puppeteerConfig.executablePath = get_browser_exe.get(headless))
-  const browser = await puppeteer.launch(puppeteerConfig)
+  })
   const loginPage = await browser.newPage()
   // 设置视窗的宽高
   await loginPage.setViewport({ width: winSize, height: winSize })

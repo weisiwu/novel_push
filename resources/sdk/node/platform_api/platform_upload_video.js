@@ -1,15 +1,11 @@
 import { join, basename } from 'path'
-import puppeteer from 'puppeteer'
 import ffmpeg from 'fluent-ffmpeg'
-import { debug } from '../../../../package.json'
-import get_browser_exe from './get_local_browser_path.js'
+import puppeteer_manage from './puppeteer_manage.js'
 // TODO:(wsw) mac临时注释
 // import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
 // if (!debug) {
 //   ffmpeg.setFfmpegPath(ffmpegPath)
 // }
-
-const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
 /**
  * B站的上传视频
@@ -67,16 +63,11 @@ const platform_upload_video = async (
 ) => {
   // 关闭已有的页面，重新执行
   if (uploadBrowser) {
-    await uploadBrowser?.close?.()
+    await uploadBrowser?.close()
     uploadBrowser = null
   }
   const headless = true
-  const puppeteerConfig = {
-    headless,
-    userDataDir: chromeUserDataPath
-  }
-  !debug && (puppeteerConfig.executablePath = get_browser_exe.get(headless))
-  uploadBrowser = await puppeteer.launch(puppeteerConfig)
+  uploadBrowser = await puppeteer_manage.launch(headless)
 
   // 投稿主页
   const mainPage = await uploadBrowser.newPage()
@@ -86,9 +77,11 @@ const platform_upload_video = async (
   const UPLOAD_PROGRESS = 'wswTest[action=progress]'
   // 视频处理进度结果指令，指令末尾_1表示该步骤处理成功
   const HANDLE_VIDEO_STEP_PROGRESS = 'wswTest:[action=handle_video_step_progress]'
+  // 关闭无头浏览器指令
+  const CLOSE_BROWSER = 'wswTest:[action=close_browser]'
 
   // 监听处理进度: 将浏览器中的 console 输出捕获到 Node.js 的 console 中
-  mainPage.on('console', (msg) => {
+  mainPage.on('console', async (msg) => {
     const m_type = msg.type()
     const m_text = msg.text()
     console.log(`BROWSER LOG: ${m_text}`)
@@ -106,6 +99,12 @@ const platform_upload_video = async (
     if (m_text?.indexOf?.(HANDLE_VIDEO_STEP_PROGRESS) >= 0) {
       const msg_text = m_text?.replace?.(HANDLE_VIDEO_STEP_PROGRESS, '')?.trim()
       return uploadVideoStepProgress?.(msg_text)
+    }
+    // 指令日志: 队列处理完成，关闭无头浏览器
+    if (m_text?.indexOf?.(CLOSE_BROWSER) >= 0) {
+      await uploadBrowser?.close()
+      uploadBrowser = null
+      return
     }
 
     if (m_text?.indexOf('wswTest:') < 0) {
@@ -151,7 +150,8 @@ const platform_upload_video = async (
         maxRetryTime,
         UPLOAD_PROGRESS,
         RM_SUCCESS_VIDEOS,
-        HANDLE_VIDEO_STEP_PROGRESS
+        HANDLE_VIDEO_STEP_PROGRESS,
+        CLOSE_BROWSER
       } = params || {}
 
       const qstr = (obj) => {
@@ -694,6 +694,7 @@ const platform_upload_video = async (
             `wswTest: 当前视频队列已分发完毕，成功${distribute_success}个/共${distribute_times}个`
           )
         }
+        console.log(`${CLOSE_BROWSER}`)
         console.log(`${RM_SUCCESS_VIDEOS}${JSON.stringify(success_video_list)}`)
       })
     },
@@ -704,7 +705,8 @@ const platform_upload_video = async (
       maxRetryTime,
       UPLOAD_PROGRESS,
       RM_SUCCESS_VIDEOS,
-      HANDLE_VIDEO_STEP_PROGRESS
+      HANDLE_VIDEO_STEP_PROGRESS,
+      CLOSE_BROWSER
     }
   )
 

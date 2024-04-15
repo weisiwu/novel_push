@@ -1,14 +1,9 @@
-import { join } from 'path'
-import puppeteer from 'puppeteer'
-import { debug } from '../../../../package.json'
-import get_browser_exe from './get_local_browser_path.js'
 import cookies from '../../../cookies/BilibiliCookies.json'
-// import puppeteer_manage from './puppeteer_manage.js'
+import puppeteer_manage from './puppeteer_manage.js'
 
 const maxRetryTimes = 3
 const update_topic_list = 'wswTest:update_topic_list'
 const update_mission_list = 'wswTest:update_mission_list'
-const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 
 const platform_init = async (tid, updateProgress) => {
   if (!tid) {
@@ -16,12 +11,7 @@ const platform_init = async (tid, updateProgress) => {
   }
   updateProgress(`初始化平台特定信息: 任务、话题`)
   const headless = true
-  const puppeteerConfig = {
-    headless,
-    userDataDir: chromeUserDataPath
-  }
-  !debug && (puppeteerConfig.executablePath = get_browser_exe.get(headless))
-  const browser = await puppeteer.launch(puppeteerConfig)
+  const browser = await puppeteer_manage.launch(headless)
   const initPage = await browser.newPage()
 
   await initPage.goto('https://member.bilibili.com/', { waitUntil: 'load' })

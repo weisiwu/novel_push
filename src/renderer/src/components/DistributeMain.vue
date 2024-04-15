@@ -31,18 +31,19 @@
           @mouseleave="show_close_bt = false"
         >
           <el-icon class="el-icon--document"><document /></el-icon>
-          <span class="el-upload-list-item-baogan-filename">{{
-            `${file.name}__${file.progress_percent}`
-          }}</span>
+          <span class="el-upload-list-item-baogan-filename">{{ `${file.name}` }}</span>
           <el-progress
-            v-if="file.progress_percent > 0 && !file.hide_progress"
+            v-if="(file.progress_percent || 0) > 0 && !file.hide_progress"
             :text-inside="true"
             :stroke-width="20"
-            :percentage="file.progress_percent"
+            :percentage="file.progress_percent || 0"
             class="el-upload-list-item-baogan-progress"
             status="success"
           />
-          <div v-if="file.progress_percent <= 0" class="el-upload-list-item-baogan-progress"></div>
+          <div
+            v-if="(file.progress_percent || 0) <= 0 || file.hide_progress"
+            class="el-upload-list-item-baogan-progress"
+          ></div>
           <span
             v-if="file?.step_result"
             class="el-upload-list-item-baogan-stepresult"
