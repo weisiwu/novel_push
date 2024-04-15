@@ -155,6 +155,8 @@ const selectFile = (_, files) => {
 }
 const removeSelectedFile = (uploadFile) => {
   video_upload_ref.value.handleRemove(uploadFile)
+  selected_videos.value = selected_videos.value.filter((file) => file.uid !== uploadFile.uid)
+  console.log('wswTest删除后的值是: ', selected_videos.value)
 }
 const videoNumberExceed = () => {
   terminal_ref.value.pushMessage({
@@ -217,7 +219,7 @@ onMounted(() => {
         // TODO:(wsw) 上传中，准备删除文件。
         // TODO:(wsw) 删除掉上传成功的文件
         finished_videos.forEach((finished_video) => {
-          video_upload_ref?.value?.handleRemove?.(finished_video)
+          removeSelectedFile(finished_video)
         })
         disabled_distribute.value = !selected_videos.value.length
       } catch (e) {
