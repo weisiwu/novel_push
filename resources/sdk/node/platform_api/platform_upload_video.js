@@ -2,10 +2,11 @@ import { join, basename } from 'path'
 import ffmpeg from 'fluent-ffmpeg'
 import puppeteer_manage from './puppeteer_manage.js'
 // TODO:(wsw) mac临时注释
-// import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
-// if (!debug) {
-//   ffmpeg.setFfmpegPath(ffmpegPath)
-// }
+import { debug } from '../../../../package.json'
+import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
+if (!debug) {
+  ffmpeg.setFfmpegPath(ffmpegPath)
+}
 
 /**
  * B站的上传视频

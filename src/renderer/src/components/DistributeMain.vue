@@ -2,12 +2,7 @@
   <div class="main">
     <transition name="el-zoom-in-top">
       <div v-if="info_alert_show" :style="{ margin: '15px 20px' }">
-        <el-alert
-          title="【提示】快速分发多稿件到多平台，目前支持B站，单稿件"
-          description="使用前需要您登录授权各个平台，授权后所有平台共用一套模板，一次点击即可完成多平台，多视频分发。"
-          type="success"
-          show-icon
-        />
+        <el-alert :title="info_tips" type="success" show-icon />
       </div>
     </transition>
     <el-upload
@@ -95,6 +90,9 @@
         >一键分发</el-button
       >
     </div>
+    <div class="platform_desc">
+      已选择B站、西瓜平台。如需修改分发平台，点击模板管理，勾选需要分发的平台，取消不需要分发的平台
+    </div>
     <!-- 模板表单区 -->
     <TemplateModel :local-config="localConfig" :push-message="pushMessage" />
     <!-- 分发执行日志 -->
@@ -157,6 +155,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import Terminal from 'vue-web-terminal'
 import { ElDropdownItem, ElLoading, ElMessage } from 'element-plus'
 import { UploadFilled, Close, Document, CircleCheck } from '@element-plus/icons-vue'
+import { support_distribute_platforms } from '../../../../resources/BaoganDistributeConfig.json'
 import TemplateModel from './TemplateModel.vue'
 import 'vue-web-terminal/lib/theme/dark.css'
 
@@ -176,6 +175,7 @@ const disabled_distribute = ref(true)
 const createNewEnvironmentDialogVisible = ref(false)
 const selected_videos = ref([])
 const terminalContext = `爆肝分发(${version})`
+const info_tips = `【提示】快速分发多稿件到多平台，目前支持${support_distribute_platforms.map((platform) => platform?.name_cn || '').join('、')}`
 
 const login = () => {
   window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
@@ -271,7 +271,7 @@ const chooseEnvironment = (env) => {
 
 onMounted(() => {
   // 置顶消息，5s后自动隐藏
-  setTimeout(() => (info_alert_show.value = false), 5e3)
+  setTimeout(() => (info_alert_show.value = false), 1e4)
 
   if (window.ipcRenderer) {
     /**
@@ -397,7 +397,7 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 .el-upload-list {
-  max-height: 160px;
+  max-height: 150px;
   overflow-y: scroll;
 }
 .el-upload-list-item-baogan {
@@ -439,5 +439,9 @@ onMounted(() => {
     font-size: 16px;
     text-align: center;
   }
+}
+.platform_desc {
+  line-height: 20px;
+  font-size: 14px;
 }
 </style>

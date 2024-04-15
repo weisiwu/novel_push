@@ -39,14 +39,55 @@
           </el-button>
         </el-form-item>
         <el-collapse v-model="activeName" accordion>
-          <el-collapse-item title="B站" name="bilibili">
-            <!-- b站特有字段 -->
-            <BilibiliPartTemplateModel
-              :platform="platformNames.BILIBILI"
-              :local-config="localConfig"
-              :form="form"
-            />
-          </el-collapse-item>
+          <el-checkbox-group
+            v-model="form.selected_distribute_platforms"
+            @change="distributePlatformsChange"
+          >
+            <el-collapse-item :name="platformNames.BILIBILI">
+              <template #title>
+                <el-checkbox label="B站" :value="platformNames.BILIBILI" />
+              </template>
+              <!-- b站特有字段 -->
+              <BilibiliPartTemplateModel
+                :platform="platformNames.BILIBILI"
+                :local-config="localConfig"
+                :form="form"
+              />
+            </el-collapse-item>
+            <el-collapse-item :name="platformNames.XIGUA">
+              <template #title>
+                <el-checkbox label="西瓜视频" :value="platformNames.XIGUA" />
+              </template>
+              <!-- 西瓜视频特有字段 -->
+              <XiguaPartTemplateModel
+                :platform="platformNames.XIGUA"
+                :local-config="localConfig"
+                :form="form"
+              />
+            </el-collapse-item>
+            <el-collapse-item :name="platformNames.DOUYIN">
+              <template #title>
+                <el-checkbox label="抖音" :value="platformNames.DOUYIN" />
+              </template>
+              <!-- 抖音特有字段 -->
+              <DouyinPartTemplateModel
+                :platform="platformNames.DOUYIN"
+                :local-config="localConfig"
+                :form="form"
+              />
+            </el-collapse-item>
+            <el-collapse-item :name="platformNames.KUAISHOU">
+              <template #title>
+                <el-checkbox label="快手" :value="platformNames.KUAISHOU" />
+              </template>
+              <!-- 快手特有字段 -->
+              <KuaishouPartTemplateModel
+                :platform="platformNames.KUAISHOU"
+                :local-config="localConfig"
+                :form="form"
+              />
+            </el-collapse-item>
+          </el-checkbox-group>
         </el-collapse>
       </el-form>
     </template>
@@ -63,11 +104,16 @@
 import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
 import BilibiliPartTemplateModel from './BilibiliPartTemplateModel.vue'
+import XiguaPartTemplateModel from './XiguaPartTemplateModel.vue'
+import { distribute_platforms } from '../../../../resources/BaoganDistributeConfig.json'
 import 'vue-web-terminal/lib/theme/dark.css'
 
 // 平台列表
 const platformNames = {
-  BILIBILI: 'bilibili'
+  BILIBILI: 'bilibili',
+  XIGUA: 'xigua',
+  DOUYIN: 'douyin',
+  KUAISHOU: 'kuaishou'
 }
 const props = defineProps({ pushMessage: Function, localConfig: Object })
 const drawer = ref(false)
@@ -75,7 +121,8 @@ const activeName = ref('')
 const form = reactive({
   title_prefix: '',
   desc: '',
-  tag: []
+  tag: [],
+  selected_distribute_platforms: distribute_platforms.map((platform) => platform || '')
 })
 const add_tag_input_val = ref('')
 const add_tag_input_visible = ref(false)
@@ -121,6 +168,10 @@ const handleTemplateModelCancel = () => {
   drawer.value = false
 }
 
+const distributePlatformsChange = (vals) => {
+  console.log('wswTest: distributePlatformsChange', vals)
+}
+
 // 新配置加载成功后，覆盖初始值
 watchEffect(() => {
   if (!props?.localConfig) {
@@ -138,6 +189,7 @@ const handleTemplateModelConfirm = () => {
   const globalLoadingIns = ElLoading.service({ fullscreen: true })
   drawer.value = false
   // 对外通知消息
+  console.log('wswTest: formform', form)
   window.ipcRenderer.send('distribute-save-tpl-model', JSON.stringify(form))
   props?.pushMessage?.({
     content: `[${new Date().toLocaleString()}]视频模板信息已更新`,

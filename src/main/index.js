@@ -222,6 +222,8 @@ app.whenReady().then(() => {
         ...localTplModel,
         // 软件环境字段
         useEnvironment: userTplModel.useEnvironment || localTplModel.useEnvironment || '',
+        distribute_platforms:
+          userTplModel.selected_distribute_platforms || localTplModel.distribute_platforms || [],
         // 视频模板信息字段
         title_prefix: userTplModel.title_prefix || localTplModel.title_prefix || '',
         desc: userTplModel.desc || localTplModel.desc || '',

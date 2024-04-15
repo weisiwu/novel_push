@@ -161,10 +161,8 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
       return
     }
     localConfig = JSON.parse(readFileSync(baoganDistributeConfigPath).toString())
-    event.sender.send('platform-init-result', JSON.stringify(localConfig))
     updateProgress(`[${new Date().toLocaleString()}]成功读取本地配置`, 'success')
     updateProgress(`[初始化]读取本地环境列表`)
-    // console.log('wswTest:开始初始化设置 ', localConfig?.environments)
     if (!localConfig?.environments?.length) {
       updateProgress(`[初始化]初始化本地环境列表`)
       localConfig.environments = [
@@ -179,6 +177,7 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
       updateProgress(`[初始化]初始化本地分发平台列表`)
       localConfig.distribute_platforms = localConfig?.support_distribute_platforms || []
     }
+    event.sender.send('platform-init-result', JSON.stringify(localConfig))
   } catch (e) {
     event.sender.send('platform-init-result', 'null')
     updateProgress(`[${new Date().toLocaleString()}]读取本地配置失败: ${e?.message || ''}`, 'error')

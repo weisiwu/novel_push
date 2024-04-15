@@ -34,7 +34,7 @@ const create_new_environment = async ({ name = '' } = {}, updateProgress, event)
     }
     localConfig.environments?.push({ path: newUserDataPath, name })
     localConfig.useEnvironment = name
-    const browser = await puppeteer_manage.launch(false, { userDataDir: newUserDataPath })
+    const browser = await puppeteer_manage.launch(true, { userDataDir: newUserDataPath })
     await browser.close()
     event.sender.send('create-new-environment-result', 'true')
     updateProgress(`[${new Date().toLocaleString()}]新建环境(${name})成功`, 'success')
