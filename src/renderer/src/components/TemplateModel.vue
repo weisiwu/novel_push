@@ -199,6 +199,12 @@ const handleTemplateModelConfirm = () => {
 }
 </script>
 
+<style>
+.el-drawer__header {
+  margin-bottom: 0px;
+}
+</style>
+
 <style scoped>
 #tplBtn {
   position: fixed;

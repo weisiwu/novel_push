@@ -682,7 +682,7 @@ const platform_upload_video = async (
             success_video_list.push(videoList[i / 2])
             distribute_success = distribute_success + 1
           }
-          const wait_time = Math.ceil(Math.max(0.2, Math.random()) * 10) * 1000
+          const wait_time = Math.ceil(Math.max(0.2, Math.random()) * 5) * 1000
           console.log(`wswTest: 等待${wait_time / 1000}秒，继续投稿`)
           await new Promise((resolve) => setTimeout(resolve, wait_time))
         }

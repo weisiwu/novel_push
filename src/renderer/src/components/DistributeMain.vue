@@ -90,8 +90,13 @@
         >一键分发</el-button
       >
     </div>
-    <div class="platform_desc">
-      已选择B站、西瓜平台。如需修改分发平台，点击模板管理，勾选需要分发的平台，取消不需要分发的平台
+    <div v-if="localConfig?.distribute_platforms?.length" class="platform_desc">
+      已选择{{
+        support_distribute_platforms
+          .filter((platform) => localConfig.distribute_platforms?.includes?.(platform.name))
+          ?.map?.((platform) => platform?.name_cn)
+          ?.join?.('、')
+      }}平台。如需修改分发平台，点击模板管理，勾选需要分发的平台，取消不需要分发的平台
     </div>
     <!-- 模板表单区 -->
     <TemplateModel :local-config="localConfig" :push-message="pushMessage" />
@@ -231,7 +236,6 @@ const sendVideo = () => {
   window.ipcRenderer.send(
     'platform-send-video',
     JSON.stringify({
-      platform: 'bilibili',
       videos: Array.from(selected_videos.value)
     })
   )

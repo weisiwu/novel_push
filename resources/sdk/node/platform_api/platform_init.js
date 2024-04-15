@@ -173,10 +173,10 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
       ]
       localConfig.useEnvironment = '默认环境'
     }
-    if (!localConfig?.distribute_platforms?.length) {
-      updateProgress(`[初始化]初始化本地分发平台列表`)
-      localConfig.distribute_platforms = localConfig?.support_distribute_platforms || []
-    }
+    // if (!localConfig?.distribute_platforms?.length) {
+    //   updateProgress(`[初始化]初始化本地分发平台列表`)
+    //   localConfig.distribute_platforms = localConfig?.support_distribute_platforms || []
+    // }
     event.sender.send('platform-init-result', JSON.stringify(localConfig))
   } catch (e) {
     event.sender.send('platform-init-result', 'null')
