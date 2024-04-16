@@ -676,7 +676,6 @@ const platform_upload_video = async (
             return
           }
           distribute_times++
-          // TODO:(wsw) 传入文件数量不足2
           const distribute_res = await distribute_draft(files[i], files[i + 1], i / 2)
           if (distribute_res) {
             success_video_list.push(videoList[i / 2])
@@ -711,15 +710,14 @@ const platform_upload_video = async (
     }
   )
 
-  // TODO:(wsw) videoInfo.video 无值
-  // TODO:(wsw) videoInfo.video 对应非视频
   // 触发文件上传，开始投稿流程
   const elementHandle = await mainPage.$(`#${videoUploadInput}`)
-  // TODO:(wsw) 获取封面失败
   const drafts_list = []
   // 获取封面图片，保存并上传
   for (let vid = 0; vid < videoList.length; vid++) {
     const videoObj = videoList[vid]
+    // 无值下一个
+    if (!videoObj) continue
     const cover_path = await get_cover_from_video(videoObj?.path)
     console.log('wswTest: cover_path', cover_path)
     console.log('wswTest: videoObj', videoObj)

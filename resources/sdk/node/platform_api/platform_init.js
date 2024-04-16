@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { existsSync, readFileSync, writeFile, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import puppeteer_manage from './puppeteer_manage.js'
 import baoganDistributeConfigPath from '../../../BaoganDistributeConfig.json?commonjs-external&asset&asarUnpack'
 
@@ -72,14 +72,14 @@ const init_bilibili_platform = async ({ bilibili_tid, updateProgress, localConfi
               if (times < maxRetryTimes) {
                 return update_missions_list(bilibili_tid, times + 1)
               }
-              return []
+              return false
             }
           })
           .catch((e) => {
             if (times < maxRetryTimes) {
               return update_missions_list(bilibili_tid, times + 1)
             }
-            return []
+            return false
           })
       }
 
@@ -122,12 +122,14 @@ const init_bilibili_platform = async ({ bilibili_tid, updateProgress, localConfi
           })
       }
 
-      console.log('wswTest: 开始刷新任务')
+      console.log(`wswTest: 开始刷新任务${bilibili_tid}`)
       const mission_list = await update_missions_list(bilibili_tid)
-      if (mission_list?.length) {
+      if (!mission_list) {
+        console.error('wswTest: 刷新任务失败')
+      } else if (mission_list?.length) {
         console.info('wswTest: 刷新任务成功')
       } else {
-        console.error('wswTest: 刷新任务失败')
+        console.error('wswTest: 刷新任务为空')
       }
       console.log(`${update_mission_list}${JSON.stringify(mission_list)}`)
 
@@ -192,3 +194,4 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
 }
 
 export default platform_init
+export { init_bilibili_platform }

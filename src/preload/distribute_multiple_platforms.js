@@ -20,7 +20,9 @@ const mainWindowChannels = [
   'upload-video-progress', // 上传视频百分比进度
   'upload-video-step-progress', // 更新上传步骤级别进度结果
   'create-new-environment', // 新建环境
-  'create-new-environment-result' // 新建环境结果
+  'create-new-environment-result', // 新建环境结果
+  'bilibili-refresh-tid', // b站刷新tid相关字段
+  'bilibili-refresh-tid-result' // b站tid刷新结果
 ]
 
 if (process.contextIsolated) {

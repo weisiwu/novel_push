@@ -35,15 +35,6 @@
       time-format="HH:mm"
     />
   </el-form-item>
-  <!-- <el-form-item label="【待确认】bilibili_no_disturbance">
-    <el-input v-model="form.bilibili_no_disturbance" />
-  </el-form-item>
-  <el-form-item label="【待确认】bilibili_act_reserve_create">
-    <el-input v-model="form.bilibili_act_reserve_create" />
-  </el-form-item>
-  <el-form-item label="【待确认】bilibili_dolby">
-    <el-input v-model="form.bilibili_dolby" />
-  </el-form-item> -->
   <el-form-item label="视频分类">
     <el-tree-select
       v-model="form.bilibili_tid"
@@ -108,7 +99,9 @@ watchEffect(() => {
   form.bilibili_no_reprint = String(props?.localConfig?.bilibili_no_reprint) || '1'
   form.bilibili_open_elec = String(props?.localConfig?.bilibili_open_elec) || '1'
   form.bilibili_recreate = props?.localConfig?.bilibili_recreate || '0'
-  form.bilibili_dtime = new Date(Number(props?.localConfig?.bilibili_dtime)) || '0'
+  form.bilibili_dtime = Number(props?.localConfig?.bilibili_dtime)
+    ? new Date(Number(props?.localConfig?.bilibili_dtime))
+    : ''
   form.bilibili_no_disturbance = props?.localConfig?.bilibili_no_disturbance || ''
   form.bilibili_act_reserve_create = props?.localConfig?.bilibili_act_reserve_create || ''
   form.bilibili_dolby = props?.localConfig?.bilibili_dolby || ''
@@ -120,7 +113,8 @@ watchEffect(() => {
 const tidChange = (bilibili_tid) => {
   // 获取bilibili_tid后，开始更新missions和topics
   fetch_mission_topic_loading.value = true
-  window.ipcRenderer.send('platform-init', { platform: ['bilibili'], bilibili_tid })
+  // 触发bilibili-refresh-tid事件，通过distribute-update-process接受返回结果
+  window.ipcRenderer.send('bilibili-refresh-tid', { platform: ['bilibili'], bilibili_tid })
 }
 
 // B站定时发布允许时间: 当前+2小时 ≤ 可选时间 ≤ 当前+15天
@@ -140,6 +134,7 @@ const check_time_is_available = (date) => {
 
 onMounted(() => {
   window.ipcRenderer.receive('distribute-update-process', (info) => {
+    console.log('wswTest:b站设置分区接受到的设置修改 ', info)
     const { action } = info || {}
     let data = null
 
@@ -163,6 +158,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.ipcRenderer.remove('distribute-update-process')
+  window.ipcRenderer.remove('bilibili-refresh-tid-result')
 })
 </script>
 

@@ -374,8 +374,6 @@ onMounted(() => {
      * 2、查看cookie文件是否存在，存在则认为已登录
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
-    const stack = new Error().stack || ''
-    console.log(stack)
     window.ipcRenderer.send('platform-init', { platform: ['bilibili'] })
     window.ipcRenderer.receive('platform-init-result', (info) => {
       try {

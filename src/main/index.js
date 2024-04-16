@@ -7,7 +7,9 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
-import platform_init from '../../resources/sdk/node/platform_api/platform_init.js'
+import platform_init, {
+  init_bilibili_platform
+} from '../../resources/sdk/node/platform_api/platform_init.js'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
 import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
 import create_new_environment from '../../resources/sdk/node/platform_api/create_new_environment.js'
@@ -171,6 +173,13 @@ app.whenReady().then(() => {
    */
   ipcMain.on('platform-init', async (event, options) => {
     platform_init(options, updateProgress(event), event)
+  })
+
+  /**
+   * 接受B站刷新tid
+   */
+  ipcMain.on('bilibili-refresh-tid', async (event, options) => {
+    init_bilibili_platform({ ...options, updateProgress: updateProgress(event) })
   })
 
   /**
