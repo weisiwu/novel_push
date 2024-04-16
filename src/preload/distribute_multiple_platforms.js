@@ -44,6 +44,11 @@ if (process.contextIsolated) {
             func(...args)
           })
         }
+      },
+      remove: (channel, func) => {
+        if (mainWindowChannels.includes(channel)) {
+          ipcRenderer.removeAllListeners(channel)
+        }
       }
     })
   } catch (error) {

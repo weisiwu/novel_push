@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFile, writeFileSync } from 'fs'
 import puppeteer_manage from './puppeteer_manage.js'
 import baoganDistributeConfigPath from '../../../BaoganDistributeConfig.json?commonjs-external&asset&asarUnpack'
 
@@ -173,23 +173,22 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
       ]
       localConfig.useEnvironment = '默认环境'
     }
-    // if (!localConfig?.distribute_platforms?.length) {
-    //   updateProgress(`[初始化]初始化本地分发平台列表`)
-    //   localConfig.distribute_platforms = localConfig?.support_distribute_platforms || []
-    // }
     event.sender.send('platform-init-result', JSON.stringify(localConfig))
   } catch (e) {
     event.sender.send('platform-init-result', 'null')
     updateProgress(`[${new Date().toLocaleString()}]读取本地配置失败: ${e?.message || ''}`, 'error')
     console.log('wswTest: 读取本地配置失败', e)
+    return
   }
 
   if (bilibili_tid) {
     init_bilibili_platform({ bilibili_tid, updateProgress, localConfig })
   }
 
-  // 初始化完毕后，将改动写入
-  writeFileSync(baoganDistributeConfigPath, JSON.stringify(localConfig))
+  if (localConfig) {
+    // 初始化完毕后，将改动写入
+    writeFileSync(baoganDistributeConfigPath, JSON.stringify(localConfig))
+  }
 }
 
 export default platform_init

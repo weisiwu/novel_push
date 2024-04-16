@@ -105,16 +105,10 @@ import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
 import BilibiliPartTemplateModel from './BilibiliPartTemplateModel.vue'
 import XiguaPartTemplateModel from './XiguaPartTemplateModel.vue'
+import { platformNames } from '../../src/constants.js'
 import { distribute_platforms } from '../../../../resources/BaoganDistributeConfig.json'
 import 'vue-web-terminal/lib/theme/dark.css'
 
-// 平台列表
-const platformNames = {
-  BILIBILI: 'bilibili',
-  XIGUA: 'xigua',
-  DOUYIN: 'douyin',
-  KUAISHOU: 'kuaishou'
-}
 const props = defineProps({ pushMessage: Function, localConfig: Object })
 const drawer = ref(false)
 const activeName = ref('')

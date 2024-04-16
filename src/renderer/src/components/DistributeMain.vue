@@ -156,11 +156,11 @@
 
 <script setup>
 import { version } from '../../../../package.json'
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import Terminal from 'vue-web-terminal'
 import { ElDropdownItem, ElLoading, ElMessage } from 'element-plus'
 import { UploadFilled, Close, Document, CircleCheck } from '@element-plus/icons-vue'
-import { support_distribute_platforms } from '../../../../resources/BaoganDistributeConfig.json'
+import { support_distribute_platforms } from '../../src/constants.js'
 import TemplateModel from './TemplateModel.vue'
 import 'vue-web-terminal/lib/theme/dark.css'
 
@@ -374,6 +374,8 @@ onMounted(() => {
      * 2、查看cookie文件是否存在，存在则认为已登录
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
+    const stack = new Error().stack || ''
+    console.log(stack)
     window.ipcRenderer.send('platform-init', { platform: ['bilibili'] })
     window.ipcRenderer.receive('platform-init-result', (info) => {
       try {
@@ -391,6 +393,18 @@ onMounted(() => {
       }, 1000)
     })
   }
+})
+
+onUnmounted(() => {
+  window.ipcRenderer.remove('distribute-update-process')
+
+  window.ipcRenderer.remove('distribute-remove-finished-videos')
+
+  window.ipcRenderer.remove('upload-video-progress')
+
+  window.ipcRenderer.remove('upload-video-step-progress')
+
+  window.ipcRenderer.remove('platform-init-result')
 })
 </script>
 

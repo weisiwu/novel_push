@@ -1,7 +1,7 @@
 import { debug } from '../../../../package.json'
 // TODO:(wsw) mac临时注释
-import browserPath from '../../../puppeteer/chrome/win64-123.0.6312.105/chrome-win64/chrome.exe?commonjs-external&asset&asarUnpack'
-import browserHeaderlessPath from '../../../puppeteer/chrome-headless-shell/win64-123.0.6312.105/chrome-headless-shell-win64/chrome-headless-shell.exe?commonjs-external&asset&asarUnpack'
+// import browserPath from '../../../puppeteer/chrome/win64-123.0.6312.105/chrome-win64/chrome.exe?commonjs-external&asset&asarUnpack'
+// import browserHeaderlessPath from '../../../puppeteer/chrome-headless-shell/win64-123.0.6312.105/chrome-headless-shell-win64/chrome-headless-shell.exe?commonjs-external&asset&asarUnpack'
 
 class GetBrowserPath {
   constructor() {
@@ -12,10 +12,10 @@ class GetBrowserPath {
     if (debug) {
       return ''
     }
-    if (headerless) {
-      return browserHeaderlessPath
-    }
-    return browserPath
+    // if (headerless) {
+    //   return browserHeaderlessPath
+    // }
+    // return browserPath
   }
 }
 

@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, watchEffect, defineProps } from 'vue'
+import { ref, watchEffect, defineProps, onMounted, onUnmounted } from 'vue'
 import bilibili_tids from '../../../../resources/sdk/node/platform_api/bilibili_tids.json'
 import 'vue-web-terminal/lib/theme/dark.css'
 
@@ -138,25 +138,31 @@ const check_time_is_available = (date) => {
   return false
 }
 
-window.ipcRenderer.receive('distribute-update-process', (info) => {
-  const { action } = info || {}
-  let data = null
+onMounted(() => {
+  window.ipcRenderer.receive('distribute-update-process', (info) => {
+    const { action } = info || {}
+    let data = null
 
-  if (action) {
-    const { data: dataStr, type } = action || {}
-    try {
-      data = JSON.parse(dataStr) || {}
-    } catch (e) {
+    if (action) {
+      const { data: dataStr, type } = action || {}
+      try {
+        data = JSON.parse(dataStr) || {}
+      } catch (e) {
+        fetch_mission_topic_loading.value = false
+        return false
+      }
+      if (type === 'topic') {
+        topics_list.value = data
+      } else if (type === 'mission') {
+        missions_list.value = data
+      }
       fetch_mission_topic_loading.value = false
-      return false
     }
-    if (type === 'topic') {
-      topics_list.value = data
-    } else if (type === 'mission') {
-      missions_list.value = data
-    }
-    fetch_mission_topic_loading.value = false
-  }
+  })
+})
+
+onUnmounted(() => {
+  window.ipcRenderer.remove('distribute-update-process')
 })
 </script>
 
