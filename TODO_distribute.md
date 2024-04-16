@@ -1,15 +1,14 @@
-细节功能&bug
-1. 刷新任务失败
-   刷新有bug
-2. 了解西瓜如何投稿
-   1. https://studio.ixigua.com/upload
-1. 底部terminal没有同步输出log
+https://studio.ixigua.com/upload
+1. 西瓜
 
-2. 如何在windows 和mac间来回切换，目前windws下代码，在mac下编译有问题
+
+2. 底部terminal没有同步输出log
+3. 如何在windows 和mac间来回切换，目前windws下代码，在mac下编译有问题
 能力扩展
 1. 进度条调优
    1. 目前启动的时候，没有展示出来正在启动
    2. 结束的时候也没有文字展示
+   3. 投稿结果么有展示在每个视频横条上
 2. 不支持分P投稿
 3. 添加广告栏
 4. 如何下载代码，在安装期间
