@@ -21,8 +21,19 @@ const platform_upload_video = async ({
   uploadVideoProgress,
   uploadVideoStepProgress
 }) => {
-  if (platform === platformNames.BILIBILI) {
-    return bilibili_upload_video({
+  if (platform.includes(platformNames.BILIBILI)) {
+    // TODO:(wsw) 临时注释，调试西瓜
+    // bilibili_upload_video({
+    //   videoInfo,
+    //   videoList,
+    //   updateProgress,
+    //   removeSuccessVideos,
+    //   uploadVideoProgress,
+    //   uploadVideoStepProgress
+    // })
+  }
+  if (platform.includes(platformNames.XIGUA)) {
+    xigua_upload_video({
       videoInfo,
       videoList,
       updateProgress,
@@ -30,19 +41,10 @@ const platform_upload_video = async ({
       uploadVideoProgress,
       uploadVideoStepProgress
     })
-  } else if (platform === platformNames.XIGUA) {
-    return xigua_upload_video({
-      videoInfo,
-      videoList,
-      updateProgress,
-      removeSuccessVideos,
-      uploadVideoProgress,
-      uploadVideoStepProgress
-    })
-  } else if (platform === platformNames.DOUYIN) {
-    return
-  } else if (platform === platformNames.KUAISHOU) {
-    return
+  }
+  if (platform.includes(platformNames.DOUYIN)) {
+  }
+  if (platform.includes(platformNames.KUAISHOU)) {
   }
 }
 

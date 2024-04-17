@@ -199,16 +199,17 @@ app.whenReady().then(() => {
     try {
       const info = JSON.parse(infoStr)
       const { platform, videos = [] } = info || {}
+
       config = JSON.parse(configStr)
-      platform_upload_video(
+      platform_upload_video({
         platform,
-        config,
-        videos,
-        updateProgress(event),
-        removeSuccessVideos(event),
-        uploadVideoProgress(event),
-        uploadVideoStepProgress(event)
-      )
+        videoInfo: config,
+        videoList: videos,
+        updateProgress: updateProgress(event),
+        removeSuccessVideos: removeSuccessVideos(event),
+        uploadVideoProgress: uploadVideoProgress(event),
+        uploadVideoStepProgress: uploadVideoStepProgress(event)
+      })
     } catch (e) {
       console.log('wswTest:[platform-send-video]e:', e)
     }

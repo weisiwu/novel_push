@@ -40,7 +40,7 @@ const platform_login = async (platforms, updateProgress = () => {}) => {
   const check_timer = setInterval(async () => {
     const pages = await browser.pages()
     const open_pages = pages.filter((page) => !page.isClosed())
-    if (open_pages.length === 1) {
+    if (open_pages.length <= 1) {
       // 全部登录: 每个登录页登录检测到登录后，都会关闭自身
       clearInterval(check_timer)
     }

@@ -1,8 +1,10 @@
-1. 西瓜
-  https://studio.ixigua.com/upload
+1. 封面统一处理，在前面
+   上传完毕后，点击开始分发，先在本地将封面都拆出来，然后配发任务
+2. 西瓜表单搞定
+1. 西瓜搞一波
 
-2. 底部terminal没有同步输出log
-3. 如何在windows 和mac间来回切换，目前windws下代码，在mac下编译有问题
+1. 底部terminal没有同步输出log
+2. 如何在windows 和mac间来回切换，目前windws下代码，在mac下编译有问题
 能力扩展
 1. 进度条调优
    1. 目前启动的时候，没有展示出来正在启动

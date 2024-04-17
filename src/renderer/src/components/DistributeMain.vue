@@ -238,6 +238,7 @@ const sendVideo = () => {
   window.ipcRenderer.send(
     'platform-send-video',
     JSON.stringify({
+      platform: localConfig.value?.distribute_platforms || [],
       videos: Array.from(selected_videos.value)
     })
   )
