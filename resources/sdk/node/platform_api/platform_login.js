@@ -1,61 +1,50 @@
-import fs from 'fs'
 import puppeteer_manage from './puppeteer_manage.js'
-import bilibiliCookiesPath from '../../../cookies/BilibiliCookies.json?commonjs-external&asset&asarUnpack'
+import {
+  platformNames,
+  support_distribute_platforms
+} from '../../../../src/renderer/src/constants.js'
+import xigua_login from './xigua_login.js'
+import bilibili_login from './bilibili_login.js'
 
-const platform_login = async (platform, updateProgress = () => {}) => {
-  console.log('wswTest: 将要登录平台', platform)
-  updateProgress(`将要登录平台: ${platform}`)
+const platform_login = async (platforms, updateProgress = () => {}) => {
+  console.log('wswTest: 将要登录平台', platforms)
+  updateProgress(`将要登录平台: ${platforms}`)
   const winSize = 1080
   const headless = false
   const browser = await puppeteer_manage.launch(headless, {
     args: [`--window-size=${winSize},${winSize}`]
   })
-  const loginPage = await browser.newPage()
-  // 设置视窗的宽高
-  await loginPage.setViewport({ width: winSize, height: winSize })
+  // 登录流程结束
+  const platforms_login_status = {}
+  const notify_finish = (result) => {
+    platforms_login_status[result.platform] = result.is_success || false
+  }
 
-  // B站种cookie，通过多个接口，分别给主站、游戏、漫画种上登录态
-  const bilibiliSetLoginApi = 'https://passport.biligame.com/x/passport-login/web/sso/set'
-  // 用来判断是否登录
-  const bilibiliCoolieApi = 'https://api.bilibili.com/x/web-interface/nav'
-  await loginPage.goto('https://passport.bilibili.com/login', { waitUntil: 'load' })
-  loginPage.on('response', async (response) => {
-    const responseUrl = response.url()
-    if (responseUrl.indexOf(bilibiliSetLoginApi) >= 0) {
-      updateProgress(`开始检查登录`)
-      console.log('wswTest: 开始检查登录')
-      // 登录成功: 种cookie请求，只要成功返回了，可不用检查返回值内部状态
-      if (response.status()) {
-        // 等待页面加载完成
-        await loginPage.waitForNavigation()
-        console.log('wswTest: 登录成功')
-        updateProgress(`登录成功`, 'success')
-        // 获取登录Cookie并保存到本地文件中
-        const cookies = await loginPage.cookies()
-        fs.writeFileSync(bilibiliCookiesPath, JSON.stringify(cookies), 'utf-8')
-        console.log('wswTest: 关闭登录页面')
-        updateProgress(`关闭登录页面`)
-      } else {
-        updateProgress(`登录失败`, 'error')
-      }
-      await browser.close()
+  // 依次打开登录页，等待检查登录状态或者手动登录
+  for (let i in platforms) {
+    const platform = platforms[i]
+    support_distribute_platforms.find((item) => item.name === platform)
+    if (!support_distribute_platforms) continue
+    if (platform === platformNames.BILIBILI) {
+      await bilibili_login({ browser, winSize, platform, updateProgress, notify_finish })
+    } else if (platform === platformNames.XIGUA) {
+      await xigua_login({ browser, winSize, platform, updateProgress, notify_finish })
+    } else if (platform === platformNames.DOUYIN) {
+      // TODO:(wsw) 临时
+      continue
+    } else if (platform === platformNames.KUAISHOU) {
+      // TODO:(wsw) 临时
+      continue
     }
-
-    if (responseUrl.indexOf(bilibiliCoolieApi) >= 0) {
-      if (response.status()) {
-        await response.json().then((data) => {
-          if (data?.data?.isLogin) {
-            updateProgress(`已保持登录态`, 'success')
-            console.log('wswTest: 已保持登录态')
-          } else {
-            updateProgress(`未登录${platform}，请登录`, 'error')
-            console.log(`wswTest: 未登录${platform}，请登录`)
-          }
-        })
-        await browser.close()
-      }
+  }
+  const check_timer = setInterval(async () => {
+    const pages = await browser.pages()
+    const open_pages = pages.filter((page) => !page.isClosed())
+    if (open_pages.length === 1) {
+      // 全部登录: 每个登录页登录检测到登录后，都会关闭自身
+      clearInterval(check_timer)
     }
-  })
+  }, 1000)
 }
 
 export default platform_login

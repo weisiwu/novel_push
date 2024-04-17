@@ -183,7 +183,9 @@ const terminalContext = `爆肝分发(${version})`
 const info_tips = `【提示】快速分发多稿件到多平台，目前支持${support_distribute_platforms.map((platform) => platform?.name_cn || '').join('、')}`
 
 const login = () => {
-  window.ipcRenderer.send('platform-login', { platform: 'bilibili' })
+  window.ipcRenderer.send('platform-login', {
+    platform: localConfig.value?.distribute_platforms?.join(',')
+  })
 }
 
 const pushMessage = (args) => terminal_ref.value.pushMessage(args)

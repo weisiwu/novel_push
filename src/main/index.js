@@ -164,7 +164,8 @@ app.whenReady().then(() => {
    * 登录平台
    */
   ipcMain.on('platform-login', async (event, info) => {
-    const { platform } = info || {}
+    const { platform: platformStr = '' } = info || {}
+    const platform = platformStr.split(',') || []
     platform_login(platform, updateProgress(event))
   })
 

@@ -1,6 +1,7 @@
 import { basename } from 'path'
 import ffmpeg from 'fluent-ffmpeg'
 import puppeteer_manage from './puppeteer_manage.js'
+import { CMDS } from '../../../../src/renderer/src/constants.js'
 // TODO:(wsw) mac临时注释
 // import { debug } from '../../../../package.json'
 // import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
@@ -71,20 +72,19 @@ const platform_upload_video = async ({
 
   // 投稿主页
   const mainPage = await uploadBrowser.newPage()
-  // 移除已上传视频完成指令
-  const RM_SUCCESS_VIDEOS = 'wswTest:[action=remove_success_videos]'
-  // 上传进度指令
-  const UPLOAD_PROGRESS = 'wswTest[action=progress]'
-  // 视频处理进度结果指令，指令末尾_1表示该步骤处理成功
-  const HANDLE_VIDEO_STEP_PROGRESS = 'wswTest:[action=handle_video_step_progress]'
-  // 关闭无头浏览器指令
-  const CLOSE_BROWSER = 'wswTest:[action=close_browser]'
+  const RM_SUCCESS_VIDEOS = CMDS.RM_SUCCESS_VIDEOS
+  const UPLOAD_PROGRESS = CMDS.UPLOAD_PROGRESS
+  const HANDLE_VIDEO_STEP_PROGRESS = CMDS.HANDLE_VIDEO_STEP_PROGRESS
+  const CLOSE_BROWSER = CMDS.CLOSE_BROWSER
 
   // 监听处理进度: 将浏览器中的 console 输出捕获到 Node.js 的 console 中
   mainPage.on('console', async (msg) => {
     const m_type = msg.type()
     const m_text = msg.text()
     console.log(`BROWSER LOG: ${m_text}`)
+    if (m_text?.indexOf('wswTest:') < 0) {
+      return
+    }
     // 指令日志: 队列处理完毕，以下视频投稿成功，从视频列表中移除
     if (m_text?.indexOf?.(RM_SUCCESS_VIDEOS) >= 0) {
       const msg_text = m_text?.replace?.(RM_SUCCESS_VIDEOS, '')?.trim()
@@ -107,9 +107,6 @@ const platform_upload_video = async ({
       return
     }
 
-    if (m_text?.indexOf('wswTest:') < 0) {
-      return
-    }
     const msg_text = m_text?.replace?.('wswTest:', '')?.trim()
     if (m_type === 'log') {
       updateProgress(msg_text)

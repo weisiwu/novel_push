@@ -1,6 +1,5 @@
-https://studio.ixigua.com/upload
 1. 西瓜
-
+  https://studio.ixigua.com/upload
 
 2. 底部terminal没有同步输出log
 3. 如何在windows 和mac间来回切换，目前windws下代码，在mac下编译有问题
