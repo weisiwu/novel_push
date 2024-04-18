@@ -179,101 +179,106 @@ const xigua_upload_single_video = async ({
     }
   }
 
-  // TODO:(wsw) 发布设置-定时发布
   // TODO:(wsw) 临时假值
-  const dtime = '2024-04-24 14:12'
-  const dtimeObj = new Date(dtime)
-  const nowObj = new Date()
-  const timeRemain = dtimeObj - nowObj
-  // 预定发布时间在2小时后，7天内
-  if (timeRemain >= 2 * hourMilSec && timeRemain <= 24 * 7 * hourMilSec) {
-    const dDate = dtimeObj.getDate()
-    const dHours = dtimeObj.getHours()
-    const dMinutes = dtimeObj.getMinutes()
-    const dtimeNodes = await mainPage?.$$('.video-form-item.form-item-timer .byte-radio')
-    // 如果传入了定时的时间，那么是定时发布
-    if (dtime) {
-      // 第一个选项是立即发布，第二个是定时发布
-      await dtimeNodes[1].click()
-      // 点击定时发布后，等待时间输入框出现
-      await mainPage.waitForSelector(
-        '.video-form-item.form-item-timer .byte-datepicker-input .byte-input'
-      )
-      const timeBtns = await mainPage.$$(
-        '.video-form-item.form-item-timer .byte-datepicker-input .byte-input'
-      )
-      const [startBtn, endBtn] = timeBtns || []
-      // 设置日期
-      startBtn && (await startBtn.click())
-      const availableDates = await mainPage?.$$(
-        '.byte-datepicker td.byte-calendar-cell:not(.byte-calendar-cell-disabled) .byte-calendar-date-value'
-      )
-      let is_date_set = false
-      console.log('wswTest: 目前可以点击的日期', availableDates)
-      for (let availableDate of availableDates) {
-        // 对每个元素执行页面函数，检查它是否包含特定文本
-        const text = await mainPage.evaluate((el) => el.textContent, availableDate)
-        if (text?.trim?.() === String(dDate)) {
-          console.log('wswTest:找了了日期', dDate)
-          is_date_set = true
-          await availableDate.click()
-        }
-      }
-      // TODO:(wsw) 这段逻辑没有经过测试
-      // 如果在本月没有找到可点击的日期，点击前往下一个月，然后寻找点击
-      if (!is_date_set) {
-        const nextMonthBtn = await mainPage.$('.byte-datepicker .byte-picker-next-month-btn')
-        await nextMonthBtn.click()
-        // 等待500ms防止渲染没有完成
-        await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
-        // 在下个月的日期列表中找到可点击的日期
-        const nextMonthAvailableDates = await mainPage?.$$(
+  // const dtime = '2024-04-24 14:12'
+  const dtime = false
+  // 发布设置-定时发布
+  if (dtime) {
+    const dtimeObj = new Date(dtime)
+    const nowObj = new Date()
+    const timeRemain = dtimeObj - nowObj
+    // 预定发布时间在2小时后，7天内
+    if (timeRemain >= 2 * hourMilSec && timeRemain <= 24 * 7 * hourMilSec) {
+      const dDate = dtimeObj.getDate()
+      const dHours = dtimeObj.getHours()
+      const dMinutes = dtimeObj.getMinutes()
+      const dtimeNodes = await mainPage?.$$('.video-form-item.form-item-timer .byte-radio')
+      // 如果传入了定时的时间，那么是定时发布
+      if (dtime) {
+        // 第一个选项是立即发布，第二个是定时发布
+        await dtimeNodes[1].click()
+        // 点击定时发布后，等待时间输入框出现
+        await mainPage.waitForSelector(
+          '.video-form-item.form-item-timer .byte-datepicker-input .byte-input'
+        )
+        const timeBtns = await mainPage.$$(
+          '.video-form-item.form-item-timer .byte-datepicker-input .byte-input'
+        )
+        const [startBtn, endBtn] = timeBtns || []
+        // 设置日期
+        startBtn && (await startBtn.click())
+        const availableDates = await mainPage?.$$(
           '.byte-datepicker td.byte-calendar-cell:not(.byte-calendar-cell-disabled) .byte-calendar-date-value'
         )
-        for (let availableDate of nextMonthAvailableDates) {
+        let is_date_set = false
+        console.log('wswTest: 目前可以点击的日期', availableDates)
+        for (let availableDate of availableDates) {
           // 对每个元素执行页面函数，检查它是否包含特定文本
           const text = await mainPage.evaluate((el) => el.textContent, availableDate)
           if (text?.trim?.() === String(dDate)) {
+            console.log('wswTest:找了了日期', dDate)
             is_date_set = true
             await availableDate.click()
           }
         }
-      }
-
-      // 设置时间
-      endBtn && (await endBtn.click())
-      const [hoursNode, minutesNode] =
-        (await mainPage?.$$('.byte-timepicker .byte-timepicker-list')) || []
-      if (hoursNode) {
-        const hoursList = (await hoursNode?.$$('.byte-timepicker-cell')) || []
-        // console.log('wswTest: hoursList', hoursList)
-        for (const hour of hoursList) {
-          const text = await mainPage.evaluate((el) => el.textContent, hour)
-          if (text?.trim?.() === String(dHours)) {
-            await hour.click()
+        // TODO:(wsw) 这段逻辑没有经过测试
+        // 如果在本月没有找到可点击的日期，点击前往下一个月，然后寻找点击
+        if (!is_date_set) {
+          const nextMonthBtn = await mainPage.$('.byte-datepicker .byte-picker-next-month-btn')
+          await nextMonthBtn.click()
+          // 等待500ms防止渲染没有完成
+          await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
+          // 在下个月的日期列表中找到可点击的日期
+          const nextMonthAvailableDates = await mainPage?.$$(
+            '.byte-datepicker td.byte-calendar-cell:not(.byte-calendar-cell-disabled) .byte-calendar-date-value'
+          )
+          for (let availableDate of nextMonthAvailableDates) {
+            // 对每个元素执行页面函数，检查它是否包含特定文本
+            const text = await mainPage.evaluate((el) => el.textContent, availableDate)
+            if (text?.trim?.() === String(dDate)) {
+              is_date_set = true
+              await availableDate.click()
+            }
           }
         }
-      }
-      if (minutesNode) {
-        const minutesList = (await minutesNode?.$$('.byte-timepicker-cell')) || []
-        // console.log('wswTest:minutesList ', minutesList)
-        for (const minute of minutesList) {
-          const text = await mainPage.evaluate((el) => el.textContent, minute)
-          if (text?.trim?.() === String(dMinutes)) {
-            await minute.click()
+
+        // 设置时间
+        endBtn && (await endBtn.click())
+        const [hoursNode, minutesNode] =
+          (await mainPage?.$$('.byte-timepicker .byte-timepicker-list')) || []
+        if (hoursNode) {
+          const hoursList = (await hoursNode?.$$('.byte-timepicker-cell')) || []
+          // console.log('wswTest: hoursList', hoursList)
+          for (const hour of hoursList) {
+            const text = await mainPage.evaluate((el) => el.textContent, hour)
+            if (text?.trim?.() === String(dHours)) {
+              await hour.click()
+            }
+          }
+        }
+        if (minutesNode) {
+          const minutesList = (await minutesNode?.$$('.byte-timepicker-cell')) || []
+          // console.log('wswTest:minutesList ', minutesList)
+          for (const minute of minutesList) {
+            const text = await mainPage.evaluate((el) => el.textContent, minute)
+            if (text?.trim?.() === String(dMinutes)) {
+              await minute.click()
+            }
           }
         }
       }
     }
   }
 
-  // TODO:(wsw) 临时测试
   // 发布设置-下载权限
   const allowDownload = false
   const allowDownloadNode = await mainPage?.$('.video-form-item.form-item-download .byte-checkbox')
   if (!allowDownload) {
     await allowDownloadNode.click()
   }
+
+  const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
+  if (submitBtn) await submitBtn.click()
 }
 
 const xigua_upload_video = async ({
