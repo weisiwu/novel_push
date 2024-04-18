@@ -2,7 +2,6 @@ import { PLATFORM_APIS, platformNames } from '../../../../src/renderer/src/const
 
 const bilibili_login = async ({
   browser,
-  winSize,
   platform,
   updateProgress = () => {},
   notify_finish = () => {}
@@ -10,7 +9,9 @@ const bilibili_login = async ({
   // B站种cookie，通过多个接口，分别给主站、游戏、漫画种上登录态
   const bilibiliSetLoginApi = PLATFORM_APIS.BILIBILI.login_api
   const loginPage = await browser.newPage()
-  await loginPage.setViewport({ width: winSize, height: winSize })
+  const screenWidth = await loginPage.evaluate(() => window.screen.width)
+  const screenHeight = await loginPage.evaluate(() => window.screen.height)
+  await loginPage.setViewport({ width: screenWidth, height: screenHeight })
   // 用来判断是否登录
   loginPage.goto(PLATFORM_APIS.BILIBILI.login_html, { waitUntil: 'load' })
   loginPage.on('response', async (response) => {

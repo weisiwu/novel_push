@@ -1,13 +1,5 @@
-import { basename } from 'path'
-import ffmpeg from 'fluent-ffmpeg'
 import puppeteer_manage from './puppeteer_manage.js'
 import { CMDS } from '../../../../src/renderer/src/constants.js'
-// TODO:(wsw) mac临时注释
-// import { debug } from '../../../../package.json'
-// import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
-// if (!debug) {
-//   ffmpeg.setFfmpegPath(ffmpegPath)
-// }
 
 /**
  * B站的上传视频
@@ -26,27 +18,6 @@ const mainPageUrl = 'https://member.bilibili.com/platform/upload/video/frame'
  * 根据视频地址，获取视频第一帧作为封面
  * 以视频名+_cover保存在相同目录
  */
-const get_cover_from_video = (video_path) => {
-  if (!video_path) {
-    return false
-  }
-  const video_name = basename(video_path)
-  const base_path = video_path.replace(video_name, '')
-  const cover_path = `${base_path}${video_name?.split?.('.')?.[0]}_cover.png`
-  return new Promise((resolve, reject) => {
-    ffmpeg(video_path)
-      .frames(1)
-      .on('end', () => {
-        console.log(`wswTest: 截取${video_name}第一帧完成，获取封面完成`)
-        resolve(cover_path)
-      })
-      .on('error', (err) => {
-        console.error(`wswTest: 获取视频封面失败: ${err?.message || ''}`)
-        reject(false)
-      })
-      .save(cover_path)
-  })
-}
 
 let uploadBrowser = null
 /**
@@ -57,6 +28,7 @@ let uploadBrowser = null
 const platform_upload_video = async ({
   videoInfo = {},
   videoList = [],
+  coverList = [],
   updateProgress,
   removeSuccessVideos,
   uploadVideoProgress,
@@ -712,9 +684,10 @@ const platform_upload_video = async ({
   // 获取封面图片，保存并上传
   for (let vid = 0; vid < videoList.length; vid++) {
     const videoObj = videoList[vid]
+
     // 无值下一个
     if (!videoObj) continue
-    const cover_path = await get_cover_from_video(videoObj?.path)
+    const cover_path = coverList[vid]
     console.log('wswTest: cover_path', cover_path)
     console.log('wswTest: videoObj', videoObj)
     drafts_list.push(cover_path)

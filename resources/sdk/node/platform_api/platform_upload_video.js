@@ -1,6 +1,37 @@
+import { basename } from 'path'
+import ffmpeg from 'fluent-ffmpeg'
 import bilibili_upload_video from './bilibili_upload_video.js'
 import xigua_upload_video from './xigua_upload_video.js'
 import { platformNames } from '../../../../src/renderer/src/constants.js'
+
+// TODO:(wsw) mac临时注释
+// import { debug } from '../../../../package.json'
+// import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
+// if (!debug) {
+//   ffmpeg.setFfmpegPath(ffmpegPath)
+// }
+
+const get_cover_from_video = (video_path) => {
+  if (!video_path) {
+    return false
+  }
+  const video_name = basename(video_path)
+  const base_path = video_path.replace(video_name, '')
+  const cover_path = `${base_path}${video_name?.split?.('.')?.[0]}_cover.png`
+  return new Promise((resolve, reject) => {
+    ffmpeg(video_path)
+      .frames(1)
+      .on('end', () => {
+        console.log(`wswTest: 截取${video_name}第一帧完成，获取封面完成`)
+        resolve(cover_path)
+      })
+      .on('error', (err) => {
+        console.error(`wswTest: 获取视频封面失败: ${err?.message || ''}`)
+        reject(false)
+      })
+      .save(cover_path)
+  })
+}
 
 /**
  * B站的上传视频
@@ -21,11 +52,22 @@ const platform_upload_video = async ({
   uploadVideoProgress,
   uploadVideoStepProgress
 }) => {
+  // 统一获取视频第一帧作为封面
+  const coverList = []
+  for (let vid = 0; vid < videoList.length; vid++) {
+    const videoObj = videoList[vid]
+    // 无值下一个
+    if (!videoObj) continue
+    const cover_path = await get_cover_from_video(videoObj?.path)
+    coverList.push(cover_path)
+  }
+
   if (platform.includes(platformNames.BILIBILI)) {
     // TODO:(wsw) 临时注释，调试西瓜
     // bilibili_upload_video({
     //   videoInfo,
     //   videoList,
+    //   coverList,
     //   updateProgress,
     //   removeSuccessVideos,
     //   uploadVideoProgress,
@@ -36,6 +78,7 @@ const platform_upload_video = async ({
     xigua_upload_video({
       videoInfo,
       videoList,
+      coverList,
       updateProgress,
       removeSuccessVideos,
       uploadVideoProgress,

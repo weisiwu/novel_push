@@ -11,9 +11,10 @@ const platform_login = async (platforms, updateProgress = () => {}) => {
   updateProgress(`将要登录平台: ${platforms}`)
   const winSize = 1080
   const headless = false
-  const browser = await puppeteer_manage.launch(headless, {
-    args: [`--window-size=${winSize},${winSize}`]
-  })
+  // const browser = await puppeteer_manage.launch(headless, {
+  //   args: [`--window-size=${winSize},${winSize}`]
+  // })
+  const browser = await puppeteer_manage.launch(headless)
   // 登录流程结束
   const platforms_login_status = {}
   const notify_finish = (result) => {
@@ -26,9 +27,9 @@ const platform_login = async (platforms, updateProgress = () => {}) => {
     support_distribute_platforms.find((item) => item.name === platform)
     if (!support_distribute_platforms) continue
     if (platform === platformNames.BILIBILI) {
-      await bilibili_login({ browser, winSize, platform, updateProgress, notify_finish })
+      await bilibili_login({ browser, platform, updateProgress, notify_finish })
     } else if (platform === platformNames.XIGUA) {
-      await xigua_login({ browser, winSize, platform, updateProgress, notify_finish })
+      await xigua_login({ browser, platform, updateProgress, notify_finish })
     } else if (platform === platformNames.DOUYIN) {
       // TODO:(wsw) 临时
       continue
