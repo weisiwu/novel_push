@@ -268,8 +268,18 @@ app.whenReady().then(() => {
         ),
         bilibili_topic_id: Number(
           userTplModel.bilibili_topic_id || localTplModel.bilibili_topic_id || 1
-        )
-        // 特有字段
+        ),
+        // 西瓜特有字段
+        xigua_isReproduce:
+          userTplModel.xigua_isReproduce || localTplModel.xigua_isReproduce || false,
+        xigua_reproduceDesc:
+          userTplModel.xigua_reproduceDesc || localTplModel.xigua_reproduceDesc || '',
+        xigua_activityName:
+          userTplModel.xigua_activityName || localTplModel.xigua_activityName || '',
+        xigua_privacyVal: userTplModel.xigua_privacyVal || localTplModel.xigua_privacyVal || '',
+        xigua_dtime: userTplModel.xigua_dtime || localTplModel.xigua_dtime || '',
+        xigua_allowDownload:
+          userTplModel.xigua_allowDownload || localTplModel.xigua_allowDownload || true
       })
       writeFileSync(distributeConfigPath, localConfig)
     } catch (e) {
