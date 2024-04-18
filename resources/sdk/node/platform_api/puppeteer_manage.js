@@ -23,7 +23,7 @@ class PuppeteerManager {
           JSON.parse(readFileSync(baoganDistributeConfigPath).toString()) || {}
         this.userDataDir =
           environments.find((env) => env.name === useEnvironment)?.path || chromeUserDataPath
-        console.log('wswTest: 成功读取本地的环境地址', this.userDataDir)
+        // console.log('wswTest: 成功读取本地的环境地址', this.userDataDir)
       } catch (e) {
         this.userDataDir = chromeUserDataPath
       }

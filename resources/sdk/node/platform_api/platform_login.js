@@ -31,10 +31,8 @@ const platform_login = async (platforms, updateProgress = () => {}) => {
     } else if (platform === platformNames.XIGUA) {
       await xigua_login({ browser, platform, updateProgress, notify_finish })
     } else if (platform === platformNames.DOUYIN) {
-      // TODO:(wsw) 临时
       continue
     } else if (platform === platformNames.KUAISHOU) {
-      // TODO:(wsw) 临时
       continue
     }
   }
