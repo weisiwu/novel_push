@@ -35,19 +35,6 @@ const get_cover_from_video = (video_path) => {
   })
 }
 
-const get_local_config = () => {
-  let localConfig = null
-  if (!existsSync(baoganDistributeConfigPath)) {
-    return localConfig
-  }
-  try {
-    localConfig = JSON.parse(readFileSync(baoganDistributeConfigPath).toString())
-  } catch (e) {
-    console.log('wswTest: 重读取本地配置失败', e)
-  }
-  return localConfig
-}
-
 /**
  * B站的上传视频
  * @ref 上传逻辑 https://pypi.org/project/bilibili-toolman/
@@ -77,21 +64,12 @@ const platform_upload_video = async ({
     coverList.push(cover_path)
   }
 
-  const localConfig = get_local_config() || {}
-
-  // 无法读取本地配置，就是无法读取视频模板配置
-  if (!localConfig) {
-    console.log('wswTest: 无法读取视频模板配置')
-    return false
-  }
-
   if (platform.includes(platformNames.BILIBILI)) {
     // TODO:(wsw) 临时注释，调试西瓜
     // bilibili_upload_video({
     //   videoInfo,
     //   videoList,
     //   coverList,
-    //   localConfig,
     //   updateProgress,
     //   removeSuccessVideos,
     //   uploadVideoProgress,
@@ -103,7 +81,6 @@ const platform_upload_video = async ({
       videoInfo,
       videoList,
       coverList,
-      localConfig,
       updateProgress,
       removeSuccessVideos,
       uploadVideoProgress,

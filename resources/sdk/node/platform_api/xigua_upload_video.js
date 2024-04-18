@@ -1,4 +1,3 @@
-import { basename, resolve } from 'path'
 import puppeteer_manage from './puppeteer_manage.js'
 import { CMDS, platformNames } from '../../../../src/renderer/src/constants.js'
 
@@ -6,8 +5,6 @@ const platform = platformNames.XIGUA
 const queryUploadProcessInterval = 500
 const hourMilSec = 60 * 60 * 1e3
 const uploadPageUrl = 'https://studio.ixigua.com/upload'
-const videoUploadInput = 'videoUploadInput'
-const videoUploadInputSelector = `#${videoUploadInput}`
 
 const xigua_upload_single_video = async ({
   videoInfo,
@@ -295,7 +292,6 @@ const xigua_upload_video = async ({
   videoInfo = {},
   videoList = [],
   coverList = [],
-  localConfig = {},
   updateProgress,
   removeSuccessVideos,
   uploadVideoProgress
@@ -344,15 +340,15 @@ const xigua_upload_video = async ({
     const cover = coverList[index]
     // TODO:(wsw) 还有个视频简介，没有加进去
     const videoInfoDemo = {
-      title: `${localConfig?.title_prefix || ''}${video.name || ''}`,
-      desc: localConfig?.desc || '',
-      tags: localConfig?.tag?.split?.(',') || [],
-      isReproduce: localConfig?.xigua_isReproduce || false,
-      reproduceDesc: localConfig?.xigua_reproduceDesc || '',
-      activityName: localConfig?.xigua_activityName || '',
-      privacyVal: localConfig?.xigua_privacyVal || '', // 谁可以看，不设置就是都可以看，1: 粉丝可见 2: 仅我可见
-      dtime: localConfig?.xigua_dtime || '', // 假值: 立刻发送 2024-04-24 14:12: 定时发送的时间
-      allowDownload: localConfig?.xigua_allowDownload || false // 是否允许下载
+      title: `${videoInfo?.title_prefix || ''}${video.name || ''}`,
+      desc: videoInfo?.desc || '',
+      tags: videoInfo?.tag?.split?.(',') || [],
+      isReproduce: videoInfo?.xigua_isReproduce || false,
+      reproduceDesc: videoInfo?.xigua_reproduceDesc || '',
+      activityName: videoInfo?.xigua_activityName || '',
+      privacyVal: videoInfo?.xigua_privacyVal || '', // 谁可以看，不设置就是都可以看，1: 粉丝可见 2: 仅我可见
+      dtime: videoInfo?.xigua_dtime || '', // 假值: 立刻发送 2024-04-24 14:12: 定时发送的时间
+      allowDownload: videoInfo?.xigua_allowDownload || false // 是否允许下载
     }
     console.log('wswTest: 视频的发送数据测试ddd', videoInfoDemo)
     await xigua_upload_single_video({

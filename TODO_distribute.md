@@ -1,6 +1,5 @@
 1. 获取活动列表
-   1. https://studio.ixigua.com/api/activity/list?AppId=0&NewXigua=true&act_status=2&category=%E5%85%A8%E9%83%A8&limit=15&media_id=0&offset=0&part_status=0&title=
-   2. 无头浏览器拉数据
+  无头浏览器拉数据
 2. 各步骤结果输出
 3. 多平台分发结果展示
 4. 底部terminal没有同步输出log

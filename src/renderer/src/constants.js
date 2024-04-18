@@ -19,7 +19,9 @@ const PLATFORM_APIS = {
   },
   XIGUA: {
     login_html: 'https://studio.ixigua.com/',
-    is_login_api: 'https://studio.ixigua.com/api/feedbacks/getUnreadFeedback'
+    is_login_api: 'https://studio.ixigua.com/api/feedbacks/getUnreadFeedback',
+    fetch_activity_list:
+      'https://studio.ixigua.com/api/activity/list?AppId=0&NewXigua=true&act_status=2&category=%E5%85%A8%E9%83%A8&limit=15&media_id=0&offset=0&part_status=0&title='
   },
   DOUYIN: { login_html: '', login_api: '' },
   KUAISHOU: { login_html: '', login_api: '' }
