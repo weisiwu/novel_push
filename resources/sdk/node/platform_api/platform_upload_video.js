@@ -1,19 +1,17 @@
 import { basename } from 'path'
 import ffmpeg from 'fluent-ffmpeg'
-import { existsSync, readFileSync } from 'fs'
-import bilibili_upload_video from './bilibili_upload_video.js'
+// import { debug } from '../../../../package.json'
 import xigua_upload_video from './xigua_upload_video.js'
+import bilibili_upload_video from './bilibili_upload_video.js'
 import { platformNames } from '../../../../src/renderer/src/constants.js'
-import baoganDistributeConfigPath from '../../../BaoganDistributeConfig.json?commonjs-external&asset&asarUnpack'
+// import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
 
 // TODO:(wsw) mac临时注释
-// import { debug } from '../../../../package.json'
-// import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
 // if (!debug) {
 //   ffmpeg.setFfmpegPath(ffmpegPath)
 // }
 
-const get_cover_from_video = (video_path) => {
+const get_cover_from_video = async (video_path) => {
   if (!video_path) {
     return false
   }
@@ -66,7 +64,7 @@ const platform_upload_video = async ({
 
   if (platform.includes(platformNames.BILIBILI)) {
     // TODO:(wsw) 临时注释，调试西瓜
-    // bilibili_upload_video({
+    // await bilibili_upload_video({
     //   videoInfo,
     //   videoList,
     //   coverList,
@@ -77,7 +75,7 @@ const platform_upload_video = async ({
     // })
   }
   if (platform.includes(platformNames.XIGUA)) {
-    xigua_upload_video({
+    await xigua_upload_video({
       videoInfo,
       videoList,
       coverList,

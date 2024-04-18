@@ -22,7 +22,9 @@ const mainWindowChannels = [
   'create-new-environment', // 新建环境
   'create-new-environment-result', // 新建环境结果
   'bilibili-refresh-tid', // b站刷新tid相关字段
-  'bilibili-refresh-tid-result' // b站tid刷新结果
+  'bilibili-refresh-tid-result', // b站tid刷新结果
+  'xigua-fetch-activity-list', // 请求西瓜活动列表
+  'xigua-fetch-activity-list-result' // 获取西瓜活动列表返回值
 ]
 
 if (process.contextIsolated) {

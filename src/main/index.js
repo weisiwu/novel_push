@@ -12,6 +12,7 @@ import platform_init, {
 } from '../../resources/sdk/node/platform_api/platform_init.js'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
 import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
+import xigua_get_activity_list from '../../resources/sdk/node/platform_api/xigua_get_activity_list.js'
 import create_new_environment from '../../resources/sdk/node/platform_api/create_new_environment.js'
 import configPath from '../../resources/BaoganAiConfig.json?commonjs-external&asset&asarUnpack'
 import distributeConfigPath from '../../resources/BaoganDistributeConfig.json?commonjs-external&asset&asarUnpack'
@@ -273,6 +274,15 @@ app.whenReady().then(() => {
     } catch (e) {
       console.log('wswTest: 本地写入配置失败', e)
     }
+  })
+
+  /**
+   * 获取西瓜平台活动列表
+   */
+  ipcMain.on('xigua-fetch-activity-list', (event) => {
+    xigua_get_activity_list((result) => {
+      event.sender.send('xigua-fetch-activity-list-result', result)
+    })
   })
 
   // 保存全局配置

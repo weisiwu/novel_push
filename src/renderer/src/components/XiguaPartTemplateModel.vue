@@ -57,7 +57,7 @@
 import { ref, watchEffect, defineProps, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({ platform: String, localConfig: Object, form: Object })
-const activity_list = ref([{ label: '活动1', value: '活动1' }])
+const activity_list = ref([])
 // 这些属性会被直接注入到form中
 const form = props.form
 
@@ -92,11 +92,16 @@ watchEffect(() => {
 })
 
 onMounted(() => {
-  // window.ipcRenderer.receive('distribute-update-process', (info) => {})
+  window.ipcRenderer.send('xigua-fetch-activity-list')
+  window.ipcRenderer.receive('xigua-fetch-activity-list-result', (info) => {
+    if (info instanceof Array) {
+      activity_list.value = info
+    }
+  })
 })
 
 onUnmounted(() => {
-  // window.ipcRenderer.remove('distribute-update-process')
+  window.ipcRenderer.remove('xigua-fetch-activity-list-result')
 })
 </script>
 

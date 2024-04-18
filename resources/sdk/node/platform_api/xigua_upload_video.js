@@ -7,10 +7,10 @@ const hourMilSec = 60 * 60 * 1e3
 const uploadPageUrl = 'https://studio.ixigua.com/upload'
 
 const xigua_upload_single_video = async ({
-  videoInfo,
   video,
   cover,
   mainPage,
+  videoInfo,
   updateProgress,
   removeSuccessVideos,
   uploadVideoProgress
