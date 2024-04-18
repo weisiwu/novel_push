@@ -83,7 +83,7 @@ const xigua_upload_single_video = async ({
     // 转载需要标出来源
     const reprintTextNode = await mainPage?.$('.video-form-item.form-item-reprint input[type=text]')
     await reprintTextNode.click()
-    await mainPage.keyboard.sendCharacter(`转载来源: https://www.zhihu.com/question/595744321`)
+    await mainPage.keyboard.sendCharacter(videoInfo.reproduceDesc || '')
   } else {
     await videoSourceNode[0].click()
   }
@@ -131,38 +131,40 @@ const xigua_upload_single_video = async ({
 
   // 选择活动
   const activity_name = videoInfo.activityName || ''
-  // 获取焦点
-  const activityNode = await mainPage?.$?.(
-    '.video-form-item.form-item-activity-tags .form-item-activity-tags__empty'
-  )
-  await activityNode.click()
-  await mainPage.waitForSelector(
-    '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
-  )
+  if (activity_name) {
+    // 获取焦点
+    const activityNode = await mainPage?.$?.(
+      '.video-form-item.form-item-activity-tags .form-item-activity-tags__empty'
+    )
+    await activityNode.click()
+    await mainPage.waitForSelector(
+      '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
+    )
 
-  const activity_list = await mainPage.$$(
-    '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
-  )
-  for (const card of activity_list) {
-    const activity_title = await card.evaluate((cardNode) => {
-      return cardNode.getAttribute('title')
-    })
-    if (activity_title === activity_name) {
-      await card.click()
-      const activityModelBtnNode = await mainPage.$(
-        '.upload-activity-modal .red.upload-activity-modal__btn:not(.cannot-click)'
-      )
-      activityModelBtnNode && (await activityModelBtnNode.click())
-      break
+    const activity_list = await mainPage.$$(
+      '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
+    )
+    for (const card of activity_list) {
+      const activity_title = await card.evaluate((cardNode) => {
+        return cardNode.getAttribute('title')
+      })
+      if (activity_title === activity_name) {
+        await card.click()
+        const activityModelBtnNode = await mainPage.$(
+          '.upload-activity-modal .red.upload-activity-modal__btn:not(.cannot-click)'
+        )
+        activityModelBtnNode && (await activityModelBtnNode.click())
+        break
+      }
     }
-  }
 
-  // 等待活动选择弹窗关闭
-  await mainPage.waitForFunction(
-    (selector) => !document.querySelector(selector),
-    {},
-    '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
-  )
+    // 等待活动选择弹窗关闭
+    await mainPage.waitForFunction(
+      (selector) => !document.querySelector(selector),
+      {},
+      '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
+    )
+  }
 
   // 发布设置-谁可以看
   const privacyVal = videoInfo.privacyVal || ''
@@ -279,8 +281,9 @@ const xigua_upload_single_video = async ({
     await allowDownloadNode.click()
   }
 
-  const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
-  if (submitBtn) await submitBtn.click()
+  // TODO:(wsw) 临时注释
+  // const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
+  // if (submitBtn) await submitBtn.click()
 
   // 发送完毕后，等待2秒，重刷新页面
   await (() => new Promise((resolve) => setTimeout(() => resolve(), 2000)))()
@@ -292,6 +295,7 @@ const xigua_upload_video = async ({
   videoInfo = {},
   videoList = [],
   coverList = [],
+  localConfig = {},
   updateProgress,
   removeSuccessVideos,
   uploadVideoProgress
@@ -336,18 +340,19 @@ const xigua_upload_video = async ({
 
   // 西瓜依次上传
   for (let index in videoList) {
-    console.log('wswTest: 当前视频序列号', index)
     const video = videoList[index]
     const cover = coverList[index]
-    // TODO:(wsw) demo数据
+    // TODO:(wsw) 还有个视频简介，没有加进去
     const videoInfoDemo = {
-      title: `测试标题想写下_${new Date().toLocaleDateString()}_${Math.ceil(Math.random() * 100)}`,
-      tags: ['测试tag1', '测试tag2'],
-      isReproduce: true,
-      activityName: '聚光创作大赛',
-      privacyVal: 1, // 谁可以看，不设置就是都可以看，1: 粉丝可见 2: 仅我可见
-      dtime: '', // 假值: 立刻发送 2024-04-24 14:12: 定时发送的时间
-      allowDownload: false // 是否允许下载
+      title: `${localConfig?.title_prefix || ''}${video.name || ''}`,
+      desc: localConfig?.desc || '',
+      tags: localConfig?.tag?.split?.(',') || [],
+      isReproduce: localConfig?.xigua_isReproduce || false,
+      reproduceDesc: localConfig?.xigua_reproduceDesc || '',
+      activityName: localConfig?.xigua_activityName || '',
+      privacyVal: localConfig?.xigua_privacyVal || '', // 谁可以看，不设置就是都可以看，1: 粉丝可见 2: 仅我可见
+      dtime: localConfig?.xigua_dtime || '', // 假值: 立刻发送 2024-04-24 14:12: 定时发送的时间
+      allowDownload: localConfig?.xigua_allowDownload || false // 是否允许下载
     }
     console.log('wswTest: 视频的发送数据测试ddd', videoInfoDemo)
     await xigua_upload_single_video({
