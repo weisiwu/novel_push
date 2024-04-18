@@ -12,7 +12,6 @@ const xigua_upload_single_video = async ({
   mainPage,
   videoInfo,
   updateProgress,
-  removeSuccessVideos,
   uploadVideoProgress
 }) => {
   await mainPage.goto(uploadPageUrl, { waitUntil: 'load' })
@@ -38,15 +37,18 @@ const xigua_upload_single_video = async ({
         const statusTxt = statusNode ? await statusNode.evaluate((el) => el?.innerHTML || '') : ''
 
         if (percentTxt) {
-          updateProgress(percentTxt)
+          console.log(`wswTest:视频${video?.name || ''}上传${platform}中:${percentTxt}`)
+          updateProgress(`视频${video?.name || ''}上传${platform}中:${percentTxt}`)
+          uploadVideoProgress(percentTxt?.replace?.('%', ''))
         } else {
           if (!statusTxt) {
             return
           }
           clearInterval(is_finished_timer)
           if (statusTxt.indexOf('上传成功') >= 0) {
+            console.info('wswTest: 上传成功')
+            uploadVideoProgress(100)
             updateProgress('上传成功', 'success')
-            uploadVideoProgress('上传成功')
             resolve(true)
           } else {
             reject(false)
@@ -59,6 +61,17 @@ const xigua_upload_single_video = async ({
   const titleNode = await mainPage?.$?.('.video-form-item.form-item-title .mentionText')
   await titleNode.click()
   await mainPage.keyboard.sendCharacter(videoInfo?.title || '')
+  console.log(`wswTest: 成功输入标题: ${videoInfo?.title}`)
+  updateProgress(`成功输入标题: ${videoInfo?.title}`)
+
+  if (videoInfo?.desc) {
+    // 输入视频简介
+    const descNode = await mainPage?.$?.('.video-form-item.form-item-abstract .mentionText')
+    await descNode.click()
+    await mainPage.keyboard.sendCharacter(videoInfo?.desc || '')
+    console.log(`wswTest: 成功输入描述: ${videoInfo?.desc}`)
+    updateProgress(`成功输入描述: ${videoInfo?.desc}`)
+  }
 
   // 输入话题
   const tags = videoInfo.tags || []
@@ -71,6 +84,8 @@ const xigua_upload_single_video = async ({
     await mainPage.keyboard.press('Enter')
     await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
   }
+  console.log(`wswTest: 成功输入话题标签: ${tags?.join?.(',')}`)
+  updateProgress(`成功输入话题标签: ${tags?.join?.(',')}`)
 
   // 选择视频类型: 原创、转载。默认是原创
   await mainPage.waitForSelector('.video-form-item.form-item-origin input[type=radio]')
@@ -84,6 +99,8 @@ const xigua_upload_single_video = async ({
   } else {
     await videoSourceNode[0].click()
   }
+  console.log(`wswTest: 成功选择视频类型: ${videoInfo.isReproduce ? '转载' : '原创'}`)
+  updateProgress(`成功选择视频类型: ${videoInfo.isReproduce ? '转载' : '原创'}`)
 
   // 输入封面
   const posterNode = await mainPage?.$?.('.video-form-item.form-item-poster .m-xigua-upload')
@@ -94,14 +111,14 @@ const xigua_upload_single_video = async ({
     const isLocalUploadLi = await li.evaluate(
       (linode) => linode.textContent.trim()?.indexOf?.('本地上传') >= 0
     )
-    console.log('wswTest: isLocalUploadLi', isLocalUploadLi)
     if (isLocalUploadLi) {
       await li.click()
     }
   }
   const posterUploadNode = await mainPage?.$('.xigua-upload-poster-trigger input[type=file]')
   posterUploadNode.uploadFile(cover)
-  console.log('wswTest: covercover', cover)
+  console.log('wswTest: 成功上传封面')
+  updateProgress(`成功上传封面`)
 
   const confirmCoverBtn = await mainPage.waitForSelector('.m-poster-upgrade .btn-sure')
   const confirmCoverBtnDisabled = await mainPage?.$('.m-poster-upgrade .btn-sure.disabled')
@@ -114,7 +131,8 @@ const xigua_upload_single_video = async ({
   }
   await confirmCoverBtn.click()
 
-  console.log(`wswTest: ${platform}-视频上传完毕`)
+  console.log(`wswTest:视频上传完毕`)
+  updateProgress(`视频上传完毕`)
   const reConfirmModel = await mainPage.waitForSelector('.m-xigua-dialog.title-modal')
   const reConfirmBtn = await reConfirmModel.$('.m-button.red')
   await reConfirmBtn.click()
@@ -161,27 +179,33 @@ const xigua_upload_single_video = async ({
       {},
       '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
     )
+    console.log(`wswTest: 成功选择活动: ${activity_name}`)
+    updateProgress(`成功选择活动: ${activity_name}`)
   }
 
   // 发布设置-谁可以看
   const privacyVal = videoInfo.privacyVal || ''
-  const privacyNodes = await mainPage?.$$('.video-form-item.form-item-privacy .byte-radio')
-  for (const privacyInput of privacyNodes) {
-    const _privacyVal = await privacyInput.evaluate((node) => {
-      return node.querySelector('input[type=radio]')?.getAttribute?.('value')
-    })
-    // 点选谁可以看项
-    privacyInput && (await privacyInput.click())
-    // (默认公开)从公开转化私有，无论哪种形式，都会有弹窗阻止提示
-    if (Number(_privacyVal) === Number(privacyVal)) {
-      if (privacyVal) {
-        const confirmBtn = await mainPage.waitForSelector(
-          '.m-xigua-dialog.simple-confirm-modal .m-button.red'
-        )
-        await confirmBtn.click()
+  if (privacyVal) {
+    const privacyNodes = await mainPage?.$$('.video-form-item.form-item-privacy .byte-radio')
+    for (const privacyInput of privacyNodes) {
+      const _privacyVal = await privacyInput.evaluate((node) => {
+        return node.querySelector('input[type=radio]')?.getAttribute?.('value')
+      })
+      // 点选谁可以看项
+      privacyInput && (await privacyInput.click())
+      // (默认公开)从公开转化私有，无论哪种形式，都会有弹窗阻止提示
+      if (Number(_privacyVal) === Number(privacyVal)) {
+        if (privacyVal) {
+          const confirmBtn = await mainPage.waitForSelector(
+            '.m-xigua-dialog.simple-confirm-modal .m-button.red'
+          )
+          await confirmBtn.click()
+        }
+        break
       }
-      break
     }
+    console.log(`wswTest: 成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}`)
+    updateProgress(`成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}}`)
   }
 
   const dtime = videoInfo.dtime
@@ -267,20 +291,27 @@ const xigua_upload_single_video = async ({
             }
           }
         }
+        console.log(`wswTest: 成功修改发布设置(定时发布): ${videoInfo.dtime}`)
+        updateProgress(`成功修改发布设置(定时发布): ${videoInfo.dtime}`)
       }
     }
   }
 
-  // 发布设置-下载权限
+  // 发布设置-下载权限(默认允许下载)
   const allowDownload = videoInfo.allowDownload || false
   const allowDownloadNode = await mainPage?.$('.video-form-item.form-item-download .byte-checkbox')
   if (!allowDownload) {
     await allowDownloadNode.click()
+    console.log(`wswTest: 成功修改发布设置(下载权限): 允许他人下载`)
+    updateProgress(`成功修改发布设置(下载权限): 允许他人下载`)
   }
 
-  // TODO:(wsw) 临时注释
-  // const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
-  // if (submitBtn) await submitBtn.click()
+  const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
+  if (submitBtn) {
+    await submitBtn.click()
+    console.info(`wswTest: 视频${video?.name || ''}发布成功`)
+    updateProgress(`视频${video?.name || ''}发布成功`, 'success')
+  }
 
   // 发送完毕后，等待2秒，重刷新页面
   await (() => new Promise((resolve) => setTimeout(() => resolve(), 2000)))()
@@ -293,52 +324,20 @@ const xigua_upload_video = async ({
   videoList = [],
   coverList = [],
   updateProgress,
-  removeSuccessVideos,
   uploadVideoProgress
 }) => {
   // TODO:(wsw) 临时为false
-  const headless = false
+  const headless = true
   const uploadBrowser = await puppeteer_manage.launch(headless)
   const mainPage = await uploadBrowser.newPage()
   const screenWidth = await mainPage.evaluate(() => window.screen.width)
   const screenHeight = await mainPage.evaluate(() => window.screen.height)
   await mainPage.setViewport({ width: screenWidth, height: screenHeight })
 
-  mainPage.on('console', async (msg) => {
-    const m_type = msg.type()
-    const m_text = msg.text()
-    if (m_text?.indexOf('wswTest:') < 0) {
-      return
-    }
-    console.log(`BROWSER LOG: ${m_text}`)
-    // 处理指令
-    if (m_text?.indexOf?.(CMDS.RM_SUCCESS_VIDEOS) >= 0) {
-      const msg_text = m_text?.replace?.(CMDS.RM_SUCCESS_VIDEOS, '')?.trim()
-      return removeSuccessVideos?.(msg_text)
-    }
-    if (m_text?.indexOf?.(CMDS.UPLOAD_PROGRESS) >= 0) {
-      const msg_text = m_text?.replace?.(CMDS.UPLOAD_PROGRESS, '')?.trim()
-      return uploadVideoProgress?.(msg_text)
-    }
-    if (m_text?.indexOf?.(CMDS.CLOSE_BROWSER) >= 0) {
-      return uploadBrowser?.close()
-    }
-
-    const msg_text = m_text?.replace?.('wswTest:', '')?.trim()
-    if (m_type === 'log') {
-      updateProgress(msg_text)
-    } else if (m_type === 'info') {
-      updateProgress(msg_text, 'success')
-    } else if (m_type === 'error') {
-      updateProgress(msg_text, 'error')
-    }
-  })
-
   // 西瓜依次上传
   for (let index in videoList) {
     const video = videoList[index]
     const cover = coverList[index]
-    // TODO:(wsw) 还有个视频简介，没有加进去
     const videoInfoDemo = {
       title: `${videoInfo?.title_prefix || ''}${video.name || ''}`,
       desc: videoInfo?.desc || '',
@@ -350,14 +349,12 @@ const xigua_upload_video = async ({
       dtime: videoInfo?.xigua_dtime || '', // 假值: 立刻发送 2024-04-24 14:12: 定时发送的时间
       allowDownload: videoInfo?.xigua_allowDownload || false // 是否允许下载
     }
-    console.log('wswTest: 视频的发送数据测试ddd', videoInfoDemo)
     await xigua_upload_single_video({
       video,
       cover,
       mainPage,
       videoInfo: videoInfoDemo,
       updateProgress,
-      removeSuccessVideos,
       uploadVideoProgress
     })
   }

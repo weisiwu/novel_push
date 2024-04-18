@@ -127,6 +127,7 @@ app.whenReady().then(() => {
 
   /**
    * 【分发】更新进度生成函数
+   * 主要是在terminal展示，以及获取b站活动话题、任务列表
    */
   const updateProgress =
     (event) =>

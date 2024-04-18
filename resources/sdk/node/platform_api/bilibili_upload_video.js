@@ -1,5 +1,5 @@
 import puppeteer_manage from './puppeteer_manage.js'
-import { CMDS } from '../../../../src/renderer/src/constants.js'
+import { CMDS, platformNames } from '../../../../src/renderer/src/constants.js'
 
 /**
  * B站的上传视频
@@ -12,6 +12,7 @@ import { CMDS } from '../../../../src/renderer/src/constants.js'
  * @ref topic https://member.bilibili.com/x/vupre/web/topic/type?type_id=168&pn=0&ps=6&title=&t=1712912378510
  */
 const maxRetryTime = 3
+const platform = platformNames.BILIBILI
 const videoUploadInput = 'videoUploadInput'
 const mainPageUrl = 'https://member.bilibili.com/platform/upload/video/frame'
 /**
@@ -53,7 +54,7 @@ const platform_upload_video = async ({
   mainPage.on('console', async (msg) => {
     const m_type = msg.type()
     const m_text = msg.text()
-    console.log(`BROWSER LOG: ${m_text}`)
+    console.log(`[${platform}]BROWSER LOG: ${m_text}`)
     if (m_text?.indexOf('wswTest:') < 0) {
       return
     }

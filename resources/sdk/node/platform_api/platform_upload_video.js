@@ -80,7 +80,6 @@ const platform_upload_video = async ({
       videoList,
       coverList,
       updateProgress,
-      removeSuccessVideos,
       uploadVideoProgress,
       uploadVideoStepProgress
     })
