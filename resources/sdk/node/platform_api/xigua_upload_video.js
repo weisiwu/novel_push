@@ -6,6 +6,15 @@ const queryUploadProcessInterval = 500
 const hourMilSec = 60 * 60 * 1e3
 const uploadPageUrl = 'https://studio.ixigua.com/upload'
 
+/**
+ * 上传单个西瓜视频
+ * @param video {Object} 视频
+ * @param cover {String} 封面
+ * @param mainPage {Browser} 无头浏览器页面
+ * @param videoInfo {Object} 视频模板信息
+ * @param updateProgress {Function} 上传日志回调
+ * @param uploadVideoProgress {Function} 上传进度回调
+ */
 const xigua_upload_single_video = async ({
   video,
   cover,
@@ -18,10 +27,9 @@ const xigua_upload_single_video = async ({
   // 直接找页面的第一个文件上传，比较冒险
   const fileInput = await mainPage.$('input[type=file]')
 
-  // TODO:(wsw) 如果没有找到上传的input 如何处理？
   if (!fileInput) {
     await mainPage.close()
-    return
+    return updateProgress(`[${platform}]上传视频${video?.name || ''}失败`, 'error')
   }
 
   // 将传入的视频上传到input中
@@ -38,19 +46,27 @@ const xigua_upload_single_video = async ({
 
         if (percentTxt) {
           console.log(`wswTest:视频${video?.name || ''}上传${platform}中:${percentTxt}`)
-          updateProgress(`视频${video?.name || ''}上传${platform}中:${percentTxt}`)
+          updateProgress(`[${platform}]视频${video?.name || ''}上传中:${percentTxt}`)
           uploadVideoProgress(percentTxt?.replace?.('%', ''))
         } else {
           if (!statusTxt) {
-            return
+            updateProgress(
+              `[${platform}]上传视频${video?.name || ''}失败，无法获取视频上传状态`,
+              'error'
+            )
+            reject(false)
           }
           clearInterval(is_finished_timer)
           if (statusTxt.indexOf('上传成功') >= 0) {
             console.info('wswTest: 上传成功')
             uploadVideoProgress(100)
-            updateProgress('上传成功', 'success')
+            updateProgress(`[${platform}]上传${video?.name || ''}成功`, 'success')
             resolve(true)
           } else {
+            updateProgress(
+              `[${platform}]上传视频${video?.name || ''}失败，${statusTxt || ''}`,
+              'error'
+            )
             reject(false)
           }
         }
@@ -58,34 +74,53 @@ const xigua_upload_single_video = async ({
     }))()
 
   // 输入标题
-  const titleNode = await mainPage?.$?.('.video-form-item.form-item-title .mentionText')
-  await titleNode.click()
-  await mainPage.keyboard.sendCharacter(videoInfo?.title || '')
-  console.log(`wswTest: 成功输入标题: ${videoInfo?.title}`)
-  updateProgress(`成功输入标题: ${videoInfo?.title}`)
+  if (videoInfo?.title) {
+    const titleNode = await mainPage?.$?.('.video-form-item.form-item-title .mentionText')
+    if (titleNode) {
+      await titleNode.click()
+      await mainPage.keyboard.sendCharacter(videoInfo?.title || '')
+      console.log(`wswTest: 标题输入完成: ${videoInfo?.title}`)
+      updateProgress(`[${platform}]标题输入完成: ${videoInfo?.title}`)
+    } else {
+      console.log(`wswTest: 标题输入失败: ${videoInfo?.title}`)
+      updateProgress(`[${platform}]标题输入失败: ${videoInfo?.title}`, 'error')
+    }
+  }
 
+  // 输入视频简介
   if (videoInfo?.desc) {
-    // 输入视频简介
     const descNode = await mainPage?.$?.('.video-form-item.form-item-abstract .mentionText')
-    await descNode.click()
-    await mainPage.keyboard.sendCharacter(videoInfo?.desc || '')
-    console.log(`wswTest: 成功输入描述: ${videoInfo?.desc}`)
-    updateProgress(`成功输入描述: ${videoInfo?.desc}`)
+    if (descNode) {
+      await descNode.click()
+      await mainPage.keyboard.sendCharacter(videoInfo?.desc || '')
+      console.log(`wswTest: 描述输入完成: ${videoInfo?.desc}`)
+      updateProgress(`[${platform}]描述输入完成: ${videoInfo?.desc}`)
+    } else {
+      console.log(`wswTest: 描述输入失败: ${videoInfo?.desc}`)
+      updateProgress(`[${platform}]描述输入失败: ${videoInfo?.desc}`, 'error')
+    }
   }
 
   // 输入话题
   const tags = videoInfo.tags || []
-  const tagNode = await mainPage?.$?.('.video-form-item.form-item-hash_tag .hash-tag-editor')
-  await tagNode.click()
-  for (let tagIdx in tags) {
-    await mainPage.keyboard.sendCharacter(`#${tags[tagIdx]}`)
-    // 下拉列表出现后，立刻按下enter，再等待500ms
-    await mainPage.waitForSelector('.arco-trigger.arco-dropdown')
-    await mainPage.keyboard.press('Enter')
-    await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
+  if (tags?.length) {
+    const tagNode = await mainPage?.$?.('.video-form-item.form-item-hash_tag .hash-tag-editor')
+    if (tagNode) {
+      await tagNode.click()
+      for (let tagIdx in tags) {
+        await mainPage.keyboard.sendCharacter(`#${tags[tagIdx]}`)
+        // 下拉列表出现后，立刻按下enter，再等待500ms
+        await mainPage.waitForSelector('.arco-trigger.arco-dropdown')
+        await mainPage.keyboard.press('Enter')
+        await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
+      }
+      console.log(`wswTest: 话题标签输入完成: ${tags?.join?.(',')}`)
+      updateProgress(`[${platform}]话题标签输入完成: ${tags?.join?.(',')}`)
+    } else {
+      console.log(`wswTest: 话题标签输入失败: ${tags?.join?.(',')}`)
+      updateProgress(`[${platform}]话题标签输入失败: ${tags?.join?.(',')}`, 'error')
+    }
   }
-  console.log(`wswTest: 成功输入话题标签: ${tags?.join?.(',')}`)
-  updateProgress(`成功输入话题标签: ${tags?.join?.(',')}`)
 
   // 选择视频类型: 原创、转载。默认是原创
   await mainPage.waitForSelector('.video-form-item.form-item-origin input[type=radio]')
@@ -306,12 +341,13 @@ const xigua_upload_single_video = async ({
     updateProgress(`成功修改发布设置(下载权限): 允许他人下载`)
   }
 
-  const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
-  if (submitBtn) {
-    await submitBtn.click()
-    console.info(`wswTest: 视频${video?.name || ''}发布成功`)
-    updateProgress(`视频${video?.name || ''}发布成功`, 'success')
-  }
+  // TODO:(wsw) 临时注释
+  // const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
+  // if (submitBtn) {
+  //   await submitBtn.click()
+  //   console.info(`wswTest: 视频${video?.name || ''}发布成功`)
+  //   updateProgress(`视频${video?.name || ''}发布成功`, 'success')
+  // }
 
   // 发送完毕后，等待2秒，重刷新页面
   await (() => new Promise((resolve) => setTimeout(() => resolve(), 2000)))()
@@ -319,6 +355,14 @@ const xigua_upload_single_video = async ({
   return
 }
 
+/**
+ * 批量上传西瓜视频
+ * @param videoInfo {Object} 视频模板信息
+ * @param videoList {Array<Object>} 视频列表
+ * @param coverList {Array<String>} 封面列表
+ * @param updateProgress {Function} 上传日志回调
+ * @param uploadVideoProgress {Function} 上传进度回调
+ */
 const xigua_upload_video = async ({
   videoInfo = {},
   videoList = [],
@@ -338,7 +382,7 @@ const xigua_upload_video = async ({
   for (let index in videoList) {
     const video = videoList[index]
     const cover = coverList[index]
-    const videoInfoDemo = {
+    const videoInfoData = {
       title: `${videoInfo?.title_prefix || ''}${video.name?.split?.('.')?.[0] || ''}`,
       desc: videoInfo?.desc || '',
       tags: videoInfo?.tag?.split?.(',') || [],
@@ -353,7 +397,7 @@ const xigua_upload_video = async ({
       video,
       cover,
       mainPage,
-      videoInfo: videoInfoDemo,
+      videoInfo: videoInfoData,
       updateProgress,
       uploadVideoProgress
     })
