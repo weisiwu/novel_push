@@ -1,95 +1,98 @@
 <template>
   <div id="tplBtn">
-    <span @click="drawer = !drawer">模板管理</span>
+    <span @click="toggle_drawer">模板管理</span>
   </div>
+
   <el-drawer v-model="drawer" size="90%" direction="btt" :before-close="handleTemplateModelClose">
     <template #header>
       <h4>视频信息模板</h4>
     </template>
     <template #default>
-      <el-form id="templateModel" :model="form" label-width="auto" label-position="top">
-        <el-form-item label="标题前缀">
-          <el-input v-model="form.title_prefix" placeholder="投稿标题的统一前缀，非必填" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.desc" placeholder="投稿描述" />
-        </el-form-item>
-        <el-form-item label="视频标签">
-          <el-tag
-            v-for="tag in form.tag"
-            :key="tag"
-            v-model="form.tag"
-            closable
-            :disable-transitions="false"
-            @close="delete_tag(tag)"
-          >
-            {{ tag }}
-          </el-tag>
-          <el-input
-            v-if="add_tag_input_visible"
-            ref="add_tag_input_ref"
-            v-model="add_tag_input_val"
-            class="w-20"
-            size="small"
-            @keyup.enter="add_tag"
-            @blur="add_tag"
-          />
-          <el-button v-else class="button-new-tag" size="small" @click="show_add_tag_btn">
-            添加标签
-          </el-button>
-        </el-form-item>
-        <el-collapse v-model="activeName" accordion>
-          <el-checkbox-group
-            v-model="form.selected_distribute_platforms"
-            @change="distributePlatformsChange"
-          >
-            <el-collapse-item :name="platformNames.BILIBILI">
-              <template #title>
-                <el-checkbox label="B站" :value="platformNames.BILIBILI" />
-              </template>
-              <!-- b站特有字段 -->
-              <BilibiliPartTemplateModel
-                :platform="platformNames.BILIBILI"
-                :local-config="localConfig"
-                :form="form"
-              />
-            </el-collapse-item>
-            <el-collapse-item :name="platformNames.XIGUA">
-              <template #title>
-                <el-checkbox label="西瓜视频" :value="platformNames.XIGUA" />
-              </template>
-              <!-- 西瓜视频特有字段 -->
-              <XiguaPartTemplateModel
-                :platform="platformNames.XIGUA"
-                :local-config="localConfig"
-                :form="form"
-              />
-            </el-collapse-item>
-            <el-collapse-item :name="platformNames.DOUYIN">
-              <template #title>
-                <el-checkbox label="抖音" :value="platformNames.DOUYIN" />
-              </template>
-              <!-- 抖音特有字段 -->
-              <DouyinPartTemplateModel
-                :platform="platformNames.DOUYIN"
-                :local-config="localConfig"
-                :form="form"
-              />
-            </el-collapse-item>
-            <el-collapse-item :name="platformNames.KUAISHOU">
-              <template #title>
-                <el-checkbox label="快手" :value="platformNames.KUAISHOU" />
-              </template>
-              <!-- 快手特有字段 -->
-              <KuaishouPartTemplateModel
-                :platform="platformNames.KUAISHOU"
-                :local-config="localConfig"
-                :form="form"
-              />
-            </el-collapse-item>
-          </el-checkbox-group>
-        </el-collapse>
-      </el-form>
+      <div v-loading="is_reading_local_config" element-loading-text="读取本地配置中">
+        <el-form id="templateModel" :model="form" label-width="auto" label-position="top">
+          <el-form-item label="标题前缀">
+            <el-input v-model="form.title_prefix" placeholder="投稿标题的统一前缀，非必填" />
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input v-model="form.desc" placeholder="投稿描述" />
+          </el-form-item>
+          <el-form-item label="视频标签">
+            <el-tag
+              v-for="tag in form.tag"
+              :key="tag"
+              v-model="form.tag"
+              closable
+              :disable-transitions="false"
+              @close="delete_tag(tag)"
+            >
+              {{ tag }}
+            </el-tag>
+            <el-input
+              v-if="add_tag_input_visible"
+              ref="add_tag_input_ref"
+              v-model="add_tag_input_val"
+              class="w-20"
+              size="small"
+              @keyup.enter="add_tag"
+              @blur="add_tag"
+            />
+            <el-button v-else class="button-new-tag" size="small" @click="show_add_tag_btn">
+              添加标签
+            </el-button>
+          </el-form-item>
+          <el-collapse v-model="activeName" accordion>
+            <el-checkbox-group
+              v-model="form.selected_distribute_platforms"
+              @change="distributePlatformsChange"
+            >
+              <el-collapse-item :name="platformNames.BILIBILI">
+                <template #title>
+                  <el-checkbox label="B站" :value="platformNames.BILIBILI" />
+                </template>
+                <!-- b站特有字段 -->
+                <BilibiliPartTemplateModel
+                  :platform="platformNames.BILIBILI"
+                  :local-config="localConfig"
+                  :form="form"
+                />
+              </el-collapse-item>
+              <el-collapse-item :name="platformNames.XIGUA">
+                <template #title>
+                  <el-checkbox label="西瓜视频" :value="platformNames.XIGUA" />
+                </template>
+                <!-- 西瓜视频特有字段 -->
+                <XiguaPartTemplateModel
+                  :platform="platformNames.XIGUA"
+                  :local-config="localConfig"
+                  :form="form"
+                />
+              </el-collapse-item>
+              <el-collapse-item :name="platformNames.DOUYIN">
+                <template #title>
+                  <el-checkbox label="抖音" :value="platformNames.DOUYIN" />
+                </template>
+                <!-- 抖音特有字段 -->
+                <DouyinPartTemplateModel
+                  :platform="platformNames.DOUYIN"
+                  :local-config="localConfig"
+                  :form="form"
+                />
+              </el-collapse-item>
+              <el-collapse-item :name="platformNames.KUAISHOU">
+                <template #title>
+                  <el-checkbox label="快手" :value="platformNames.KUAISHOU" />
+                </template>
+                <!-- 快手特有字段 -->
+                <KuaishouPartTemplateModel
+                  :platform="platformNames.KUAISHOU"
+                  :local-config="localConfig"
+                  :form="form"
+                />
+              </el-collapse-item>
+            </el-checkbox-group>
+          </el-collapse>
+        </el-form>
+      </div>
     </template>
     <template #footer>
       <div style="flex: auto">
@@ -109,8 +112,10 @@ import { platformNames } from '../../src/constants.js'
 import { distribute_platforms } from '../../../../resources/BaoganDistributeConfig.json'
 import 'vue-web-terminal/lib/theme/dark.css'
 
-const props = defineProps({ pushMessage: Function, localConfig: Object })
+const props = defineProps({ pushMessage: Function, initlocalConfig: Object })
 const drawer = ref(false)
+const localConfig = ref(props?.initlocalConfig)
+const is_reading_local_config = ref(false)
 const activeName = ref('')
 const form = reactive({
   title_prefix: '',
@@ -121,6 +126,22 @@ const form = reactive({
 const add_tag_input_val = ref('')
 const add_tag_input_visible = ref(false)
 const add_tag_input_ref = ref()
+
+const toggle_drawer = async () => {
+  is_reading_local_config.value = true
+  // 如果要打开设置面板
+  if (!drawer.value) {
+    drawer.value = !drawer.value
+    window.ipcRenderer.send('fetch-distribute-config')
+    window.ipcRenderer.receive('fetch-distribute-config-result', (info) => {
+      try {
+        localConfig.value = JSON.parse(info)
+      } catch (e) {}
+      is_reading_local_config.value = false
+      window.ipcRenderer.remove('fetch-distribute-config-result')
+    })
+  }
+}
 
 // 删除标签
 const delete_tag = (tag) => {
@@ -168,12 +189,12 @@ const distributePlatformsChange = (vals) => {
 
 // 新配置加载成功后，覆盖初始值
 watchEffect(() => {
-  if (!props?.localConfig) {
+  if (!localConfig.value) {
     return
   }
-  form.title_prefix = props?.localConfig?.title_prefix || ''
-  form.desc = props?.localConfig?.desc || ''
-  form.tag = props?.localConfig?.tag?.split?.(',') || []
+  form.title_prefix = localConfig.value?.title_prefix || ''
+  form.desc = localConfig.value?.desc || ''
+  form.tag = localConfig.value?.tag?.split?.(',') || []
 })
 
 /**
@@ -183,7 +204,6 @@ const handleTemplateModelConfirm = () => {
   const globalLoadingIns = ElLoading.service({ fullscreen: true })
   drawer.value = false
   // 对外通知消息
-  console.log('wswTest: formform', form)
   window.ipcRenderer.send('distribute-save-tpl-model', JSON.stringify(form))
   props?.pushMessage?.({
     content: `[${new Date().toLocaleString()}]视频模板信息已更新`,

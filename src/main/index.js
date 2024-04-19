@@ -270,8 +270,7 @@ app.whenReady().then(() => {
           userTplModel.bilibili_topic_id || localTplModel.bilibili_topic_id || 1
         ),
         // 西瓜特有字段
-        xigua_isReproduce:
-          userTplModel.xigua_isReproduce || localTplModel.xigua_isReproduce || false,
+        xigua_isReproduce: userTplModel.xigua_isReproduce || false,
         xigua_reproduceDesc:
           userTplModel.xigua_reproduceDesc || localTplModel.xigua_reproduceDesc || '',
         xigua_activityName:
@@ -326,6 +325,19 @@ app.whenReady().then(() => {
     } catch (e) {
       console.log('wswTest: 本地写入配置失败', e)
     }
+  })
+
+  // 响应读取分发配置请求
+  ipcMain.on('fetch-distribute-config', (event) => {
+    if (!existsSync(distributeConfigPath)) {
+      // 每值夜返回
+      event.sender.send('fetch-distribute-config-result', '')
+      return
+    }
+    const localConfig = readFileSync(distributeConfigPath).toString()
+    console.log('wswTestxx读取配置测试: ', localConfig)
+    // 将写入的配置传回UI中
+    event.sender.send('fetch-distribute-config-result', localConfig)
   })
 
   // 响应读起配置请求

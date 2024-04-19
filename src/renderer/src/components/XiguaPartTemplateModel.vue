@@ -1,8 +1,8 @@
 <template>
   <el-form-item label="视频类型">
     <el-radio-group v-model="form.xigua_isReproduce">
-      <el-radio value="true">原创</el-radio>
-      <el-radio value="false">转载</el-radio>
+      <el-radio :value="true">原创</el-radio>
+      <el-radio :value="false">转载</el-radio>
     </el-radio-group>
   </el-form-item>
   <el-form-item label="视频来源">
@@ -81,9 +81,9 @@ watchEffect(() => {
   if (!props?.localConfig) {
     return
   }
-  form.xigua_isReproduce = String(props?.localConfig?.xigua_isReproduce) || false
-  form.xigua_reproduceDesc = String(props?.localConfig?.xigua_reproduceDesc) || ''
-  form.xigua_activityName = String(props?.localConfig?.xigua_activityName) || ''
+  form.xigua_isReproduce = props?.localConfig?.xigua_isReproduce || false
+  form.xigua_reproduceDesc = props?.localConfig?.xigua_reproduceDesc || ''
+  form.xigua_activityName = props?.localConfig?.xigua_activityName || ''
   form.xigua_privacyVal = props?.localConfig?.xigua_privacyVal || ''
   form.xigua_dtime = Number(props?.localConfig?.xigua_dtime)
     ? new Date(Number(props?.localConfig?.xigua_dtime))

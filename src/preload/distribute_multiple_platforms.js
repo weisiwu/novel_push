@@ -8,6 +8,8 @@ const mainWindowChannels = [
   'fetch-config',
   'read-config',
   'save-config',
+  'fetch-distribute-config',
+  'fetch-distribute-config-result',
   // 平台信息初始化，主进程读取本地视频模板
   // 获取tid相关的话题和任务id
   'platform-init',

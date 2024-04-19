@@ -99,7 +99,7 @@
       }}平台。如需修改分发平台，点击模板管理，勾选需要分发的平台，取消不需要分发的平台
     </div>
     <!-- 模板表单区 -->
-    <TemplateModel :local-config="localConfig" :push-message="pushMessage" />
+    <TemplateModel :init-local-config="localConfig" :push-message="pushMessage" />
     <!-- 分发执行日志 -->
     <div :style="{ position: 'fixed', bottom: '20px' }">
       <el-button
@@ -374,7 +374,6 @@ onMounted(() => {
     /**
      * 初始化，执行以下操作，同时全局loading
      * 1、启动后，读取本地已保存视频模板配置
-     * 2、查看cookie文件是否存在，存在则认为已登录
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
     window.ipcRenderer.send('platform-init', { platform: ['bilibili'] })
