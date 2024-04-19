@@ -339,7 +339,7 @@ const xigua_upload_video = async ({
     const video = videoList[index]
     const cover = coverList[index]
     const videoInfoDemo = {
-      title: `${videoInfo?.title_prefix || ''}${video.name || ''}`,
+      title: `${videoInfo?.title_prefix || ''}${video.name?.split?.('.')?.[0] || ''}`,
       desc: videoInfo?.desc || '',
       tags: videoInfo?.tag?.split?.(',') || [],
       isReproduce: videoInfo?.xigua_isReproduce || false,
