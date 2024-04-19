@@ -41,13 +41,11 @@
             </el-button>
           </el-form-item>
           <el-collapse v-model="activeName" accordion>
-            <el-checkbox-group
-              v-model="form.selected_distribute_platforms"
-              @change="distributePlatformsChange"
-            >
+            <el-checkbox-group v-model="form.selected_distribute_platforms">
               <el-collapse-item :name="platformNames.BILIBILI">
                 <template #title>
-                  <el-checkbox label="B站" :value="platformNames.BILIBILI" />
+                  <el-checkbox :value="platformNames.BILIBILI" />
+                  <span>B站</span>
                 </template>
                 <!-- b站特有字段 -->
                 <BilibiliPartTemplateModel
@@ -58,7 +56,8 @@
               </el-collapse-item>
               <el-collapse-item :name="platformNames.XIGUA">
                 <template #title>
-                  <el-checkbox label="西瓜视频" :value="platformNames.XIGUA" />
+                  <el-checkbox :value="platformNames.XIGUA" />
+                  <span>西瓜视频</span>
                 </template>
                 <!-- 西瓜视频特有字段 -->
                 <XiguaPartTemplateModel
@@ -69,7 +68,8 @@
               </el-collapse-item>
               <el-collapse-item :name="platformNames.DOUYIN">
                 <template #title>
-                  <el-checkbox label="抖音" :value="platformNames.DOUYIN" />
+                  <el-checkbox :value="platformNames.DOUYIN" />
+                  <span>抖音</span>
                 </template>
                 <!-- 抖音特有字段 -->
                 <DouyinPartTemplateModel
@@ -80,7 +80,8 @@
               </el-collapse-item>
               <el-collapse-item :name="platformNames.KUAISHOU">
                 <template #title>
-                  <el-checkbox label="快手" :value="platformNames.KUAISHOU" />
+                  <el-checkbox :value="platformNames.KUAISHOU" />
+                  <span>快手</span>
                 </template>
                 <!-- 快手特有字段 -->
                 <KuaishouPartTemplateModel
@@ -181,10 +182,6 @@ const handleTemplateModelClose = (done) => {
 
 const handleTemplateModelCancel = () => {
   drawer.value = false
-}
-
-const distributePlatformsChange = (vals) => {
-  console.log('wswTest: distributePlatformsChange', vals)
 }
 
 // 新配置加载成功后，覆盖初始值
