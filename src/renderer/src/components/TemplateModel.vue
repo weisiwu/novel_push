@@ -45,7 +45,7 @@
               <el-collapse-item :name="platformNames.BILIBILI">
                 <template #title>
                   <el-checkbox :value="platformNames.BILIBILI" />
-                  <span>B站</span>
+                  <span class="platform_title">B站</span>
                 </template>
                 <!-- b站特有字段 -->
                 <BilibiliPartTemplateModel
@@ -57,7 +57,7 @@
               <el-collapse-item :name="platformNames.XIGUA">
                 <template #title>
                   <el-checkbox :value="platformNames.XIGUA" />
-                  <span>西瓜视频</span>
+                  <span class="platform_title">西瓜视频</span>
                 </template>
                 <!-- 西瓜视频特有字段 -->
                 <XiguaPartTemplateModel
@@ -69,7 +69,7 @@
               <el-collapse-item :name="platformNames.DOUYIN">
                 <template #title>
                   <el-checkbox :value="platformNames.DOUYIN" />
-                  <span>抖音</span>
+                  <span class="platform_title">抖音</span>
                 </template>
                 <!-- 抖音特有字段 -->
                 <DouyinPartTemplateModel
@@ -81,7 +81,7 @@
               <el-collapse-item :name="platformNames.KUAISHOU">
                 <template #title>
                   <el-checkbox :value="platformNames.KUAISHOU" />
-                  <span>快手</span>
+                  <span class="platform_title">快手</span>
                 </template>
                 <!-- 快手特有字段 -->
                 <KuaishouPartTemplateModel
@@ -239,5 +239,10 @@ const handleTemplateModelConfirm = () => {
   span:hover {
     color: #fff;
   }
+}
+.platform_title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #409eff;
 }
 </style>
