@@ -4,12 +4,33 @@ import ffmpeg from 'fluent-ffmpeg'
 import xigua_upload_video from './xigua_upload_video.js'
 import bilibili_upload_video from './bilibili_upload_video.js'
 import { platformNames } from '../../../../src/renderer/src/constants.js'
+import { xigua_min_width, xigua_min_height } from '../../../BaoganDistributeConfig.json'
 // import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
 
 // TODO:(wsw) mac临时注释
 // if (!debug) {
 //   ffmpeg.setFfmpegPath(ffmpegPath)
 // }
+
+const get_video_size = (videoPath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(videoPath, (err, metadata) => {
+      if (err) {
+        reject(err)
+      } else {
+        const videoStream = metadata.streams.find((stream) => stream.codec_type === 'video')
+        if (videoStream) {
+          resolve({
+            width: videoStream.width,
+            height: videoStream.height
+          })
+        } else {
+          reject(new Error('未找到视频流信息'))
+        }
+      }
+    })
+  })
+}
 
 const get_cover_from_video = async (video_path) => {
   if (!video_path) {
@@ -18,18 +39,38 @@ const get_cover_from_video = async (video_path) => {
   const video_name = basename(video_path)
   const base_path = video_path.replace(video_name, '')
   const cover_path = `${base_path}${video_name?.split?.('.')?.[0]}_cover.png`
-  return new Promise((resolve, reject) => {
-    ffmpeg(video_path)
-      .frames(1)
-      .on('end', () => {
-        console.log(`wswTest: 截取${video_name}第一帧完成，获取封面完成`)
-        resolve(cover_path)
-      })
-      .on('error', (err) => {
-        console.error(`wswTest: 获取视频封面失败: ${err?.message || ''}`)
-        reject(false)
-      })
-      .save(cover_path)
+
+  return get_video_size(video_path).then((size) => {
+    console.log('wswTest: size', size)
+    const { width, height } = size || {}
+    const video_ratio = width / height
+    let finalWidth = width
+    let finalHeight = height
+
+    // 【西瓜】如果尺寸中有小于最小值的
+    if (finalWidth < xigua_min_width) {
+      finalWidth = xigua_min_width
+      finalHeight = finalWidth / video_ratio
+    }
+    if (finalHeight < xigua_min_height) {
+      finalHeight = xigua_min_height
+      finalWidth = finalHeight * video_ratio
+    }
+    console.log(`wswTest: 封面最终尺寸是=> ${finalWidth}_${finalHeight}`)
+    return new Promise((resolve, reject) => {
+      ffmpeg(video_path)
+        .frames(1)
+        .size(`${finalWidth}x${finalHeight}`)
+        .on('end', () => {
+          console.log(`wswTest: 截取${video_name}第一帧完成，获取封面完成`)
+          resolve(cover_path)
+        })
+        .on('error', (err) => {
+          console.error(`wswTest: 获取视频封面失败: ${err?.message || ''}`)
+          reject(false)
+        })
+        .save(cover_path)
+    })
   })
 }
 
