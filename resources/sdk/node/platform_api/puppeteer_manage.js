@@ -23,7 +23,7 @@ class PuppeteerManager {
           JSON.parse(readFileSync(baoganDistributeConfigPath).toString()) || {}
         this.userDataDir =
           environments.find((env) => env.name === useEnvironment)?.path || chromeUserDataPath
-        // console.log('wswTest: 成功读取本地的环境地址', this.userDataDir)
+        console.log('wswTest: 成功读取本地的环境地址', this.userDataDir)
       } catch (e) {
         this.userDataDir = chromeUserDataPath
       }
@@ -47,13 +47,10 @@ class PuppeteerManager {
 
   async launch(headless = false, options = {}) {
     const user_data_dir_changed = this.userDataDir !== this.read_user_data_dir()
-    // console.log('wswTest:1212 ', this.userDataDir)
-    // console.log('wswTest:xxxx ', this.read_user_data_dir())
-    // console.log('wswTest: user_data_dir_changeduser_data_dir_changed', user_data_dir_changed)
     // 启动前，先判断用户数据目录是否发生变换
     const puppeteerConfig = {
       headless,
-      defaultTimeout: 10000, // 默认等待10秒
+      defaultTimeout: 5000, // 默认等待5秒
       userDataDir: user_data_dir_changed ? this.read_user_data_dir() : this.userDataDir,
       ...options
     }
