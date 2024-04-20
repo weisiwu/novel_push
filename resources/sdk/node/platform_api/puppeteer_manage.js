@@ -53,6 +53,7 @@ class PuppeteerManager {
     // 启动前，先判断用户数据目录是否发生变换
     const puppeteerConfig = {
       headless,
+      defaultTimeout: 10000, // 默认等待10秒
       userDataDir: user_data_dir_changed ? this.read_user_data_dir() : this.userDataDir,
       ...options
     }
