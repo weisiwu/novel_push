@@ -50,17 +50,19 @@ const xigua_upload_single_video = async ({
         const percentTxt = percentNode ? await percentNode.evaluate((el) => el?.innerHTML) : ''
         const statusTxt = statusNode ? await statusNode.evaluate((el) => el?.innerHTML || '') : ''
 
+        // 如果状态文本和进度文本都为空，则继续等待下一次轮询结果
+        if (!statusTxt && !percentTxt) return
+
         if (percentTxt) {
           console.log(`wswTest:视频${video?.name || ''}上传${platform}中:${percentTxt}`)
-          updateProgress(`[${platform}]视频${video?.name || ''}上传中:${percentTxt}`)
           uploadVideoProgress(percentTxt?.replace?.('%', ''))
         } else {
-          if (statusTxt?.indexOf?.('上传成功') < 0) {
+          if (statusTxt && statusTxt?.indexOf?.('上传成功') < 0) {
             return reject(statusTxt)
           }
           clearInterval(is_finished_timer)
           uploadVideoProgress(100)
-          updateProgress(`[${platform}]上传${video?.name || ''}成功`, 'success')
+          updateProgress(`[${platform}]上传${video?.name || ''}成功`)
           resolve(true)
         }
       }, queryUploadProcessInterval)
@@ -81,6 +83,7 @@ const xigua_upload_single_video = async ({
       } else {
         console.log(`wswTest: 标题输入失败: ${videoInfo?.title}`)
         updateProgress(`[${platform}]标题输入失败: ${videoInfo?.title}`, 'error')
+        return false
       }
     } catch (e) {
       updateProgress(`[${platform}]标题输入失败: ${e?.message || ''}`, 'error')
@@ -140,11 +143,11 @@ const xigua_upload_single_video = async ({
   }
 
   // 选择视频类型: 原创、转载。默认是原创
-  if (videoInfo.isReproduce) {
-    try {
-      await mainPage.waitForSelector('.video-form-item.form-item-origin input[type=radio]')
-      const videoSourceNode = await mainPage.$$('.video-form-item.form-item-origin .byte-radio')
-      if (videoSourceNode) {
+  try {
+    await mainPage.waitForSelector('.video-form-item.form-item-origin input[type=radio]')
+    const videoSourceNode = await mainPage.$$('.video-form-item.form-item-origin .byte-radio')
+    if (videoSourceNode) {
+      if (videoInfo.isReproduce) {
         await videoSourceNode?.[1]?.click?.()
         // 转载需要标出来源
         const reprintTextNode = await mainPage.$(
@@ -152,17 +155,22 @@ const xigua_upload_single_video = async ({
         )
         await reprintTextNode?.click?.()
         await mainPage.keyboard.sendCharacter(videoInfo.reproduceDesc || '')
-        console.log(`wswTest: [${platform}]选择视频类型完成: 转载`)
-        updateProgress(`[${platform}]选择视频类型完成: 转载`)
       } else {
-        console.log(`wswTest: [${platform}]选择视频类型失败: 没有找到对应节点}`)
-        updateProgress(`[${platform}]选择视频类型失败: 没有找到对应节点'}`)
+        await videoSourceNode?.[0]?.click?.()
       }
-    } catch (e) {
-      console.log(`wswTest: [${platform}]选择视频类型失败: ${e?.message || ''}`)
-      // 视频类型选择错误，不影响最终发布（有默认值）。
-      updateProgress(`[${platform}]选择视频类型失败: ${e?.message || ''}`)
+      const _text = videoInfo.isReproduce ? '转载' : '原创'
+      console.log(`wswTest: [${platform}]选择视频类型完成: ${_text}`)
+      updateProgress(`[${platform}]选择视频类型完成: ${_text}`)
+    } else {
+      console.log(`wswTest: [${platform}]选择视频类型失败: 没有找到对应节点}`)
+      updateProgress(`[${platform}]选择视频类型失败: 没有找到对应节点'}`)
+      return false
     }
+  } catch (e) {
+    console.log(`wswTest: [${platform}]选择视频类型失败: ${e?.message || ''}`)
+    // 视频类型选择错误，不影响最终发布（有默认值）。
+    updateProgress(`[${platform}]选择视频类型失败: ${e?.message || ''}`)
+    return false
   }
 
   // 输入封面
@@ -207,7 +215,7 @@ const xigua_upload_single_video = async ({
     updateProgress(`[${platform}]:视频封面裁切发生异常: ${e?.message || ''}`, 'error')
   }
 
-  console.log(`wswTest:视频上传完毕`)
+  console.log(`wswTest: 视频上传完毕`)
   updateProgress(`视频上传完毕`)
 
   // 发布视频前最终确认点击步骤
@@ -292,7 +300,7 @@ const xigua_upload_single_video = async ({
       console.log(
         `wswTest: 成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}`
       )
-      updateProgress(`成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}}`)
+      updateProgress(`成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}`)
     } catch (e) {
       // 有默认值，选择失败也可以发布
       updateProgress(`[${platform}]:修改发布设置(谁可以看)失败 ${e?.message || ''}`, 'error')
@@ -367,7 +375,8 @@ const xigua_upload_single_video = async ({
             const hoursList = (await hoursNode?.$$('.byte-timepicker-cell')) || []
             for (const hour of hoursList) {
               const text = await mainPage.evaluate((el) => el.textContent, hour)
-              if (text?.trim?.() === String(dHours)) {
+              console.log('wswTest: 开始选择分钟', text?.trim?.(), String(dHours))
+              if (text?.trim?.() === String(dHours).padStart(2, 0)) {
                 await hour.click()
               }
             }
@@ -376,7 +385,8 @@ const xigua_upload_single_video = async ({
             const minutesList = (await minutesNode?.$$('.byte-timepicker-cell')) || []
             for (const minute of minutesList) {
               const text = await mainPage.evaluate((el) => el.textContent, minute)
-              if (text?.trim?.() === String(dMinutes)) {
+              console.log('wswTest: 开始选择分钟', text?.trim?.(), String(dMinutes))
+              if (text?.trim?.() === String(dMinutes).padStart(2, 0)) {
                 await minute.click()
               }
             }
@@ -418,8 +428,8 @@ const xigua_upload_single_video = async ({
     return false
   }
 
-  // 发送完毕后，等待2秒，重刷新页面
-  await (() => new Promise((resolve) => setTimeout(() => resolve(), 2000)))()
+  // 发送完毕后，等待5秒，重刷新页面
+  await (() => new Promise((resolve) => setTimeout(() => resolve(), 5000)))()
   await mainPage.reload()
   return true
 }
@@ -440,7 +450,7 @@ const xigua_upload_video = async ({
   uploadVideoProgress = () => {},
   uploadVideoStepProgress = () => {}
 }) => {
-  const headless = false
+  const headless = true
   const uploadBrowser = await puppeteer_manage.launch(headless)
   const mainPage = await uploadBrowser.newPage()
   const screenWidth = await mainPage.evaluate(() => window.screen.width)
@@ -471,7 +481,6 @@ const xigua_upload_video = async ({
       uploadVideoProgress
     })
     console.log('wswTest: 上传视频结果', video.name, upload_resut)
-    // TODO:(wsw) 如果上传失败，需要同步告知失败
     uploadVideoStepProgress(
       `[${platform}]:${video?.name || ''}上传${upload_resut ? '成功_1' : '失败'}`
     )
