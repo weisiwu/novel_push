@@ -26,12 +26,12 @@ let uploadBrowser = null
  * @videoInfo 视频相关信息，包含平台特殊信息
  * @videoList 将要投递的视频列表，视频稿件最终信息以videoInfo信息和videoList中信息混合而成
  */
-const platform_upload_video = async ({
+const platform_upload_video_inner = async ({
+  _finish = () => {},
   videoInfo = {},
   videoList = [],
   coverList = [],
   updateProgress,
-  removeSuccessVideos,
   uploadVideoProgress,
   uploadVideoStepProgress
 }) => {
@@ -45,7 +45,6 @@ const platform_upload_video = async ({
 
   // 投稿主页
   const mainPage = await uploadBrowser.newPage()
-  const RM_SUCCESS_VIDEOS = CMDS.RM_SUCCESS_VIDEOS
   const UPLOAD_PROGRESS = CMDS.UPLOAD_PROGRESS
   const HANDLE_VIDEO_STEP_PROGRESS = CMDS.HANDLE_VIDEO_STEP_PROGRESS
   const CLOSE_BROWSER = CMDS.CLOSE_BROWSER
@@ -57,11 +56,6 @@ const platform_upload_video = async ({
     console.log(`[${platform}]BROWSER LOG: ${m_text}`)
     if (m_text?.indexOf('wswTest:') < 0) {
       return
-    }
-    // 指令日志: 队列处理完毕，以下视频投稿成功，从视频列表中移除
-    if (m_text?.indexOf?.(RM_SUCCESS_VIDEOS) >= 0) {
-      const msg_text = m_text?.replace?.(RM_SUCCESS_VIDEOS, '')?.trim()
-      return removeSuccessVideos?.(msg_text)
     }
     // 指令日志: 上传视频成功
     if (m_text?.indexOf?.(UPLOAD_PROGRESS) >= 0) {
@@ -77,7 +71,7 @@ const platform_upload_video = async ({
     if (m_text?.indexOf?.(CLOSE_BROWSER) >= 0) {
       await uploadBrowser?.close()
       uploadBrowser = null
-      return
+      return _finish()
     }
 
     const msg_text = m_text?.replace?.('wswTest:', '')?.trim()
@@ -119,7 +113,6 @@ const platform_upload_video = async ({
         videoUploadInput,
         maxRetryTime,
         UPLOAD_PROGRESS,
-        RM_SUCCESS_VIDEOS,
         HANDLE_VIDEO_STEP_PROGRESS,
         CLOSE_BROWSER
       } = params || {}
@@ -664,7 +657,6 @@ const platform_upload_video = async ({
           )
         }
         console.log(`${CLOSE_BROWSER}`)
-        console.log(`${RM_SUCCESS_VIDEOS}${JSON.stringify(success_video_list)}`)
       })
     },
     {
@@ -673,7 +665,6 @@ const platform_upload_video = async ({
       videoUploadInput,
       maxRetryTime,
       UPLOAD_PROGRESS,
-      RM_SUCCESS_VIDEOS,
       HANDLE_VIDEO_STEP_PROGRESS,
       CLOSE_BROWSER
     }
@@ -695,6 +686,12 @@ const platform_upload_video = async ({
     drafts_list.push(videoObj?.path)
   }
   await elementHandle.uploadFile(...drafts_list)
+}
+
+const platform_upload_video = (args) => {
+  return new Promise((resolve) => {
+    platform_upload_video_inner({ ...args, _finish: resolve })
+  })
 }
 
 export default platform_upload_video

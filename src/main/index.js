@@ -136,15 +136,6 @@ app.whenReady().then(() => {
     }
 
   /**
-   * 删除已经成功投稿的视频
-   */
-  const removeSuccessVideos =
-    (event) =>
-    (msg = '') => {
-      event?.sender?.send?.('distribute-remove-finished-videos', msg)
-    }
-
-  /**
    * 更新上传视频进度
    */
   const uploadVideoProgress =
@@ -208,7 +199,6 @@ app.whenReady().then(() => {
         videoInfo: config,
         videoList: videos,
         updateProgress: updateProgress(event),
-        removeSuccessVideos: removeSuccessVideos(event),
         uploadVideoProgress: uploadVideoProgress(event),
         uploadVideoStepProgress: uploadVideoStepProgress(event)
       })

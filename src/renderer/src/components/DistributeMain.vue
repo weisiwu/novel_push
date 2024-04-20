@@ -300,27 +300,6 @@ onMounted(() => {
     })
 
     /**
-     * 接受分发进程投稿完毕指令，移除投稿成功的视频
-     * 这也是投稿任务队列结束事件
-     */
-    window.ipcRenderer.receive('distribute-remove-finished-videos', (msg) => {
-      if (!msg) {
-        disabled_distribute.value = false
-        return false
-      }
-      try {
-        const finished_videos = JSON.parse(msg) || []
-        console.log('wswTest: 解析出来的要移除的视频列表', finished_videos)
-        finished_videos.forEach((finished_video) => {
-          removeSelectedFile(finished_video)
-        })
-        disabled_distribute.value = !selected_videos.value.length
-      } catch (e) {
-        return false
-      }
-    })
-
-    /**
      * 视频上传百分比进度
      */
     window.ipcRenderer.receive('upload-video-progress', (msg) => {
@@ -397,13 +376,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.ipcRenderer.remove('distribute-update-process')
-
-  window.ipcRenderer.remove('distribute-remove-finished-videos')
-
   window.ipcRenderer.remove('upload-video-progress')
-
   window.ipcRenderer.remove('upload-video-step-progress')
-
   window.ipcRenderer.remove('platform-init-result')
 })
 </script>

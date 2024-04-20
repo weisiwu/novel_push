@@ -49,12 +49,12 @@ const get_cover_from_video = async (video_path) => {
 
     // 【西瓜】如果尺寸中有小于最小值的
     if (finalWidth < xigua_min_width) {
-      finalWidth = xigua_min_width
-      finalHeight = finalWidth / video_ratio
+      finalWidth = Math.ceil(xigua_min_width)
+      finalHeight = Math.ceil(finalWidth / video_ratio)
     }
     if (finalHeight < xigua_min_height) {
-      finalHeight = xigua_min_height
-      finalWidth = finalHeight * video_ratio
+      finalHeight = Math.ceil(xigua_min_height)
+      finalWidth = Math.ceil(finalHeight * video_ratio)
     }
     console.log(`wswTest: 封面最终尺寸是=> ${finalWidth}_${finalHeight}`)
     return new Promise((resolve, reject) => {
@@ -67,6 +67,7 @@ const get_cover_from_video = async (video_path) => {
         })
         .on('error', (err) => {
           console.error(`wswTest: 获取视频封面失败: ${err?.message || ''}`)
+          console.log('wswTest: ', err)
           reject(false)
         })
         .save(cover_path)
@@ -89,7 +90,6 @@ const platform_upload_video = async ({
   videoInfo = {},
   videoList = [],
   updateProgress,
-  removeSuccessVideos,
   uploadVideoProgress,
   uploadVideoStepProgress
 }) => {
@@ -103,19 +103,21 @@ const platform_upload_video = async ({
     coverList.push(cover_path)
   }
 
+  console.log('wswTest: platformplatformplatform', platform)
   if (platform.includes(platformNames.BILIBILI)) {
-    // TODO:(wsw) 临时注释，调试西瓜
-    // await bilibili_upload_video({
-    //   videoInfo,
-    //   videoList,
-    //   coverList,
-    //   updateProgress,
-    //   removeSuccessVideos,
-    //   uploadVideoProgress,
-    //   uploadVideoStepProgress
-    // })
+    updateProgress('============== 开始B站分发 ==============')
+    await bilibili_upload_video({
+      videoInfo,
+      videoList,
+      coverList,
+      updateProgress,
+      uploadVideoProgress,
+      uploadVideoStepProgress
+    })
+    updateProgress('============== 结束B站分发 ==============')
   }
   if (platform.includes(platformNames.XIGUA)) {
+    updateProgress('============== 开始西瓜视频分发 ==============')
     await xigua_upload_video({
       videoInfo,
       videoList,
@@ -124,6 +126,7 @@ const platform_upload_video = async ({
       uploadVideoProgress,
       uploadVideoStepProgress
     })
+    updateProgress('============== 结束西瓜视频分发 ==============')
   }
   if (platform.includes(platformNames.DOUYIN)) {
   }

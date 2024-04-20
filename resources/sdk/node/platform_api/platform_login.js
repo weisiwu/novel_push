@@ -9,11 +9,7 @@ import bilibili_login from './bilibili_login.js'
 const platform_login = async (platforms, updateProgress = () => {}) => {
   console.log('wswTest: 将要登录平台', platforms)
   updateProgress(`将要登录平台: ${platforms}`)
-  const winSize = 1080
   const headless = false
-  // const browser = await puppeteer_manage.launch(headless, {
-  //   args: [`--window-size=${winSize},${winSize}`]
-  // })
   const browser = await puppeteer_manage.launch(headless)
   // 登录流程结束
   const platforms_login_status = {}
@@ -42,6 +38,7 @@ const platform_login = async (platforms, updateProgress = () => {}) => {
     if (open_pages.length <= 1) {
       // 全部登录: 每个登录页登录检测到登录后，都会关闭自身
       clearInterval(check_timer)
+      browser.close()
     }
   }, 1000)
 }

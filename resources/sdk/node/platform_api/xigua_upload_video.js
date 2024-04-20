@@ -375,7 +375,6 @@ const xigua_upload_single_video = async ({
             const hoursList = (await hoursNode?.$$('.byte-timepicker-cell')) || []
             for (const hour of hoursList) {
               const text = await mainPage.evaluate((el) => el.textContent, hour)
-              console.log('wswTest: 开始选择分钟', text?.trim?.(), String(dHours))
               if (text?.trim?.() === String(dHours).padStart(2, 0)) {
                 await hour.click()
               }
@@ -385,7 +384,6 @@ const xigua_upload_single_video = async ({
             const minutesList = (await minutesNode?.$$('.byte-timepicker-cell')) || []
             for (const minute of minutesList) {
               const text = await mainPage.evaluate((el) => el.textContent, minute)
-              console.log('wswTest: 开始选择分钟', text?.trim?.(), String(dMinutes))
               if (text?.trim?.() === String(dMinutes).padStart(2, 0)) {
                 await minute.click()
               }
@@ -428,8 +426,8 @@ const xigua_upload_single_video = async ({
     return false
   }
 
-  // 发送完毕后，等待5秒，重刷新页面
-  await (() => new Promise((resolve) => setTimeout(() => resolve(), 5000)))()
+  // 发送完毕后，等待2秒，重刷新页面
+  await (() => new Promise((resolve) => setTimeout(() => resolve(), 2000)))()
   await mainPage.reload()
   return true
 }
@@ -457,6 +455,8 @@ const xigua_upload_video = async ({
   const screenHeight = await mainPage.evaluate(() => window.screen.height)
   await mainPage.setViewport({ width: screenWidth, height: screenHeight })
 
+  let distribute_times = 0
+  let distribute_success = 0
   // 西瓜依次上传
   for (let index in videoList) {
     const video = videoList[index]
@@ -480,9 +480,22 @@ const xigua_upload_video = async ({
       updateProgress,
       uploadVideoProgress
     })
+    distribute_times++
+    upload_resut && (distribute_success = distribute_success + 1)
     console.log('wswTest: 上传视频结果', video.name, upload_resut)
     uploadVideoStepProgress(
       `[${platform}]:${video?.name || ''}上传${upload_resut ? '成功_1' : '失败'}`
+    )
+  }
+  if (distribute_success === distribute_times) {
+    uploadVideoStepProgress(
+      `[${platform}]当前视频队列已分发完毕，成功${distribute_success}个/共${distribute_times}个`,
+      'success'
+    )
+  } else {
+    uploadVideoStepProgress(
+      `[${platform}]当前视频队列已分发完毕，成功${distribute_success}个/共${distribute_times}个`,
+      'error'
     )
   }
 }

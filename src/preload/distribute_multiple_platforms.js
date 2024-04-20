@@ -18,7 +18,6 @@ const mainWindowChannels = [
   'platform-send-video', // 开始分发投稿视频
   'distribute-update-process', // 更新分发进程日志
   'distribute-save-tpl-model', // 保存视频模板
-  'distribute-remove-finished-videos', // 删除分发进程中已经投稿完成的视频
   'upload-video-progress', // 上传视频百分比进度
   'upload-video-step-progress', // 更新上传步骤级别进度结果
   'create-new-environment', // 新建环境
