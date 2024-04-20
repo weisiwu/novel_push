@@ -4,9 +4,10 @@ import {
   support_distribute_platforms
 } from '../../../../src/renderer/src/constants.js'
 import xigua_login from './xigua_login.js'
+import kuaishou_login from './kuaishou_login.js'
 import bilibili_login from './bilibili_login.js'
 
-const platform_login = async (platforms, updateProgress = () => {}) => {
+const platform_login = async ({ platforms, updateProgress = () => {} }) => {
   console.log('wswTest: 将要登录平台', platforms)
   updateProgress(`将要登录平台: ${platforms}`)
   const headless = false
@@ -29,7 +30,7 @@ const platform_login = async (platforms, updateProgress = () => {}) => {
     } else if (platform === platformNames.DOUYIN) {
       continue
     } else if (platform === platformNames.KUAISHOU) {
-      continue
+      await kuaishou_login({ browser, platform, updateProgress, notify_finish })
     }
   }
   const check_timer = setInterval(async () => {

@@ -159,7 +159,7 @@ app.whenReady().then(() => {
   ipcMain.on('platform-login', async (event, info) => {
     const { platform: platformStr = '' } = info || {}
     const platform = platformStr.split(',') || []
-    platform_login(platform, updateProgress(event))
+    platform_login({ platforms: platform, updateProgress: updateProgress(event) })
   })
 
   /**
