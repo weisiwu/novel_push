@@ -3,6 +3,7 @@ import ffmpeg from 'fluent-ffmpeg'
 // import { debug } from '../../../../package.json'
 import xigua_upload_video from './xigua_upload_video.js'
 import bilibili_upload_video from './bilibili_upload_video.js'
+import kuaishou_upload_video from './kuaishou_upload_video.js'
 import { platformNames } from '../../../../src/renderer/src/constants.js'
 import { xigua_min_width, xigua_min_height } from '../../../BaoganDistributeConfig.json'
 // import ffmpegPath from '../../../ffmpeg/ffmpeg-win64-v4.2.2.exe?commonjs-external&asset&asarUnpack'
@@ -103,34 +104,43 @@ const platform_upload_video = async ({
     coverList.push(cover_path)
   }
 
-  console.log('wswTest: platformplatformplatform', platform)
   if (platform.includes(platformNames.BILIBILI)) {
-    updateProgress('============== 开始B站分发 ==============')
-    await bilibili_upload_video({
-      videoInfo,
-      videoList,
-      coverList,
-      updateProgress,
-      uploadVideoProgress,
-      uploadVideoStepProgress
-    })
-    updateProgress('============== 结束B站分发 ==============')
+    // updateProgress('============== 开始B站分发 ==============')
+    // await bilibili_upload_video({
+    //   videoInfo,
+    //   videoList,
+    //   coverList,
+    //   updateProgress,
+    //   uploadVideoProgress,
+    //   uploadVideoStepProgress
+    // })
+    // updateProgress('============== 结束B站分发 ==============')
   }
   if (platform.includes(platformNames.XIGUA)) {
-    updateProgress('============== 开始西瓜视频分发 ==============')
-    await xigua_upload_video({
-      videoInfo,
-      videoList,
-      coverList,
-      updateProgress,
-      uploadVideoProgress,
-      uploadVideoStepProgress
-    })
-    updateProgress('============== 结束西瓜视频分发 ==============')
+    // updateProgress('============== 开始西瓜视频分发 ==============')
+    // await xigua_upload_video({
+    //   videoInfo,
+    //   videoList,
+    //   coverList,
+    //   updateProgress,
+    //   uploadVideoProgress,
+    //   uploadVideoStepProgress
+    // })
+    // updateProgress('============== 结束西瓜视频分发 ==============')
   }
   if (platform.includes(platformNames.DOUYIN)) {
   }
   if (platform.includes(platformNames.KUAISHOU)) {
+    updateProgress('============== 开始快手视频分发 ==============')
+    await kuaishou_upload_video({
+      videoInfo,
+      videoList,
+      coverList,
+      updateProgress,
+      uploadVideoProgress,
+      uploadVideoStepProgress
+    })
+    updateProgress('============== 结束快手视频分发 ==============')
   }
 }
 

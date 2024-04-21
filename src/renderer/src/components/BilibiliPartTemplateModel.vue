@@ -114,7 +114,7 @@ const tidChange = (bilibili_tid) => {
   // 获取bilibili_tid后，开始更新missions和topics
   fetch_mission_topic_loading.value = true
   // 触发bilibili-refresh-tid事件，通过distribute-update-process接受返回结果
-  window.ipcRenderer.send('bilibili-refresh-tid', { platform: ['bilibili'], bilibili_tid })
+  window.ipcRenderer.send('bilibili-refresh-tid', { bilibili_tid })
 }
 
 // B站定时发布允许时间: 当前+2小时 ≤ 可选时间 ≤ 当前+15天
@@ -158,7 +158,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.ipcRenderer.remove('distribute-update-process')
-  window.ipcRenderer.remove('bilibili-refresh-tid-result')
 })
 </script>
 

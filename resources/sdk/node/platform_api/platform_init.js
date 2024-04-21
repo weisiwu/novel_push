@@ -11,10 +11,9 @@ const chromeUserDataPath = join(process.resourcesPath, 'chromeUserData')
 /**
  * b站相关初始化
  */
-const init_bilibili_platform = async ({ bilibili_tid, updateProgress, localConfig = {} } = {}) => {
+const init_bilibili_platform = async ({ bilibili_tid, updateProgress } = {}) => {
   updateProgress(`初始化平台特定信息: 任务、话题`)
-  const headless = true
-  const browser = await puppeteer_manage.launch(headless)
+  const browser = await puppeteer_manage.launch(true)
   const initPage = await browser.newPage()
 
   await initPage.goto('https://member.bilibili.com/', { waitUntil: 'load' })
@@ -144,7 +143,33 @@ const init_bilibili_platform = async ({ bilibili_tid, updateProgress, localConfi
     },
     { bilibili_tid, update_topic_list, update_mission_list }
   )
-  await browser.close()
+}
+
+/**
+ * 获取快手所有视频分类
+ */
+const fetch_kuaishou_type_list = async ({ updateProgress } = {}) => {
+  const browser = await puppeteer_manage.launch(true)
+  const initPage = await browser.newPage()
+  const typeListAPI = 'https://cp.kuaishou.com/rest/cp/works/v2/video/pc/upload/domain/list'
+
+  initPage.goto(typeListAPI)
+  initPage.on('response', async (response) => {
+    const respUrl = response.url()
+    if (respUrl.indexOf(typeListAPI) >= 0 && response.status() >= 200 && response.status() < 300) {
+      const resp = (await response.json()) || {}
+      const { data, result } = resp || {}
+      if (Number(result) === 1) {
+        updateProgress(`获取快手平台视频分类列表`)
+        // 有第四个参数的都是发送数据，非log
+        updateProgress('', 'info', 'normal', { data, type: 'kuaishou_video_type' })
+      } else {
+        updateProgress(`获取快手平台视频分类列表失败`, 'error')
+        updateProgress('', 'info', 'normal', { data, type: 'kuaishou_video_type' })
+      }
+      initPage.close()
+    }
+  })
 }
 
 /**
@@ -153,7 +178,7 @@ const init_bilibili_platform = async ({ bilibili_tid, updateProgress, localConfi
  * 2、读取所有分发平台信息
  * 3、读取视频分发模板信息
  */
-const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgress, event) => {
+const platform_init = async ({ updateProgress, event } = {}) => {
   let localConfig = null
   try {
     updateProgress(`[初始化]读取本地配置文件`)
@@ -183,10 +208,6 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
     return
   }
 
-  if (bilibili_tid) {
-    init_bilibili_platform({ bilibili_tid, updateProgress, localConfig })
-  }
-
   if (localConfig) {
     // 初始化完毕后，将改动写入
     writeFileSync(baoganDistributeConfigPath, JSON.stringify(localConfig))
@@ -194,4 +215,4 @@ const platform_init = async ({ platform = [], bilibili_tid } = {}, updateProgres
 }
 
 export default platform_init
-export { init_bilibili_platform }
+export { init_bilibili_platform, fetch_kuaishou_type_list }

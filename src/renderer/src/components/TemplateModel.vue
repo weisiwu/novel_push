@@ -105,10 +105,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
+import { ref, reactive, watchEffect, onMounted, onUnmounted, nextTick, defineProps } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
 import BilibiliPartTemplateModel from './BilibiliPartTemplateModel.vue'
 import XiguaPartTemplateModel from './XiguaPartTemplateModel.vue'
+import KuaishouPartTemplateModel from './KuaishouPartTemplateModel.vue'
 import { platformNames } from '../../src/constants.js'
 import { distribute_platforms } from '../../../../resources/BaoganDistributeConfig.json'
 import 'vue-web-terminal/lib/theme/dark.css'

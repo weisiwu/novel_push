@@ -355,7 +355,7 @@ onMounted(() => {
      * 1、启动后，读取本地已保存视频模板配置
      */
     const globalLoadingIns = ElLoading.service({ fullscreen: true })
-    window.ipcRenderer.send('platform-init', { platform: ['bilibili'] })
+    window.ipcRenderer.send('platform-init')
     window.ipcRenderer.receive('platform-init-result', (info) => {
       try {
         localConfig.value = JSON.parse(info) || {}

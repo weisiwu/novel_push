@@ -20,7 +20,6 @@ const xigua_get_activity_list = async (cb) => {
       // 返回数据后，200ms退出浏览器
       await (() => new Promise((resolve) => setTimeout(() => resolve(), 200)))()
       await page.close()
-      await browser.close()
     }
   })
 }

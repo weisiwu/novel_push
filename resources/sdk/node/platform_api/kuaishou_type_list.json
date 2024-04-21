@@ -1,0 +1,1146 @@
+[
+    {
+        "value": "舞蹈",
+        "label": "舞蹈",
+        "children": [
+            {
+                "value": "舞蹈民族舞",
+                "label": "舞蹈民族舞"
+            },
+            {
+                "value": "手势舞",
+                "label": "手势舞"
+            },
+            {
+                "value": "街舞",
+                "label": "街舞"
+            },
+            {
+                "value": "广场舞",
+                "label": "广场舞"
+            },
+            {
+                "value": "古风舞蹈",
+                "label": "古风舞蹈"
+            },
+            {
+                "value": "拉丁舞",
+                "label": "拉丁舞"
+            },
+            {
+                "value": "宅舞",
+                "label": "宅舞"
+            },
+            {
+                "value": "芭蕾舞",
+                "label": "芭蕾舞"
+            },
+            {
+                "value": "钢管舞",
+                "label": "钢管舞"
+            },
+            {
+                "value": "即兴舞蹈",
+                "label": "即兴舞蹈"
+            },
+            {
+                "value": "鬼步舞",
+                "label": "鬼步舞"
+            },
+            {
+                "value": "社会摇",
+                "label": "社会摇"
+            },
+            {
+                "value": "韩舞",
+                "label": "韩舞"
+            },
+            {
+                "value": "网红舞",
+                "label": "网红舞"
+            },
+            {
+                "value": "肚皮舞",
+                "label": "肚皮舞"
+            }
+        ]
+    },
+    {
+        "value": "音乐",
+        "label": "音乐",
+        "children": [
+            {
+                "value": "唱歌",
+                "label": "唱歌"
+            },
+            {
+                "value": "乐器",
+                "label": "乐器"
+            }
+        ]
+    },
+    {
+        "value": "游戏",
+        "label": "游戏",
+        "children": [
+            {
+                "value": "多人在线战术竞技游戏（MOBA）",
+                "label": "多人在线战术竞技游戏（MOBA）"
+            },
+            {
+                "value": "枪战射击",
+                "label": "枪战射击"
+            },
+            {
+                "value": "回合",
+                "label": "回合"
+            },
+            {
+                "value": "音乐游戏",
+                "label": "音乐游戏"
+            },
+            {
+                "value": "跑酷躲避",
+                "label": "跑酷躲避"
+            },
+            {
+                "value": "竞速游戏",
+                "label": "竞速游戏"
+            },
+            {
+                "value": "沙盒游戏",
+                "label": "沙盒游戏"
+            },
+            {
+                "value": "棋牌游戏",
+                "label": "棋牌游戏"
+            },
+            {
+                "value": "对战卡牌类",
+                "label": "对战卡牌类"
+            },
+            {
+                "value": "卡牌角色扮演游戏（卡牌RPG）",
+                "label": "卡牌角色扮演游戏（卡牌RPG）"
+            },
+            {
+                "value": "动作角色扮演游戏（ARPG）",
+                "label": "动作角色扮演游戏（ARPG）"
+            },
+            {
+                "value": "大型多人在线游戏 （MMO）",
+                "label": "大型多人在线游戏 （MMO）"
+            },
+            {
+                "value": "休闲益智",
+                "label": "休闲益智"
+            },
+            {
+                "value": "电子竞技",
+                "label": "电子竞技"
+            },
+            {
+                "value": "游戏设备",
+                "label": "游戏设备"
+            }
+        ]
+    },
+    {
+        "value": "颜值",
+        "label": "颜值",
+        "children": [
+            {
+                "value": "美女",
+                "label": "美女"
+            },
+            {
+                "value": "帅哥",
+                "label": "帅哥"
+            }
+        ]
+    },
+    {
+        "value": "娱乐",
+        "label": "娱乐",
+        "children": [
+            {
+                "value": "娱乐八卦",
+                "label": "娱乐八卦"
+            },
+            {
+                "value": "综艺",
+                "label": "综艺"
+            }
+        ]
+    },
+    {
+        "value": "影视",
+        "label": "影视",
+        "children": [
+            {
+                "value": "影视分类",
+                "label": "影视分类"
+            },
+            {
+                "value": "影视地区",
+                "label": "影视地区"
+            },
+            {
+                "value": "影视作品",
+                "label": "影视作品"
+            },
+            {
+                "value": "情景剧",
+                "label": "情景剧"
+            }
+        ]
+    },
+    {
+        "value": "运动",
+        "label": "运动",
+        "children": [
+            {
+                "value": "健身",
+                "label": "健身"
+            },
+            {
+                "value": "球类运动",
+                "label": "球类运动"
+            },
+            {
+                "value": "田径",
+                "label": "田径"
+            },
+            {
+                "value": "搏击运动",
+                "label": "搏击运动"
+            },
+            {
+                "value": "水上运动",
+                "label": "水上运动"
+            },
+            {
+                "value": "极限运动",
+                "label": "极限运动"
+            },
+            {
+                "value": "滑雪",
+                "label": "滑雪"
+            },
+            {
+                "value": "滑冰",
+                "label": "滑冰"
+            },
+            {
+                "value": "体操",
+                "label": "体操"
+            },
+            {
+                "value": "街头运动",
+                "label": "街头运动"
+            },
+            {
+                "value": "休闲运动",
+                "label": "休闲运动"
+            }
+        ]
+    },
+    {
+        "value": "教育",
+        "label": "教育",
+        "children": [
+            {
+                "value": "语言教育",
+                "label": "语言教育"
+            },
+            {
+                "value": "学业教育",
+                "label": "学业教育"
+            },
+            {
+                "value": "职业教育",
+                "label": "职业教育"
+            },
+            {
+                "value": "安全教育",
+                "label": "安全教育"
+            },
+            {
+                "value": "教育周边",
+                "label": "教育周边"
+            }
+        ]
+    },
+    {
+        "value": "才艺",
+        "label": "才艺",
+        "children": [
+            {
+                "value": "手艺",
+                "label": "手艺"
+            },
+            {
+                "value": "绘画",
+                "label": "绘画"
+            },
+            {
+                "value": "书法",
+                "label": "书法"
+            },
+            {
+                "value": "表演",
+                "label": "表演"
+            },
+            {
+                "value": "炫技",
+                "label": "炫技"
+            },
+            {
+                "value": "艺术设计",
+                "label": "艺术设计"
+            }
+        ]
+    },
+    {
+        "value": "历史",
+        "label": "历史",
+        "children": [
+            {
+                "value": "历史事件",
+                "label": "历史事件"
+            },
+            {
+                "value": "传统文化",
+                "label": "传统文化"
+            }
+        ]
+    },
+    {
+        "value": "宗教",
+        "label": "宗教",
+        "children": [
+            {
+                "value": "佛教",
+                "label": "佛教"
+            },
+            {
+                "value": "伊斯兰教",
+                "label": "伊斯兰教"
+            },
+            {
+                "value": "基督教",
+                "label": "基督教"
+            },
+            {
+                "value": "天主教",
+                "label": "天主教"
+            },
+            {
+                "value": "道教",
+                "label": "道教"
+            }
+        ]
+    },
+    {
+        "value": "读书",
+        "label": "读书",
+        "children": [
+            {
+                "value": "阅读",
+                "label": "阅读"
+            },
+            {
+                "value": "听书",
+                "label": "听书"
+            },
+            {
+                "value": "诗词文学",
+                "label": "诗词文学"
+            },
+            {
+                "value": "民间俗语",
+                "label": "民间俗语"
+            }
+        ]
+    },
+    {
+        "value": "二次元",
+        "label": "二次元",
+        "children": [
+            {
+                "value": "动画",
+                "label": "动画"
+            },
+            {
+                "value": "漫画",
+                "label": "漫画"
+            },
+            {
+                "value": "二次元装扮",
+                "label": "二次元装扮"
+            },
+            {
+                "value": "宅物潮玩",
+                "label": "宅物潮玩"
+            },
+            {
+                "value": "漫展",
+                "label": "漫展"
+            },
+            {
+                "value": "广播剧",
+                "label": "广播剧"
+            }
+        ]
+    },
+    {
+        "value": "情感",
+        "label": "情感",
+        "children": [
+            {
+                "value": "爱情",
+                "label": "爱情"
+            },
+            {
+                "value": "友情",
+                "label": "友情"
+            },
+            {
+                "value": "亲情",
+                "label": "亲情"
+            },
+            {
+                "value": "正能量",
+                "label": "正能量"
+            },
+            {
+                "value": "陌生人社交",
+                "label": "陌生人社交"
+            },
+            {
+                "value": "职场语录",
+                "label": "职场语录"
+            },
+            {
+                "value": "爱国",
+                "label": "爱国"
+            },
+            {
+                "value": "鸡汤励志",
+                "label": "鸡汤励志"
+            },
+            {
+                "value": "征婚交友",
+                "label": "征婚交友"
+            }
+        ]
+    },
+    {
+        "value": "星座命理",
+        "label": "星座命理",
+        "children": [
+            {
+                "value": "星座",
+                "label": "星座"
+            },
+            {
+                "value": "生肖",
+                "label": "生肖"
+            },
+            {
+                "value": "面相手相",
+                "label": "面相手相"
+            },
+            {
+                "value": "占卜命运",
+                "label": "占卜命运"
+            },
+            {
+                "value": "心理测试",
+                "label": "心理测试"
+            }
+        ]
+    },
+    {
+        "value": "亲子",
+        "label": "亲子",
+        "children": [
+            {
+                "value": "晒娃",
+                "label": "晒娃"
+            },
+            {
+                "value": "孕产",
+                "label": "孕产"
+            },
+            {
+                "value": "育儿",
+                "label": "育儿"
+            }
+        ]
+    },
+    {
+        "value": "摄影",
+        "label": "摄影",
+        "children": [
+            {
+                "value": "人物摄影",
+                "label": "人物摄影"
+            },
+            {
+                "value": "景物摄影",
+                "label": "景物摄影"
+            },
+            {
+                "value": "航拍摄影",
+                "label": "航拍摄影"
+            },
+            {
+                "value": "手机摄影",
+                "label": "手机摄影"
+            },
+            {
+                "value": "单反摄影",
+                "label": "单反摄影"
+            },
+            {
+                "value": "后期处理",
+                "label": "后期处理"
+            }
+        ]
+    },
+    {
+        "value": "高新数码",
+        "label": "高新数码",
+        "children": [
+            {
+                "value": "数码品牌",
+                "label": "数码品牌"
+            },
+            {
+                "value": "科技数码产品",
+                "label": "科技数码产品"
+            },
+            {
+                "value": "软件产品",
+                "label": "软件产品"
+            },
+            {
+                "value": "科技公司",
+                "label": "科技公司"
+            },
+            {
+                "value": "前沿科技",
+                "label": "前沿科技"
+            }
+        ]
+    },
+    {
+        "value": "资讯",
+        "label": "资讯",
+        "children": [
+            {
+                "value": "社会资讯",
+                "label": "社会资讯"
+            },
+            {
+                "value": "时政资讯",
+                "label": "时政资讯"
+            },
+            {
+                "value": "天气资讯",
+                "label": "天气资讯"
+            }
+        ]
+    },
+    {
+        "value": "军事",
+        "label": "军事",
+        "children": [
+            {
+                "value": "武器装备",
+                "label": "武器装备"
+            },
+            {
+                "value": "国防动态",
+                "label": "国防动态"
+            },
+            {
+                "value": "军事冲突",
+                "label": "军事冲突"
+            },
+            {
+                "value": "航空航天器",
+                "label": "航空航天器"
+            }
+        ]
+    },
+    {
+        "value": "房产家居",
+        "label": "房产家居",
+        "children": [
+            {
+                "value": "房产",
+                "label": "房产"
+            }
+        ]
+    },
+    {
+        "value": "财经",
+        "label": "财经",
+        "children": [
+            {
+                "value": "创业",
+                "label": "创业"
+            },
+            {
+                "value": "理财",
+                "label": "理财"
+            }
+        ]
+    },
+    {
+        "value": "科学",
+        "label": "科学",
+        "children": [
+            {
+                "value": "天文",
+                "label": "天文"
+            },
+            {
+                "value": "医学",
+                "label": "医学"
+            },
+            {
+                "value": "动植物与微生物",
+                "label": "动植物与微生物"
+            },
+            {
+                "value": "自然地理",
+                "label": "自然地理"
+            },
+            {
+                "value": "实验发明",
+                "label": "实验发明"
+            },
+            {
+                "value": "科学新闻",
+                "label": "科学新闻"
+            }
+        ]
+    },
+    {
+        "value": "法律",
+        "label": "法律",
+        "children": [
+            {
+                "value": "商业法律",
+                "label": "商业法律"
+            },
+            {
+                "value": "工作法律",
+                "label": "工作法律"
+            },
+            {
+                "value": "婚姻法律",
+                "label": "婚姻法律"
+            },
+            {
+                "value": "土地法",
+                "label": "土地法"
+            },
+            {
+                "value": "日常法律",
+                "label": "日常法律"
+            },
+            {
+                "value": "消费法",
+                "label": "消费法"
+            },
+            {
+                "value": "继承法",
+                "label": "继承法"
+            },
+            {
+                "value": "收养法",
+                "label": "收养法"
+            }
+        ]
+    },
+    {
+        "value": "搞笑",
+        "label": "搞笑",
+        "children": [
+            {
+                "value": "搞笑段子",
+                "label": "搞笑段子"
+            },
+            {
+                "value": "相声",
+                "label": "相声"
+            },
+            {
+                "value": "小品",
+                "label": "小品"
+            },
+            {
+                "value": "脱口秀",
+                "label": "脱口秀"
+            },
+            {
+                "value": "糗人糗事",
+                "label": "糗人糗事"
+            },
+            {
+                "value": "恶作剧",
+                "label": "恶作剧"
+            }
+        ]
+    },
+    {
+        "value": "穿搭",
+        "label": "穿搭",
+        "children": [
+            {
+                "value": "穿搭品牌",
+                "label": "穿搭品牌"
+            },
+            {
+                "value": "时尚穿搭",
+                "label": "时尚穿搭"
+            },
+            {
+                "value": "搭配展示",
+                "label": "搭配展示"
+            },
+            {
+                "value": "T台走秀",
+                "label": "T台走秀"
+            }
+        ]
+    },
+    {
+        "value": "美妆",
+        "label": "美妆",
+        "children": [
+            {
+                "value": "美妆品牌",
+                "label": "美妆品牌"
+            },
+            {
+                "value": "美发",
+                "label": "美发"
+            },
+            {
+                "value": "护肤",
+                "label": "护肤"
+            },
+            {
+                "value": "美容美体",
+                "label": "美容美体"
+            },
+            {
+                "value": "口腔护理",
+                "label": "口腔护理"
+            },
+            {
+                "value": "美甲",
+                "label": "美甲"
+            },
+            {
+                "value": "彩妆",
+                "label": "彩妆"
+            },
+            {
+                "value": "仿妆",
+                "label": "仿妆"
+            },
+            {
+                "value": "医美整形",
+                "label": "医美整形"
+            },
+            {
+                "value": "美睫",
+                "label": "美睫"
+            }
+        ]
+    },
+    {
+        "value": "旅游",
+        "label": "旅游",
+        "children": [
+            {
+                "value": "境内游",
+                "label": "境内游"
+            },
+            {
+                "value": "海外游",
+                "label": "海外游"
+            },
+            {
+                "value": "骑行游",
+                "label": "骑行游"
+            },
+            {
+                "value": "拉车游",
+                "label": "拉车游"
+            },
+            {
+                "value": "自驾游",
+                "label": "自驾游"
+            },
+            {
+                "value": "住宿",
+                "label": "住宿"
+            },
+            {
+                "value": "著名景点",
+                "label": "著名景点"
+            },
+            {
+                "value": "旅游特产",
+                "label": "旅游特产"
+            }
+        ]
+    },
+    {
+        "value": "美食",
+        "label": "美食",
+        "children": [
+            {
+                "value": "烹饪",
+                "label": "烹饪"
+            },
+            {
+                "value": "吃播",
+                "label": "吃播"
+            },
+            {
+                "value": "食材",
+                "label": "食材"
+            },
+            {
+                "value": "美食日常",
+                "label": "美食日常"
+            },
+            {
+                "value": "餐厅",
+                "label": "餐厅"
+            },
+            {
+                "value": "迷你厨房",
+                "label": "迷你厨房"
+            },
+            {
+                "value": "厨房好物",
+                "label": "厨房好物"
+            }
+        ]
+    },
+    {
+        "value": "生活",
+        "label": "生活",
+        "children": [
+            {
+                "value": "港澳台生活",
+                "label": "港澳台生活"
+            },
+            {
+                "value": "欧洲生活",
+                "label": "欧洲生活"
+            },
+            {
+                "value": "亚洲生活",
+                "label": "亚洲生活"
+            },
+            {
+                "value": "美洲生活",
+                "label": "美洲生活"
+            },
+            {
+                "value": "大洋洲生活",
+                "label": "大洋洲生活"
+            },
+            {
+                "value": "非洲生活",
+                "label": "非洲生活"
+            },
+            {
+                "value": "校园生活",
+                "label": "校园生活"
+            },
+            {
+                "value": "中老年人",
+                "label": "中老年人"
+            },
+            {
+                "value": "驾驶行业",
+                "label": "驾驶行业"
+            },
+            {
+                "value": "交通生活",
+                "label": "交通生活"
+            },
+            {
+                "value": "特色职业",
+                "label": "特色职业"
+            },
+            {
+                "value": "农民工",
+                "label": "农民工"
+            },
+            {
+                "value": "家庭生活",
+                "label": "家庭生活"
+            },
+            {
+                "value": "婚礼",
+                "label": "婚礼"
+            },
+            {
+                "value": "丧礼",
+                "label": "丧礼"
+            },
+            {
+                "value": "求职",
+                "label": "求职"
+            },
+            {
+                "value": "情侣日常",
+                "label": "情侣日常"
+            },
+            {
+                "value": "生活小妙招",
+                "label": "生活小妙招"
+            },
+            {
+                "value": "古玩收藏",
+                "label": "古玩收藏"
+            },
+            {
+                "value": "休闲活动",
+                "label": "休闲活动"
+            }
+        ]
+    },
+    {
+        "value": "随手拍",
+        "label": "随手拍",
+        "children": [
+            {
+                "value": "无意义视频",
+                "label": "无意义视频"
+            },
+            {
+                "value": "自拍",
+                "label": "自拍"
+            }
+        ]
+    },
+    {
+        "value": "三农",
+        "label": "三农",
+        "children": [
+            {
+                "value": "种植业",
+                "label": "种植业"
+            },
+            {
+                "value": "养殖业",
+                "label": "养殖业"
+            },
+            {
+                "value": "田园生活",
+                "label": "田园生活"
+            },
+            {
+                "value": "兽医",
+                "label": "兽医"
+            }
+        ]
+    },
+    {
+        "value": "健康",
+        "label": "健康",
+        "children": [
+            {
+                "value": "看病治病",
+                "label": "看病治病"
+            },
+            {
+                "value": "健康周边",
+                "label": "健康周边"
+            },
+            {
+                "value": "保健养生",
+                "label": "保健养生"
+            },
+            {
+                "value": "消费中医",
+                "label": "消费中医"
+            },
+            {
+                "value": "体检",
+                "label": "体检"
+            },
+            {
+                "value": "消费眼科",
+                "label": "消费眼科"
+            },
+            {
+                "value": "辅助生殖",
+                "label": "辅助生殖"
+            }
+        ]
+    },
+    {
+        "value": "动物",
+        "label": "动物",
+        "children": [
+            {
+                "value": "宠物",
+                "label": "宠物"
+            },
+            {
+                "value": "牲畜",
+                "label": "牲畜"
+            },
+            {
+                "value": "野生动物",
+                "label": "野生动物"
+            },
+            {
+                "value": "爬虫飞虫",
+                "label": "爬虫飞虫"
+            },
+            {
+                "value": "宠物医美",
+                "label": "宠物医美"
+            },
+            {
+                "value": "动物收留",
+                "label": "动物收留"
+            },
+            {
+                "value": "驯兽表演",
+                "label": "驯兽表演"
+            },
+            {
+                "value": "动物园动物",
+                "label": "动物园动物"
+            },
+            {
+                "value": "动物饲养",
+                "label": "动物饲养"
+            }
+        ]
+    },
+    {
+        "value": "汽车",
+        "label": "汽车",
+        "children": [
+            {
+                "value": "汽车改装",
+                "label": "汽车改装"
+            },
+            {
+                "value": "户外越野",
+                "label": "户外越野"
+            },
+            {
+                "value": "用车知识",
+                "label": "用车知识"
+            },
+            {
+                "value": "驾考交规",
+                "label": "驾考交规"
+            },
+            {
+                "value": "汽车买卖",
+                "label": "汽车买卖"
+            },
+            {
+                "value": "养护维修",
+                "label": "养护维修"
+            },
+            {
+                "value": "炫技漂移",
+                "label": "炫技漂移"
+            },
+            {
+                "value": "汽车段子",
+                "label": "汽车段子"
+            },
+            {
+                "value": "汽车赛事",
+                "label": "汽车赛事"
+            },
+            {
+                "value": "说车评车",
+                "label": "说车评车"
+            },
+            {
+                "value": "车型",
+                "label": "车型"
+            },
+            {
+                "value": "汽车品牌",
+                "label": "汽车品牌"
+            },
+            {
+                "value": "车友活动",
+                "label": "车友活动"
+            }
+        ]
+    },
+    {
+        "value": "奇人异象",
+        "label": "奇人异象",
+        "children": [
+            {
+                "value": "奇人",
+                "label": "奇人"
+            },
+            {
+                "value": "异事",
+                "label": "异事"
+            },
+            {
+                "value": "异象",
+                "label": "异象"
+            },
+            {
+                "value": "ASMR",
+                "label": "ASMR"
+            },
+            {
+                "value": "心理猎奇",
+                "label": "心理猎奇"
+            }
+        ]
+    },
+    {
+        "value": "短剧",
+        "label": "短剧",
+        "children": [
+            {
+                "value": "短剧",
+                "label": "短剧"
+            }
+        ]
+    },
+    {
+        "value": "其他",
+        "label": "其他",
+        "children": [
+            {
+                "value": "直播",
+                "label": "直播"
+            },
+            {
+                "value": "创意",
+                "label": "创意"
+            }
+        ]
+    }
+]

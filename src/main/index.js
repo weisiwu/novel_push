@@ -8,7 +8,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/imgs/icon.png?asset'
 import macIcon from '../../resources/imgs/icon.png?asset'
 import platform_init, {
-  init_bilibili_platform
+  init_bilibili_platform,
+  fetch_kuaishou_type_list
 } from '../../resources/sdk/node/platform_api/platform_init.js'
 import platform_login from '../../resources/sdk/node/platform_api/platform_login.js'
 import platform_upload_video from '../../resources/sdk/node/platform_api/platform_upload_video.js'
@@ -165,8 +166,8 @@ app.whenReady().then(() => {
   /**
    * 初始化平台特定信息
    */
-  ipcMain.on('platform-init', async (event, options) => {
-    platform_init(options, updateProgress(event), event)
+  ipcMain.on('platform-init', async (event) => {
+    platform_init({ updateProgress: updateProgress(event), event })
   })
 
   /**
@@ -175,6 +176,13 @@ app.whenReady().then(() => {
   ipcMain.on('bilibili-refresh-tid', async (event, options) => {
     init_bilibili_platform({ ...options, updateProgress: updateProgress(event) })
   })
+
+  /**
+   * 获取快手分类列表
+   */
+  // ipcMain.on('kuaishou-fetch-typelist', async (event) => {
+  //   fetch_kuaishou_type_list({ updateProgress: updateProgress(event) })
+  // })
 
   /**
    * 创建新的用户环境
@@ -325,7 +333,7 @@ app.whenReady().then(() => {
       return
     }
     const localConfig = readFileSync(distributeConfigPath).toString()
-    console.log('wswTestxx读取配置测试: ', localConfig)
+    // console.log('wswTest 读取配置测试: ', localConfig)
     // 将写入的配置传回UI中
     event.sender.send('fetch-distribute-config-result', localConfig)
   })
