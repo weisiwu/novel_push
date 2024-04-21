@@ -83,7 +83,6 @@ import bilibili_tids from '../../../../resources/sdk/node/platform_api/bilibili_
 import 'vue-web-terminal/lib/theme/dark.css'
 
 const props = defineProps({ platform: String, localConfig: Object, form: Object })
-const platform = props?.platform || ''
 // 这些属性会被直接注入到form中
 const form = props.form
 const fetch_mission_topic_loading = ref(false)

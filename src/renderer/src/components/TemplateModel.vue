@@ -105,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watchEffect, onMounted, onUnmounted, nextTick, defineProps } from 'vue'
+import { ref, reactive, watchEffect, nextTick, defineProps } from 'vue'
 import { ElLoading, ElInput, ElMessageBox } from 'element-plus'
 import BilibiliPartTemplateModel from './BilibiliPartTemplateModel.vue'
 import XiguaPartTemplateModel from './XiguaPartTemplateModel.vue'
@@ -138,7 +138,9 @@ const toggle_drawer = async () => {
     window.ipcRenderer.receive('fetch-distribute-config-result', (info) => {
       try {
         localConfig.value = JSON.parse(info)
-      } catch (e) {}
+      } catch (e) {
+        console.error('wswTest: 解析分发配置错误', e)
+      }
       is_reading_local_config.value = false
       window.ipcRenderer.remove('fetch-distribute-config-result')
     })

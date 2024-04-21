@@ -85,8 +85,8 @@ watchEffect(() => {
   form.xigua_reproduceDesc = props?.localConfig?.xigua_reproduceDesc || ''
   form.xigua_activityName = props?.localConfig?.xigua_activityName || ''
   form.xigua_privacyVal = props?.localConfig?.xigua_privacyVal || ''
-  form.xigua_dtime = Number(props?.localConfig?.xigua_dtime)
-    ? new Date(Number(props?.localConfig?.xigua_dtime))
+  form.xigua_dtime = props?.localConfig?.xigua_dtime
+    ? new Date(props?.localConfig?.xigua_dtime)
     : ''
   form.xigua_allowDownload = props?.localConfig?.xigua_allowDownload || false
 })

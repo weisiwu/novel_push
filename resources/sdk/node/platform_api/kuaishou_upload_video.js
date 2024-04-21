@@ -1,7 +1,7 @@
 import puppeteer_manage from './puppeteer_manage.js'
 import { CMDS, platformNames } from '../../../../src/renderer/src/constants.js'
 
-const platform = platformNames.XIGUA
+const platform = platformNames.KUAISHOU
 const queryUploadProcessInterval = 500
 const hourMilSec = 60 * 60 * 1e3
 const uploadPageUrl = 'https://cp.kuaishou.com/article/publish/video'
@@ -465,13 +465,12 @@ const kuaishou_upload_video = async ({
       title: `${videoInfo?.title_prefix || ''}${video.name?.split?.('.')?.[0] || ''}`,
       desc: videoInfo?.desc || '',
       tags: videoInfo?.tag?.split?.(',') || [],
-      // TODO:(wsw) 临时测试 - 默认值都是假的
-      allowSameScreen: videoInfo?.kuaishou_allowSameScreen || true, // 【个性化设置】是否允许同屏
-      allowDownload: videoInfo?.kuaishou_allowDownload || true, // 【个性化设置】不允许下载此作品
-      hideInSameCity: videoInfo?.kuaishou_hideInSameCity || true, // 【个性化设置】同城不展示
-      privacyVal: videoInfo?.kuaishou_privacyVal || true, // 查看权限: 公开:1 好友可见:4 私密(仅自己可见):2
-      type: videoInfo?.kuaishou_allowSameScreen || true, // 所属领域
-      dtime: videoInfo?.xigua_dtime || '2024-04-24 14:12:00' // 假值: 立刻发送 2024-04-24 14:12:00 定时发送的时间
+      allowSameScreen: Boolean(videoInfo?.kuaishou_allowSameScreen), // 【个性化设置】是否允许同屏
+      allowDownload: Boolean(videoInfo?.kuaishou_allowDownload), // 【个性化设置】不允许下载此作品
+      hideInSameCity: Boolean(videoInfo?.kuaishou_hideInSameCity), // 【个性化设置】同城不展示
+      privacyVal: videoInfo?.kuaishou_privacyVal || 1, // 查看权限: 公开:1 好友可见:4 私密(仅自己可见):2
+      type: videoInfo?.kuaishou_type || '', // 所属领域
+      dtime: videoInfo?.kuaishou_dtime || '' // 假值: 立刻发送 2024-04-24 14:12:00 定时发送的时间
     }
     const upload_resut = await kuaishou_upload_single_video({
       video,

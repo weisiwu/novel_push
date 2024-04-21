@@ -276,7 +276,15 @@ app.whenReady().then(() => {
         xigua_privacyVal: userTplModel.xigua_privacyVal || localTplModel.xigua_privacyVal || '',
         xigua_dtime: userTplModel.xigua_dtime || localTplModel.xigua_dtime || '',
         xigua_allowDownload:
-          userTplModel.xigua_allowDownload || localTplModel.xigua_allowDownload || true
+          userTplModel.xigua_allowDownload || localTplModel.xigua_allowDownload || true,
+        // 快手特有字段
+        kuaishou_allowSameScreen: Boolean(userTplModel.kuaishou_allowSameScreen),
+        kuaishou_allowDownload: Boolean(userTplModel.kuaishou_allowDownload),
+        kuaishou_hideInSameCity: Boolean(userTplModel.kuaishou_hideInSameCity),
+        kuaishou_privacyVal:
+          Number(userTplModel.kuaishou_privacyVal || localTplModel.kuaishou_privacyVal) || 1,
+        kuaishou_type: userTplModel.kuaishou_type || localTplModel.kuaishou_type || '',
+        kuaishou_dtime: userTplModel.kuaishou_dtime || localTplModel.kuaishou_dtime || ''
       })
       writeFileSync(distributeConfigPath, localConfig)
     } catch (e) {
