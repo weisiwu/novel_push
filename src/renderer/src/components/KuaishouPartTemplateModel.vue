@@ -13,8 +13,8 @@
   </el-form-item>
   <el-form-item label="【个性化设置】同城不展示">
     <el-radio-group v-model="form.kuaishou_hideInSameCity">
-      <el-radio :value="false">展示</el-radio>
       <el-radio :value="true">不展示</el-radio>
+      <el-radio :value="false">展示</el-radio>
     </el-radio-group>
   </el-form-item>
   <el-form-item v-loading="is_type_loading" label="所属领域">

@@ -1,4 +1,5 @@
 import puppeteer_manage from './puppeteer_manage.js'
+import kuaishouTypes from '../../node/platform_api/kuaishou_type_list.json'
 import { CMDS, platformNames } from '../../../../src/renderer/src/constants.js'
 
 const platform = platformNames.KUAISHOU
@@ -17,14 +18,14 @@ const uploadPageUrl = 'https://cp.kuaishou.com/article/publish/video'
  */
 const kuaishou_upload_single_video = async ({
   video,
-  cover,
   mainPage,
   videoInfo,
   updateProgress,
   uploadVideoProgress
 }) => {
   await mainPage.goto(uploadPageUrl, { waitUntil: 'load' })
-  // 直接找页面的第一个文件上传，比较冒险
+  // 快手是先页面结构ready，后渲染上传组件
+  await mainPage.waitForSelector('input[type=file]')
   const fileInput = await mainPage.$('input[type=file]')
 
   if (!fileInput) {
@@ -42,47 +43,67 @@ const kuaishou_upload_single_video = async ({
   }
 
   // 每0.5秒查询一次上传进度
-  await (() =>
-    new Promise((resolve, reject) => {
-      const is_finished_timer = setInterval(async () => {
-        const percentNode = await mainPage.$('.video-list-content .percent')
-        const statusNode = await mainPage.$('.video-list-content .status')
-        const percentTxt = percentNode ? await percentNode.evaluate((el) => el?.innerHTML) : ''
-        const statusTxt = statusNode ? await statusNode.evaluate((el) => el?.innerHTML || '') : ''
+  await mainPage.waitForSelector('.anticon-info-circle')
+  await new Promise((resolve, reject) => {
+    const is_finished_timer = setInterval(async () => {
+      const bodyNode = await mainPage.$('#onvideo_creator_platform')
+      // 因为快手的所有节点的class都是hash值，没有办法和节点产生大致的关联
+      // 所以上传进度百分值节点，通过限定上层的节点范围，以求尽量准确
+      const percentNode = await bodyNode.$('text/%')
+      const isSuccessNode = await bodyNode.$('.anticon-check-circle')
+      const isFailNode = await bodyNode.$('.anticon-close-circle')
+      const isProcessingNode = await bodyNode.$('.anticon-info-circle')
+      const percentNodeTagName = percentNode
+        ? await percentNode.evaluate((node) => node.tagName)
+        : ''
 
-        // 如果状态文本和进度文本都为空，则继续等待下一次轮询结果
-        if (!statusTxt && !percentTxt) return
+      // 上传进度是数字
+      const percentTxt = percentNode ? await percentNode.evaluate((el) => el?.innerHTML) : ''
+      const percentNumber = Number(percentTxt?.replace?.('%', ''))
 
-        if (percentTxt) {
+      if (isProcessingNode) {
+        // TODO:(wsw) 这里存在问题。如果获取不到进度呢？
+        if (percentNodeTagName === 'SPAN' && !Number.isNaN(percentNumber)) {
+          // 由于匹配逻辑比较差，所以强行校验是否可以转化为数字
           console.log(`wswTest:视频${video?.name || ''}上传${platform}中:${percentTxt}`)
           uploadVideoProgress(percentTxt?.replace?.('%', ''))
-        } else {
-          if (statusTxt && statusTxt?.indexOf?.('上传成功') < 0) {
-            return reject(statusTxt)
-          }
-          clearInterval(is_finished_timer)
-          uploadVideoProgress(100)
-          updateProgress(`[${platform}]上传${video?.name || ''}成功`)
-          resolve(true)
         }
-      }, queryUploadProcessInterval)
-    }).catch((e) => {
-      updateProgress(`[${platform}]上传视频${video?.path || ''}失败。${e || ''}`, 'error')
-      return false
-    }))()
+      }
+
+      if (isSuccessNode) {
+        // 当已上传文本节点出现的时候，已经开始正常上传，可以等待上传结束(且有上传进度)
+        clearInterval(is_finished_timer)
+        uploadVideoProgress(100)
+        updateProgress(`[${platform}]上传${video?.name || ''}成功`)
+        return resolve(true)
+      }
+
+      if (isFailNode) {
+        clearInterval(is_finished_timer)
+        return reject(`[${platform}]上传视频${video?.name || ''}失败`)
+      }
+    }, queryUploadProcessInterval)
+  }).catch((e) => {
+    updateProgress(`[${platform}]上传视频${video?.path || ''}失败。${e || ''}`, 'error')
+    return false
+  })
 
   // 输入标题
   if (videoInfo?.title) {
     try {
-      const titleNode = await mainPage.$('.video-form-item.form-item-title .mentionText')
+      const titleNode = await mainPage.$('div[contenteditable="true"][placeholder]')
+      const kuaishou_title = `${videoInfo?.tags
+        ?.map?.((tag) => `#${tag}`)
+        ?.join?.(' ')} ${videoInfo?.title || ''}`
+
       if (titleNode) {
         await titleNode.click()
-        await mainPage.keyboard.sendCharacter(videoInfo?.title || '')
-        console.log(`wswTest: 标题输入完成: ${videoInfo?.title}`)
-        updateProgress(`[${platform}]标题输入完成: ${videoInfo?.title}`)
+        await mainPage.keyboard.sendCharacter(kuaishou_title)
+        console.log(`wswTest: 标题输入完成: ${kuaishou_title}`)
+        updateProgress(`[${platform}]标题输入完成: ${kuaishou_title}`)
       } else {
-        console.log(`wswTest: 标题输入失败: ${videoInfo?.title}`)
-        updateProgress(`[${platform}]标题输入失败: ${videoInfo?.title}`, 'error')
+        console.log(`wswTest: 标题输入失败: ${kuaishou_title}`)
+        updateProgress(`[${platform}]标题输入失败: ${kuaishou_title}`, 'error')
         return false
       }
     } catch (e) {
@@ -91,336 +112,139 @@ const kuaishou_upload_single_video = async ({
     }
   }
 
-  // 输入视频简介
-  if (videoInfo?.desc) {
-    try {
-      const descNode = await mainPage.$('.video-form-item.form-item-abstract .mentionText')
-      if (descNode) {
-        await descNode.click()
-        await mainPage.keyboard.sendCharacter(videoInfo?.desc || '')
-        console.log(`wswTest: 描述输入完成: ${videoInfo?.desc}`)
-        updateProgress(`[${platform}]描述输入完成: ${videoInfo?.desc}`)
-      } else {
-        console.log(`wswTest: 描述输入失败: ${videoInfo?.desc}`)
-        updateProgress(`[${platform}]描述输入失败: ${videoInfo?.desc}`, 'error')
-      }
-    } catch (e) {
-      // 描述填写失败，不阻止最终发布
-      updateProgress(`[${platform}]描述输入失败: ${e?.message || ''}`, 'error')
-    }
-  }
-
-  // 输入话题
-  const tags = videoInfo.tags || []
-  if (tags?.length) {
-    try {
-      const tagNode = await mainPage.$('.video-form-item.form-item-hash_tag .hash-tag-editor')
-      if (tagNode) {
-        await tagNode.click()
-        for (let tagIdx in tags) {
-          await mainPage.keyboard.sendCharacter(`#${tags[tagIdx]}`)
-          // 下拉列表出现后，立刻按下enter，再等待500ms
-          await mainPage.waitForSelector('.arco-trigger.arco-dropdown')
-          await mainPage.keyboard.press('Enter')
-          await (() =>
-            new Promise((resolve) => setTimeout(() => resolve(), 500)).catch((e) => {
-              updateProgress(
-                `[${platform}]输入#${tags[tagIdx] || ''}话题失败: ${e?.message || ''}`,
-                'error'
-              )
-            }))()
-        }
-        console.log(`wswTest: 话题标签输入完成: ${tags?.join?.(',')}`)
-        updateProgress(`[${platform}]话题标签输入完成: ${tags?.join?.(',')}`)
-      } else {
-        console.log(`wswTest: 话题标签输入失败: ${tags?.join?.(',')}`)
-        updateProgress(`[${platform}]话题标签输入失败: ${tags?.join?.(',')}`, 'error')
-      }
-    } catch (e) {
-      // 话题输入失败，不会阻止视频的最终发布
-      updateProgress(`[${platform}]话题标签输入失败: ${e?.message || ''}`, 'error')
-    }
-  }
-
-  // 选择视频类型: 原创、转载。默认是原创
+  // 模拟点击:个性化设置
+  // 1、拍同框 2、是否允许下载 3、是否同城展示
   try {
-    await mainPage.waitForSelector('.video-form-item.form-item-origin input[type=radio]')
-    const videoSourceNode = await mainPage.$$('.video-form-item.form-item-origin .byte-radio')
-    if (videoSourceNode) {
-      if (videoInfo.isReproduce) {
-        await videoSourceNode?.[1]?.click?.()
-        // 转载需要标出来源
-        const reprintTextNode = await mainPage.$(
-          '.video-form-item.form-item-reprint input[type=text]'
-        )
-        await reprintTextNode?.click?.()
-        await mainPage.keyboard.sendCharacter(videoInfo.reproduceDesc || '')
-      } else {
-        await videoSourceNode?.[0]?.click?.()
-      }
-      const _text = videoInfo.isReproduce ? '转载' : '原创'
-      console.log(`wswTest: [${platform}]选择视频类型完成: ${_text}`)
-      updateProgress(`[${platform}]选择视频类型完成: ${_text}`)
-    } else {
-      console.log(`wswTest: [${platform}]选择视频类型失败: 没有找到对应节点}`)
-      updateProgress(`[${platform}]选择视频类型失败: 没有找到对应节点'}`)
-      return false
+    const allowSameFrameNode = await mainPage.$('input[type="checkbox"][value=allowSameFrame]')
+    const allowDownloadNode = await mainPage.$('input[type="checkbox"][value=downloadType]')
+    const hideInSameCityNode = await mainPage.$('input[type="checkbox"][value=disableNearbyShow]')
+
+    // 默认为真，用户选择假才点击
+    if (allowSameFrameNode && !videoInfo?.allowSameScreen) {
+      await allowSameFrameNode.click()
+      console.log(`wswTest: 个性化设置-拍同框: ${videoInfo?.allowSameScreen}`)
+      updateProgress(`[${platform}]个性化设置-拍同框: ${videoInfo?.allowSameScreen}`)
     }
-  } catch (e) {
-    console.log(`wswTest: [${platform}]选择视频类型失败: ${e?.message || ''}`)
-    // 视频类型选择错误，不影响最终发布（有默认值）。
-    updateProgress(`[${platform}]选择视频类型失败: ${e?.message || ''}`)
-    return false
-  }
 
-  // 输入封面
-  try {
-    const posterNode = await mainPage?.$?.('.video-form-item.form-item-poster .m-xigua-upload')
-    await posterNode.click()
-    await mainPage.waitForSelector('.m-poster-upgrade')
-    const lis = await mainPage?.$$('.m-poster-upgrade .header li')
-    for (const li of lis) {
-      const isLocalUploadLi = await li.evaluate(
-        (linode) => linode.textContent.trim()?.indexOf?.('本地上传') >= 0
-      )
-      if (isLocalUploadLi) {
-        await li.click()
-      }
-    }
-    const posterUploadNode = await mainPage?.$('.xigua-upload-poster-trigger input[type=file]')
-    posterUploadNode.uploadFile(cover)
-    console.log('wswTest: 成功上传封面')
-    updateProgress(`成功上传封面`)
-  } catch (e) {
-    updateProgress(`[${platform}]:上传封面异常: ${e?.message || ''}`, 'error')
-    return false
-  }
-
-  // 选择完毕封面后，西瓜会要求进行裁切。默认直接裁切
-  try {
-    const confirmCoverBtn = await mainPage.waitForSelector('.m-poster-upgrade .btn-sure')
-    if (confirmCoverBtn) {
-      const confirmCoverBtnDisabled = await mainPage?.$('.m-poster-upgrade .btn-sure.disabled')
-      // 如果封面不符合要求
-      if (confirmCoverBtnDisabled) {
-        const clipCoverBtn = await mainPage.waitForSelector('.m-poster-upgrade .clip-btn-box')
-        clipCoverBtn.click()
-        // 裁切后，等待0.5s继续
-        await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
-      }
-      await confirmCoverBtn.click()
-    }
-  } catch (e) {
-    // 裁切错误，不影响最终视频发布
-    updateProgress(`[${platform}]:视频封面裁切发生异常: ${e?.message || ''}`, 'error')
-  }
-
-  console.log(`wswTest: 视频上传完毕`)
-  updateProgress(`视频上传完毕`)
-
-  // 发布视频前最终确认点击步骤
-  try {
-    const reConfirmModel = await mainPage.waitForSelector('.m-xigua-dialog.title-modal')
-    const reConfirmBtn = await reConfirmModel.$('.m-button.red')
-    await reConfirmBtn.click()
-    // 选择活动前，需要等待视频封面选择弹出框消失
-    await mainPage.waitForFunction(
-      (selector) => !document.querySelector(selector),
-      {},
-      '.m-poster-upgrade'
-    )
-  } catch (e) {
-    updateProgress(`[${platform}]:发布视频前就绪点击异常: ${e?.message || ''}`, 'error')
-  }
-
-  const activity_name = videoInfo.activityName || ''
-  // 选择活动
-  if (activity_name) {
-    try {
-      // 获取焦点
-      const activityNode = await mainPage.$(
-        '.video-form-item.form-item-activity-tags .form-item-activity-tags__empty'
-      )
-      await activityNode.click()
-      await mainPage.waitForSelector(
-        '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
-      )
-      const activity_list = await mainPage.$$(
-        '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
-      )
-      for (const card of activity_list) {
-        const activity_title = await card.evaluate((cardNode) => {
-          return cardNode.getAttribute('title')
-        })
-        if (activity_title === activity_name) {
-          await card.click()
-          const activityModelBtnNode = await mainPage.$(
-            '.upload-activity-modal .red.upload-activity-modal__btn:not(.cannot-click)'
-          )
-          activityModelBtnNode && (await activityModelBtnNode.click())
-          break
-        }
-      }
-
-      // 等待活动选择弹窗关闭
-      await mainPage.waitForFunction(
-        (selector) => !document.querySelector(selector),
-        {},
-        '.byte-list-wrapper .upload-activity-card .upload-activity-card__card-title'
-      )
-      console.log(`wswTest: 成功选择活动: ${activity_name}`)
-      updateProgress(`成功选择活动: ${activity_name}`)
-    } catch (e) {
-      updateProgress(`[${platform}]:选择活动异常: ${e?.message || ''}`, 'error')
-    }
-  }
-
-  const privacyVal = videoInfo.privacyVal || ''
-  // 发布设置-谁可以看
-  if (privacyVal) {
-    try {
-      const privacyNodes = await mainPage?.$$('.video-form-item.form-item-privacy .byte-radio')
-      for (const privacyInput of privacyNodes) {
-        const _privacyVal = await privacyInput.evaluate((node) =>
-          node.querySelector('input[type=radio]')?.getAttribute?.('value')
-        )
-        // 点选谁可以看项
-        privacyInput && (await privacyInput.click())
-        // (默认公开)从公开转化私有，无论哪种形式，都会有弹窗阻止提示
-        if (Number(_privacyVal) === Number(privacyVal)) {
-          if (privacyVal) {
-            const confirmBtn = await mainPage.waitForSelector(
-              '.m-xigua-dialog.simple-confirm-modal .m-button.red'
-            )
-            await confirmBtn.click()
-          }
-          break
-        }
-      }
-      console.log(
-        `wswTest: 成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}`
-      )
-      updateProgress(`成功修改发布设置(谁可以看): ${privacyVal == 1 ? '仅我可见' : '粉丝可见'}`)
-    } catch (e) {
-      // 有默认值，选择失败也可以发布
-      updateProgress(`[${platform}]:修改发布设置(谁可以看)失败 ${e?.message || ''}`, 'error')
-    }
-  }
-
-  const dtime = videoInfo.dtime
-  // 发布设置-定时发布
-  if (dtime) {
-    try {
-      const dtimeObj = new Date(dtime)
-      const nowObj = new Date()
-      const timeRemain = dtimeObj - nowObj
-      // 预定发布时间在2小时后，7天内
-      if (timeRemain >= 2 * hourMilSec && timeRemain <= 24 * 7 * hourMilSec) {
-        const dDate = dtimeObj.getDate()
-        const dHours = dtimeObj.getHours()
-        const dMinutes = dtimeObj.getMinutes()
-        const dtimeNodes = await mainPage?.$$('.video-form-item.form-item-timer .byte-radio')
-        // 如果传入了定时的时间，那么是定时发布
-        if (dtime) {
-          // 第一个选项是立即发布，第二个是定时发布
-          await dtimeNodes[1].click()
-          // 点击定时发布后，等待时间输入框出现
-          await mainPage.waitForSelector(
-            '.video-form-item.form-item-timer .byte-datepicker-input .byte-input'
-          )
-          const timeBtns = await mainPage.$$(
-            '.video-form-item.form-item-timer .byte-datepicker-input .byte-input'
-          )
-          const [startBtn, endBtn] = timeBtns || []
-          // 设置日期
-          startBtn && (await startBtn.click())
-          const availableDates = await mainPage?.$$(
-            '.byte-datepicker td.byte-calendar-cell:not(.byte-calendar-cell-disabled) .byte-calendar-date-value'
-          )
-          let is_date_set = false
-          for (let availableDate of availableDates) {
-            // 对每个元素执行页面函数，检查它是否包含特定文本
-            const text = await mainPage.evaluate((el) => el.textContent, availableDate)
-            if (text?.trim?.() === String(dDate)) {
-              is_date_set = true
-              await availableDate.click()
-            }
-          }
-          // TODO:(wsw) 这段逻辑没有经过测试
-          // 如果在本月没有找到可点击的日期，点击前往下一个月，然后寻找点击
-          if (!is_date_set) {
-            const nextMonthBtn = await mainPage.$('.byte-datepicker .byte-picker-next-month-btn')
-            await nextMonthBtn.click()
-            // 等待500ms防止渲染没有完成
-            await (() => new Promise((resolve) => setTimeout(() => resolve(), 500)))()
-            // 在下个月的日期列表中找到可点击的日期
-            const nextMonthAvailableDates = await mainPage?.$$(
-              '.byte-datepicker td.byte-calendar-cell:not(.byte-calendar-cell-disabled) .byte-calendar-date-value'
-            )
-            for (let availableDate of nextMonthAvailableDates) {
-              // 对每个元素执行页面函数，检查它是否包含特定文本
-              const text = await mainPage.evaluate((el) => el.textContent, availableDate)
-              if (text?.trim?.() === String(dDate)) {
-                is_date_set = true
-                await availableDate.click()
-              }
-            }
-          }
-
-          // 设置时间
-          endBtn && (await endBtn.click())
-          const [hoursNode, minutesNode] =
-            (await mainPage?.$$('.byte-timepicker .byte-timepicker-list')) || []
-          if (hoursNode) {
-            const hoursList = (await hoursNode?.$$('.byte-timepicker-cell')) || []
-            for (const hour of hoursList) {
-              const text = await mainPage.evaluate((el) => el.textContent, hour)
-              if (text?.trim?.() === String(dHours).padStart(2, 0)) {
-                await hour.click()
-              }
-            }
-          }
-          if (minutesNode) {
-            const minutesList = (await minutesNode?.$$('.byte-timepicker-cell')) || []
-            for (const minute of minutesList) {
-              const text = await mainPage.evaluate((el) => el.textContent, minute)
-              if (text?.trim?.() === String(dMinutes).padStart(2, 0)) {
-                await minute.click()
-              }
-            }
-          }
-          console.log(`wswTest: 成功修改发布设置(定时发布): ${videoInfo.dtime}`)
-          updateProgress(`成功修改发布设置(定时发布): ${videoInfo.dtime}`)
-        }
-      }
-    } catch (e) {
-      // 发布时间不阻止
-      updateProgress(`[${platform}]:修改发布设置(定时发布)失败: ${e?.message || ''}`, 'error')
-    }
-  }
-
-  const allowDownload = videoInfo.allowDownload || false
-  // 发布设置-下载权限(默认允许下载)
-  if (!allowDownload) {
-    try {
-      const allowDownloadNode = await mainPage?.$(
-        '.video-form-item.form-item-download .byte-checkbox'
-      )
+    if (allowDownloadNode && videoInfo?.allowDownload) {
       await allowDownloadNode.click()
-      console.log(`wswTest: 成功修改发布设置(下载权限): 允许他人下载`)
-      updateProgress(`成功修改发布设置(下载权限): 允许他人下载`)
-    } catch (e) {
-      updateProgress(`[${platform}]:修改发布设置(下载权限)失败: ${e?.message || ''}`, 'error')
+      console.log(`wswTest: 个性化设置-不允许下载此作品: ${videoInfo?.allowDownload}`)
+      updateProgress(`[${platform}]个性化设置-不允许下载此作品: ${videoInfo?.allowDownload}`)
     }
+
+    if (hideInSameCityNode && videoInfo?.hideInSameCity) {
+      await hideInSameCityNode.click()
+      console.log(`wswTest: 个性化设置-作品在同城不显示: ${videoInfo?.hideInSameCity}`)
+      updateProgress(`[${platform}]个性化设置-作品在同城不显示: ${videoInfo?.hideInSameCity}`)
+    }
+  } catch (e) {
+    updateProgress(`[${platform}]个性化设置: ${e?.message || ''}`, 'error')
+  }
+
+  // 模拟点击: 查看权限
+  try {
+    const publicNode = await mainPage.$('input.ant-radio-input[type=radio][value="1"]')
+    const friendSeeNode = await mainPage.$('input.ant-radio-input[type=radio][value="4"]')
+    const onlySelfNode = await mainPage.$$('input.ant-radio-input[type=radio][value="2"]')?.[1]
+
+    // 默认为真，用户选择假才点击
+    if (Number(videoInfo?.privacyVal) === 1) {
+      publicNode && (await publicNode.click())
+    } else if (Number(videoInfo?.privacyVal) === 4) {
+      friendSeeNode && (await friendSeeNode.click())
+    } else if (Number(videoInfo?.privacyVal) === 2) {
+      onlySelfNode && (await onlySelfNode.click())
+    }
+    console.log(`wswTest: 设置查看权限成功: ${videoInfo?.privacyVal}`)
+    updateProgress(`[${platform}]设置查看权限成功: ${videoInfo?.privacyVal}`)
+  } catch (e) {
+    updateProgress(`[${platform}]设置查看权限发生错误: ${e?.message || ''}`, 'error')
+  }
+
+  // 模拟点击: 所属领域
+  try {
+    const typeSearchNode = await mainPage.$('input.ant-select-selection-search-input[type=search]')
+    typeSearchNode && (await typeSearchNode.click())
+
+    const type = videoInfo.type
+    let firstCls = ''
+
+    kuaishouTypes.forEach((firstClass) => {
+      if (firstClass.children.find((item) => item.value === type)) {
+        firstCls = firstClass.value
+      }
+    })
+    const firstClsNode = await mainPage.$(
+      `.ant-select-item.ant-select-item-option[title="${firstCls}"]`
+    )
+    firstClsNode && (await firstClsNode.click())
+    const selects = await mainPage.$$('.ant-select.ant-select-single')
+    selects[1] && (await selects[1].click())
+    await mainPage.waitForSelector(`.ant-select-item.ant-select-item-option[title="${type}"]`)
+    const secondClsNode = await mainPage.$(
+      `.ant-select-item.ant-select-item-option[title="${type}"]`
+    )
+    secondClsNode && (await secondClsNode.click())
+    console.log(`wswTest: 所属领域选择成功: ${firstCls}-${type}`)
+    updateProgress(`[${platform}]所属领域选择成功: ${firstCls}-${type}`)
+  } catch (e) {
+    updateProgress(`[${platform}]选择所属领域错误: ${e?.message || ''}`, 'error')
+    return false
+  }
+
+  // 模拟点击: 发布时间
+  try {
+    const dtime = videoInfo.dtime
+    const dtimeDate = new Date(dtime)
+    const year = String(dtimeDate.getFullYear())
+    const month = String(dtimeDate.getMonth() + 1).padStart(2, 0)
+    const date = String(dtimeDate.getDate()).padStart(2, 0)
+    const hour = String(dtimeDate.getHours()).padStart(2, 0)
+    const minutes = String(dtimeDate.getMinutes()).padStart(2, 0)
+    const seconds = String(dtimeDate.getSeconds()).padStart(2, 0)
+    if (dtime && year) {
+      const nodes = await mainPage.$$(
+        '.ant-radio-group input.ant-radio-input[type="radio"][value="2"]'
+      )
+      const dtimeBtn = nodes?.[2]
+
+      if (dtimeBtn) {
+        await dtimeBtn.click()
+        const pickerInput = await mainPage.$('.ant-picker-input')
+        pickerInput && (await pickerInput.click())
+        await mainPage.keyboard.sendCharacter(
+          `${year}-${month}-${date} ${hour}:${minutes}:${seconds}`
+        )
+        const pickerBtn = await mainPage.$('.ant-picker-dropdown .ant-picker-ok button')
+        pickerBtn && (await pickerBtn.click())
+      }
+      console.log(`wswTest: 发布时间选择成功: ${dtime}`)
+      updateProgress(`[${platform}]发布时间选择成功: ${dtime}`)
+    }
+  } catch (e) {
+    updateProgress(`[${platform}]选择发布时间错误: ${e?.message || ''}`, 'error')
+    return false
   }
 
   try {
-    const submitBtn = await mainPage?.$('.video-batch-footer .submit.red')
-    if (submitBtn) {
-      await submitBtn.click()
-      console.info(`wswTest: 视频${video?.name || ''}发布成功`)
-      updateProgress(`视频${video?.name || ''}发布成功`, 'success')
+    const buttonSpans = await mainPage.$$('button > span')
+    for (let buttonSpan of buttonSpans) {
+      const _text = await buttonSpan.evaluate((el) => el.innerHTML)
+      if (_text === '发布') {
+        await buttonSpan.click()
+        break
+      }
     }
+    // 如果是定时发布，需要点击确定
+    const btnSpans = await mainPage.$$('.ant-btn-primary span')
+    for (let btnSpan of btnSpans) {
+      const _text = await btnSpan.evaluate((el) => el.innerHTML)
+      if (_text === '确认发布') {
+        await btnSpan.click()
+        break
+      }
+    }
+    updateProgress(`视频${video?.name || ''}发布成功`, 'success')
   } catch (e) {
     updateProgress(`[${platform}]:视频最终发布失败: ${e?.message || ''}`, 'error')
     return false
@@ -448,7 +272,8 @@ const kuaishou_upload_video = async ({
   uploadVideoProgress = () => {},
   uploadVideoStepProgress = () => {}
 }) => {
-  const headless = true
+  // TODO:(wsw) 模拟操作
+  const headless = false
   const uploadBrowser = await puppeteer_manage.launch(headless)
   const mainPage = await uploadBrowser.newPage()
   const screenWidth = await mainPage.evaluate(() => window.screen.width)
