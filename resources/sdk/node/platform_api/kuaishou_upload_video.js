@@ -1,10 +1,9 @@
 import puppeteer_manage from './puppeteer_manage.js'
 import kuaishouTypes from '../../node/platform_api/kuaishou_type_list.json'
-import { CMDS, platformNames } from '../../../../src/renderer/src/constants.js'
+import { platformNames } from '../../../../src/renderer/src/constants.js'
 
 const platform = platformNames.KUAISHOU
 const queryUploadProcessInterval = 500
-const hourMilSec = 60 * 60 * 1e3
 const uploadPageUrl = 'https://cp.kuaishou.com/article/publish/video'
 
 /**
@@ -177,13 +176,16 @@ const kuaishou_upload_single_video = async ({
     const firstClsNode = await mainPage.$(
       `.ant-select-item.ant-select-item-option[title="${firstCls}"]`
     )
+    // console.log('wswTest: firstClsNode', firstClsNode)
     firstClsNode && (await firstClsNode.click())
     const selects = await mainPage.$$('.ant-select.ant-select-single')
+    // console.log('wswTest: selects[1]', selects[1])
     selects[1] && (await selects[1].click())
     await mainPage.waitForSelector(`.ant-select-item.ant-select-item-option[title="${type}"]`)
     const secondClsNode = await mainPage.$(
       `.ant-select-item.ant-select-item-option[title="${type}"]`
     )
+    // console.log('wswTest: secondClsNode', secondClsNode)
     secondClsNode && (await secondClsNode.click())
     console.log(`wswTest: 所属领域选择成功: ${firstCls}-${type}`)
     updateProgress(`[${platform}]所属领域选择成功: ${firstCls}-${type}`)
